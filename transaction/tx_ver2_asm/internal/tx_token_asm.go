@@ -331,7 +331,7 @@ func (tx *Tx) proveCA(params_compat *TxPrivacyInitParams, params_token *TokenInn
 	// var isBurning bool = false
 	var tid common.Hash = *params_compat.TokenID
 	for _,inf := range params_compat.PaymentInfo{
-		c, ss, err := privacy.GenerateOTACoinAndSharedSecret(inf, &tid)
+		c, ss, err := privacy.NewCoinCA(inf, &tid)
 		if err != nil {
 			return false, err
 		}
@@ -428,9 +428,6 @@ func (tx *Tx) proveToken(params *InitParamsAsm) (bool, error) {
 				HasPrivacy: temp.HasPrivacyToken,
 				TokenID: &tid,
 			}
-	if err := ValidateTxParams(params_compat); err != nil {
-		return false, err
-	}
 
 	// Init tx and params (tx and params will be changed)
 	if err := tx.initializeTxAndParams(params_compat); err != nil {
@@ -533,9 +530,6 @@ func (txToken *TxToken) InitASM(params *InitParamsAsm) error {
 		Fee: params_compat.FeeNativeCoin,
 		HasPrivacy: params_compat.HasPrivacyCoin,
 		Info: params_compat.Info,
-	}
-	if err := ValidateTxParams(txPrivacyParams); err != nil {
-		return err
 	}
 	// Init tx and params (tx and params will be changed)
 	tx := new(Tx)

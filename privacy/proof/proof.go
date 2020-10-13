@@ -1,10 +1,10 @@
 package proof
 
 import (
-	"github.com/incognitochain/incognito-chain/common"
+	// "github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
-	"github.com/incognitochain/incognito-chain/privacy/key"
+	// "github.com/incognitochain/incognito-chain/privacy/key"
 	"github.com/incognitochain/incognito-chain/privacy/proof/agg_interface"
 )
 
@@ -26,8 +26,8 @@ type Proof interface {
 	UnmarshalJSON([]byte) error
 
 	IsPrivacy() bool
-	ValidateSanity() (bool, error)
+	// ValidateSanity() (bool, error)
 
-	Verify(hasPrivacy bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, isBatch bool, additionalData interface{}) (bool, error)
+	// Verify(hasPrivacy bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, isBatch bool, additionalData interface{}) (bool, error)
 }
 

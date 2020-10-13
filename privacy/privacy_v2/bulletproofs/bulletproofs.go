@@ -34,21 +34,21 @@ type bulletproofParams struct {
 
 var AggParam = newBulletproofParams(privacy_util.MaxOutputCoin)
 
-func (proof AggregatedRangeProof) ValidateSanity() bool {
-	for i := 0; i < len(proof.cmsValue); i++ {
-		if !proof.cmsValue[i].PointValid() {
-			return false
-		}
-	}
-	if !proof.a.PointValid() || !proof.s.PointValid() || !proof.t1.PointValid() || !proof.t2.PointValid() {
-		return false
-	}
-	if !proof.tauX.ScalarValid() || !proof.tHat.ScalarValid() || !proof.mu.ScalarValid() {
-		return false
-	}
+// func (proof AggregatedRangeProof) ValidateSanity() bool {
+// 	for i := 0; i < len(proof.cmsValue); i++ {
+// 		if !proof.cmsValue[i].PointValid() {
+// 			return false
+// 		}
+// 	}
+// 	if !proof.a.PointValid() || !proof.s.PointValid() || !proof.t1.PointValid() || !proof.t2.PointValid() {
+// 		return false
+// 	}
+// 	if !proof.tauX.ScalarValid() || !proof.tHat.ScalarValid() || !proof.mu.ScalarValid() {
+// 		return false
+// 	}
 
-	return proof.innerProductProof.ValidateSanity()
-}
+// 	return proof.innerProductProof.ValidateSanity()
+// }
 
 func (proof *AggregatedRangeProof) Init() {
 	proof.a = new(operation.Point).Identity()
@@ -389,339 +389,339 @@ func (wit AggregatedRangeWitness) Prove() (*AggregatedRangeProof, error) {
 	return proof, nil
 }
 
-func (proof AggregatedRangeProof) Verify() (bool, error) {
-	numValue := len(proof.cmsValue)
-	if numValue > privacy_util.MaxOutputCoin {
-		return false, errors.New("Must less than MaxOutputNumber")
-	}
-	numValuePad := roundUpPowTwo(numValue)
-	maxExp := privacy_util.MaxExp
-	N := numValuePad * maxExp
-	aggParam := setAggregateParams(N)
+// func (proof AggregatedRangeProof) Verify() (bool, error) {
+// 	numValue := len(proof.cmsValue)
+// 	if numValue > privacy_util.MaxOutputCoin {
+// 		return false, errors.New("Must less than MaxOutputNumber")
+// 	}
+// 	numValuePad := roundUpPowTwo(numValue)
+// 	maxExp := privacy_util.MaxExp
+// 	N := numValuePad * maxExp
+// 	aggParam := setAggregateParams(N)
 
-	cmsValue := proof.cmsValue
-	for i := numValue; i < numValuePad; i++ {
-		cmsValue = append(cmsValue, new(operation.Point).Identity())
-	}
+// 	cmsValue := proof.cmsValue
+// 	for i := numValue; i < numValuePad; i++ {
+// 		cmsValue = append(cmsValue, new(operation.Point).Identity())
+// 	}
 
-	// recalculate challenge y, z
-	y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
-	z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
-	zSquare := new(operation.Scalar).Mul(z, z)
+// 	// recalculate challenge y, z
+// 	y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 	z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 	zSquare := new(operation.Scalar).Mul(z, z)
 
-	x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
-	xSquare := new(operation.Scalar).Mul(x, x)
+// 	x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
+// 	xSquare := new(operation.Scalar).Mul(x, x)
 
-	// HPrime = H^(y^(1-i)
-	HPrime := computeHPrime(y, N, aggParam.h)
+// 	// HPrime = H^(y^(1-i)
+// 	HPrime := computeHPrime(y, N, aggParam.h)
 
-	// g^tHat * h^tauX = V^(z^2) * g^delta(y,z) * T1^x * T2^(x^2)
-	yVector := powerVector(y, N)
-	deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
-	if err != nil {
-		return false, err
-	}
+// 	// g^tHat * h^tauX = V^(z^2) * g^delta(y,z) * T1^x * T2^(x^2)
+// 	yVector := powerVector(y, N)
+// 	deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	LHS := operation.PedCom.CommitAtIndex(proof.tHat, proof.tauX, operation.PedersenValueIndex)
-	RHS := new(operation.Point).ScalarMult(proof.t2, xSquare)
-	RHS.Add(RHS, new(operation.Point).AddPedersen(deltaYZ, operation.PedCom.G[operation.PedersenValueIndex], x, proof.t1))
+// 	LHS := operation.PedCom.CommitAtIndex(proof.tHat, proof.tauX, operation.PedersenValueIndex)
+// 	RHS := new(operation.Point).ScalarMult(proof.t2, xSquare)
+// 	RHS.Add(RHS, new(operation.Point).AddPedersen(deltaYZ, operation.PedCom.G[operation.PedersenValueIndex], x, proof.t1))
 
-	expVector := vectorMulScalar(powerVector(z, numValuePad), zSquare)
-	RHS.Add(RHS, new(operation.Point).MultiScalarMult(expVector, cmsValue))
+// 	expVector := vectorMulScalar(powerVector(z, numValuePad), zSquare)
+// 	RHS.Add(RHS, new(operation.Point).MultiScalarMult(expVector, cmsValue))
 
-	if !operation.IsPointEqual(LHS, RHS) {
-		Logger.Log.Errorf("verify aggregated range proof statement 1 failed")
-		return false, errors.New("verify aggregated range proof statement 1 failed")
-	}
-	uPrime := new(operation.Point).ScalarMult(aggParam.u, operation.HashToScalar(x.ToBytesS()))
-	innerProductArgValid := proof.innerProductProof.Verify(aggParam.g, HPrime, uPrime, x.ToBytesS())
-	if !innerProductArgValid {
-		Logger.Log.Errorf("verify aggregated range proof statement 2 failed")
-		return false, errors.New("verify aggregated range proof statement 2 failed")
-	}
+// 	if !operation.IsPointEqual(LHS, RHS) {
+// 		Logger.Log.Errorf("verify aggregated range proof statement 1 failed")
+// 		return false, errors.New("verify aggregated range proof statement 1 failed")
+// 	}
+// 	uPrime := new(operation.Point).ScalarMult(aggParam.u, operation.HashToScalar(x.ToBytesS()))
+// 	innerProductArgValid := proof.innerProductProof.Verify(aggParam.g, HPrime, uPrime, x.ToBytesS())
+// 	if !innerProductArgValid {
+// 		Logger.Log.Errorf("verify aggregated range proof statement 2 failed")
+// 		return false, errors.New("verify aggregated range proof statement 2 failed")
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
-func (proof AggregatedRangeProof) VerifyFaster() (bool, error) {
-	numValue := len(proof.cmsValue)
-	if numValue > privacy_util.MaxOutputCoin {
-		return false, errors.New("Must less than MaxOutputNumber")
-	}
-	numValuePad := roundUpPowTwo(numValue)
-	maxExp := privacy_util.MaxExp
-	N := maxExp * numValuePad
-	aggParam := setAggregateParams(N)
+// func (proof AggregatedRangeProof) VerifyFaster() (bool, error) {
+// 	numValue := len(proof.cmsValue)
+// 	if numValue > privacy_util.MaxOutputCoin {
+// 		return false, errors.New("Must less than MaxOutputNumber")
+// 	}
+// 	numValuePad := roundUpPowTwo(numValue)
+// 	maxExp := privacy_util.MaxExp
+// 	N := maxExp * numValuePad
+// 	aggParam := setAggregateParams(N)
 
-	cmsValue := proof.cmsValue
-	for i := numValue; i < numValuePad; i++ {
-		cmsValue = append(cmsValue, new(operation.Point).Identity())
-	}
+// 	cmsValue := proof.cmsValue
+// 	for i := numValue; i < numValuePad; i++ {
+// 		cmsValue = append(cmsValue, new(operation.Point).Identity())
+// 	}
 
-	// recalculate challenge y, z
-	y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
-	z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
-	zSquare := new(operation.Scalar).Mul(z, z)
+// 	// recalculate challenge y, z
+// 	y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 	z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 	zSquare := new(operation.Scalar).Mul(z, z)
 
-	x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
-	xSquare := new(operation.Scalar).Mul(x, x)
+// 	x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
+// 	xSquare := new(operation.Scalar).Mul(x, x)
 
-	// g^tHat * h^tauX = V^(z^2) * g^delta(y,z) * T1^x * T2^(x^2)
-	yVector := powerVector(y, N)
-	deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
-	if err != nil {
-		return false, err
-	}
+// 	// g^tHat * h^tauX = V^(z^2) * g^delta(y,z) * T1^x * T2^(x^2)
+// 	yVector := powerVector(y, N)
+// 	deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	// Verify the first argument
-	LHS := operation.PedCom.CommitAtIndex(proof.tHat, proof.tauX, operation.PedersenValueIndex)
-	RHS := new(operation.Point).ScalarMult(proof.t2, xSquare)
-	RHS.Add(RHS, new(operation.Point).AddPedersen(deltaYZ, operation.PedCom.G[operation.PedersenValueIndex], x, proof.t1))
-	expVector := vectorMulScalar(powerVector(z, numValuePad), zSquare)
-	RHS.Add(RHS, new(operation.Point).MultiScalarMult(expVector, cmsValue))
-	if !operation.IsPointEqual(LHS, RHS) {
-		Logger.Log.Errorf("verify aggregated range proof statement 1 failed")
-		return false, errors.New("verify aggregated range proof statement 1 failed")
-	}
+// 	// Verify the first argument
+// 	LHS := operation.PedCom.CommitAtIndex(proof.tHat, proof.tauX, operation.PedersenValueIndex)
+// 	RHS := new(operation.Point).ScalarMult(proof.t2, xSquare)
+// 	RHS.Add(RHS, new(operation.Point).AddPedersen(deltaYZ, operation.PedCom.G[operation.PedersenValueIndex], x, proof.t1))
+// 	expVector := vectorMulScalar(powerVector(z, numValuePad), zSquare)
+// 	RHS.Add(RHS, new(operation.Point).MultiScalarMult(expVector, cmsValue))
+// 	if !operation.IsPointEqual(LHS, RHS) {
+// 		Logger.Log.Errorf("verify aggregated range proof statement 1 failed")
+// 		return false, errors.New("verify aggregated range proof statement 1 failed")
+// 	}
 
-	// Verify the second argument
-	hashCache := x.ToBytesS()
-	L := proof.innerProductProof.l
-	R := proof.innerProductProof.r
-	s := make([]*operation.Scalar, N)
-	sInverse := make([]*operation.Scalar, N)
-	logN := int(math.Log2(float64(N)))
-	vSquareList := make([]*operation.Scalar, logN)
-	vInverseSquareList := make([]*operation.Scalar, logN)
+// 	// Verify the second argument
+// 	hashCache := x.ToBytesS()
+// 	L := proof.innerProductProof.l
+// 	R := proof.innerProductProof.r
+// 	s := make([]*operation.Scalar, N)
+// 	sInverse := make([]*operation.Scalar, N)
+// 	logN := int(math.Log2(float64(N)))
+// 	vSquareList := make([]*operation.Scalar, logN)
+// 	vInverseSquareList := make([]*operation.Scalar, logN)
 
-	for i := 0; i < N; i++ {
-		s[i] = new(operation.Scalar).Set(proof.innerProductProof.a)
-		sInverse[i] = new(operation.Scalar).Set(proof.innerProductProof.b)
-	}
+// 	for i := 0; i < N; i++ {
+// 		s[i] = new(operation.Scalar).Set(proof.innerProductProof.a)
+// 		sInverse[i] = new(operation.Scalar).Set(proof.innerProductProof.b)
+// 	}
 
-	for i := range L {
-		v := generateChallenge(hashCache, []*operation.Point{L[i], R[i]})
-		hashCache = v.ToBytesS()
-		vInverse := new(operation.Scalar).Invert(v)
-		vSquareList[i] = new(operation.Scalar).Mul(v, v)
-		vInverseSquareList[i] = new(operation.Scalar).Mul(vInverse, vInverse)
+// 	for i := range L {
+// 		v := generateChallenge(hashCache, []*operation.Point{L[i], R[i]})
+// 		hashCache = v.ToBytesS()
+// 		vInverse := new(operation.Scalar).Invert(v)
+// 		vSquareList[i] = new(operation.Scalar).Mul(v, v)
+// 		vInverseSquareList[i] = new(operation.Scalar).Mul(vInverse, vInverse)
 
-		for j := 0; j < N; j++ {
-			if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
-				s[j] = new(operation.Scalar).Mul(s[j], v)
-				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], vInverse)
-			} else {
-				s[j] = new(operation.Scalar).Mul(s[j], vInverse)
-				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], v)
-			}
-		}
-	}
-	// HPrime = H^(y^(1-i)
-	HPrime := computeHPrime(y, N, aggParam.h)
-	uPrime := new(operation.Point).ScalarMult(aggParam.u, operation.HashToScalar(x.ToBytesS()))
-	c := new(operation.Scalar).Mul(proof.innerProductProof.a, proof.innerProductProof.b)
-	tmp1 := new(operation.Point).MultiScalarMult(s, aggParam.g)
-	tmp2 := new(operation.Point).MultiScalarMult(sInverse, HPrime)
-	rightHS := new(operation.Point).Add(tmp1, tmp2)
-	rightHS.Add(rightHS, new(operation.Point).ScalarMult(uPrime, c))
+// 		for j := 0; j < N; j++ {
+// 			if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
+// 				s[j] = new(operation.Scalar).Mul(s[j], v)
+// 				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], vInverse)
+// 			} else {
+// 				s[j] = new(operation.Scalar).Mul(s[j], vInverse)
+// 				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], v)
+// 			}
+// 		}
+// 	}
+// 	// HPrime = H^(y^(1-i)
+// 	HPrime := computeHPrime(y, N, aggParam.h)
+// 	uPrime := new(operation.Point).ScalarMult(aggParam.u, operation.HashToScalar(x.ToBytesS()))
+// 	c := new(operation.Scalar).Mul(proof.innerProductProof.a, proof.innerProductProof.b)
+// 	tmp1 := new(operation.Point).MultiScalarMult(s, aggParam.g)
+// 	tmp2 := new(operation.Point).MultiScalarMult(sInverse, HPrime)
+// 	rightHS := new(operation.Point).Add(tmp1, tmp2)
+// 	rightHS.Add(rightHS, new(operation.Point).ScalarMult(uPrime, c))
 
-	tmp3 := new(operation.Point).MultiScalarMult(vSquareList, L)
-	tmp4 := new(operation.Point).MultiScalarMult(vInverseSquareList, R)
-	leftHS := new(operation.Point).Add(tmp3, tmp4)
-	leftHS.Add(leftHS, proof.innerProductProof.p)
+// 	tmp3 := new(operation.Point).MultiScalarMult(vSquareList, L)
+// 	tmp4 := new(operation.Point).MultiScalarMult(vInverseSquareList, R)
+// 	leftHS := new(operation.Point).Add(tmp3, tmp4)
+// 	leftHS.Add(leftHS, proof.innerProductProof.p)
 
-	res := operation.IsPointEqual(rightHS, leftHS)
-	if !res {
-		Logger.Log.Errorf("verify aggregated range proof statement 2 failed")
-		return false, errors.New("verify aggregated range proof statement 2 failed")
-	}
+// 	res := operation.IsPointEqual(rightHS, leftHS)
+// 	if !res {
+// 		Logger.Log.Errorf("verify aggregated range proof statement 2 failed")
+// 		return false, errors.New("verify aggregated range proof statement 2 failed")
+// 	}
 
-	return true, nil
-}
+// 	return true, nil
+// }
 
-func VerifyBatch(proofs []*AggregatedRangeProof) (bool, error, int) {
-	maxExp := privacy_util.MaxExp
-	baseG := operation.PedCom.G[operation.PedersenValueIndex]
-	baseH := operation.PedCom.G[operation.PedersenRandomnessIndex]
+// func VerifyBatch(proofs []*AggregatedRangeProof) (bool, error, int) {
+// 	maxExp := privacy_util.MaxExp
+// 	baseG := operation.PedCom.G[operation.PedersenValueIndex]
+// 	baseH := operation.PedCom.G[operation.PedersenRandomnessIndex]
 
-	sum_tHat := new(operation.Scalar).FromUint64(0)
-	sum_tauX := new(operation.Scalar).FromUint64(0)
-	list_x_alpha := make([]*operation.Scalar, 0)
-	list_x_beta := make([]*operation.Scalar, 0)
-	list_xSquare := make([]*operation.Scalar, 0)
-	list_zSquare := make([]*operation.Scalar, 0)
+// 	sum_tHat := new(operation.Scalar).FromUint64(0)
+// 	sum_tauX := new(operation.Scalar).FromUint64(0)
+// 	list_x_alpha := make([]*operation.Scalar, 0)
+// 	list_x_beta := make([]*operation.Scalar, 0)
+// 	list_xSquare := make([]*operation.Scalar, 0)
+// 	list_zSquare := make([]*operation.Scalar, 0)
 
-	list_t1 := make([]*operation.Point, 0)
-	list_t2 := make([]*operation.Point, 0)
-	list_V := make([]*operation.Point, 0)
+// 	list_t1 := make([]*operation.Point, 0)
+// 	list_t2 := make([]*operation.Point, 0)
+// 	list_V := make([]*operation.Point, 0)
 
-	sum_mu := new(operation.Scalar).FromUint64(0)
-	sum_absubthat := new(operation.Scalar).FromUint64(0)
+// 	sum_mu := new(operation.Scalar).FromUint64(0)
+// 	sum_absubthat := new(operation.Scalar).FromUint64(0)
 
-	list_S := make([]*operation.Point, 0)
-	list_A := make([]*operation.Point, 0)
-	list_beta := make([]*operation.Scalar, 0)
-	list_LR := make([]*operation.Point, 0)
-	list_lVector := make([]*operation.Scalar, 0)
-	list_rVector := make([]*operation.Scalar, 0)
-	list_gVector := make([]*operation.Point, 0)
-	list_hVector := make([]*operation.Point, 0)
+// 	list_S := make([]*operation.Point, 0)
+// 	list_A := make([]*operation.Point, 0)
+// 	list_beta := make([]*operation.Scalar, 0)
+// 	list_LR := make([]*operation.Point, 0)
+// 	list_lVector := make([]*operation.Scalar, 0)
+// 	list_rVector := make([]*operation.Scalar, 0)
+// 	list_gVector := make([]*operation.Point, 0)
+// 	list_hVector := make([]*operation.Point, 0)
 
-	twoNumber := new(operation.Scalar).FromUint64(2)
-	twoVectorN := powerVector(twoNumber, maxExp)
+// 	twoNumber := new(operation.Scalar).FromUint64(2)
+// 	twoVectorN := powerVector(twoNumber, maxExp)
 
-	for k, proof := range proofs {
-		numValue := len(proof.cmsValue)
-		if numValue > privacy_util.MaxOutputCoin {
-			return false, errors.New("Must less than MaxOutputNumber"), k
-		}
-		numValuePad := roundUpPowTwo(numValue)
-		N := maxExp * numValuePad
-		aggParam := setAggregateParams(N)
+// 	for k, proof := range proofs {
+// 		numValue := len(proof.cmsValue)
+// 		if numValue > privacy_util.MaxOutputCoin {
+// 			return false, errors.New("Must less than MaxOutputNumber"), k
+// 		}
+// 		numValuePad := roundUpPowTwo(numValue)
+// 		N := maxExp * numValuePad
+// 		aggParam := setAggregateParams(N)
 
-		cmsValue := proof.cmsValue
-		for i := numValue; i < numValuePad; i++ {
-			identity := new(operation.Point).Identity()
-			cmsValue = append(cmsValue, identity)
-		}
+// 		cmsValue := proof.cmsValue
+// 		for i := numValue; i < numValuePad; i++ {
+// 			identity := new(operation.Point).Identity()
+// 			cmsValue = append(cmsValue, identity)
+// 		}
 
-		// recalculate challenge y, z, x
-		y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
-		z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
-		x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
-		zSquare := new(operation.Scalar).Mul(z, z)
-		xSquare := new(operation.Scalar).Mul(x, x)
+// 		// recalculate challenge y, z, x
+// 		y := generateChallenge(aggParam.cs.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 		z := generateChallenge(y.ToBytesS(), []*operation.Point{proof.a, proof.s})
+// 		x := generateChallenge(z.ToBytesS(), []*operation.Point{proof.t1, proof.t2})
+// 		zSquare := new(operation.Scalar).Mul(z, z)
+// 		xSquare := new(operation.Scalar).Mul(x, x)
 
-		// Random alpha and beta for batch equations check
-		alpha := operation.RandomScalar()
-		beta := operation.RandomScalar()
-		list_beta = append(list_beta, beta)
+// 		// Random alpha and beta for batch equations check
+// 		alpha := operation.RandomScalar()
+// 		beta := operation.RandomScalar()
+// 		list_beta = append(list_beta, beta)
 
-		// Compute first equation check
-		yVector := powerVector(y, N)
-		deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
-		if err != nil {
-			return false, err, k
-		}
-		sum_tHat.Add(sum_tHat, new(operation.Scalar).Mul(alpha, new(operation.Scalar).Sub(proof.tHat, deltaYZ)))
-		sum_tauX.Add(sum_tauX, new(operation.Scalar).Mul(alpha, proof.tauX))
+// 		// Compute first equation check
+// 		yVector := powerVector(y, N)
+// 		deltaYZ, err := computeDeltaYZ(z, zSquare, yVector, N)
+// 		if err != nil {
+// 			return false, err, k
+// 		}
+// 		sum_tHat.Add(sum_tHat, new(operation.Scalar).Mul(alpha, new(operation.Scalar).Sub(proof.tHat, deltaYZ)))
+// 		sum_tauX.Add(sum_tauX, new(operation.Scalar).Mul(alpha, proof.tauX))
 
-		list_x_alpha = append(list_x_alpha, new(operation.Scalar).Mul(x, alpha))
-		list_x_beta = append(list_x_beta, new(operation.Scalar).Mul(x, beta))
-		list_xSquare = append(list_xSquare, new(operation.Scalar).Mul(xSquare, alpha))
-		tmp := vectorMulScalar(powerVector(z, numValuePad), new(operation.Scalar).Mul(zSquare, alpha))
-		list_zSquare = append(list_zSquare, tmp...)
+// 		list_x_alpha = append(list_x_alpha, new(operation.Scalar).Mul(x, alpha))
+// 		list_x_beta = append(list_x_beta, new(operation.Scalar).Mul(x, beta))
+// 		list_xSquare = append(list_xSquare, new(operation.Scalar).Mul(xSquare, alpha))
+// 		tmp := vectorMulScalar(powerVector(z, numValuePad), new(operation.Scalar).Mul(zSquare, alpha))
+// 		list_zSquare = append(list_zSquare, tmp...)
 
-		list_V = append(list_V, cmsValue...)
-		list_t1 = append(list_t1, proof.t1)
-		list_t2 = append(list_t2, proof.t2)
+// 		list_V = append(list_V, cmsValue...)
+// 		list_t1 = append(list_t1, proof.t1)
+// 		list_t2 = append(list_t2, proof.t2)
 
-		// Verify the second argument
-		hashCache := x.ToBytesS()
-		L := proof.innerProductProof.l
-		R := proof.innerProductProof.r
-		s := make([]*operation.Scalar, N)
-		sInverse := make([]*operation.Scalar, N)
-		logN := int(math.Log2(float64(N)))
-		vSquareList := make([]*operation.Scalar, logN)
-		vInverseSquareList := make([]*operation.Scalar, logN)
+// 		// Verify the second argument
+// 		hashCache := x.ToBytesS()
+// 		L := proof.innerProductProof.l
+// 		R := proof.innerProductProof.r
+// 		s := make([]*operation.Scalar, N)
+// 		sInverse := make([]*operation.Scalar, N)
+// 		logN := int(math.Log2(float64(N)))
+// 		vSquareList := make([]*operation.Scalar, logN)
+// 		vInverseSquareList := make([]*operation.Scalar, logN)
 
-		for i := 0; i < N; i++ {
-			s[i] = new(operation.Scalar).Set(proof.innerProductProof.a)
-			sInverse[i] = new(operation.Scalar).Set(proof.innerProductProof.b)
-		}
+// 		for i := 0; i < N; i++ {
+// 			s[i] = new(operation.Scalar).Set(proof.innerProductProof.a)
+// 			sInverse[i] = new(operation.Scalar).Set(proof.innerProductProof.b)
+// 		}
 
-		for i := range L {
-			v := generateChallenge(hashCache, []*operation.Point{L[i], R[i]})
-			hashCache = v.ToBytesS()
-			vInverse := new(operation.Scalar).Invert(v)
-			vSquareList[i] = new(operation.Scalar).Mul(v, v)
-			vInverseSquareList[i] = new(operation.Scalar).Mul(vInverse, vInverse)
+// 		for i := range L {
+// 			v := generateChallenge(hashCache, []*operation.Point{L[i], R[i]})
+// 			hashCache = v.ToBytesS()
+// 			vInverse := new(operation.Scalar).Invert(v)
+// 			vSquareList[i] = new(operation.Scalar).Mul(v, v)
+// 			vInverseSquareList[i] = new(operation.Scalar).Mul(vInverse, vInverse)
 
-			for j := 0; j < N; j++ {
-				if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
-					s[j] = new(operation.Scalar).Mul(s[j], v)
-					sInverse[j] = new(operation.Scalar).Mul(sInverse[j], vInverse)
-				} else {
-					s[j] = new(operation.Scalar).Mul(s[j], vInverse)
-					sInverse[j] = new(operation.Scalar).Mul(sInverse[j], v)
-				}
-			}
-		}
+// 			for j := 0; j < N; j++ {
+// 				if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
+// 					s[j] = new(operation.Scalar).Mul(s[j], v)
+// 					sInverse[j] = new(operation.Scalar).Mul(sInverse[j], vInverse)
+// 				} else {
+// 					s[j] = new(operation.Scalar).Mul(s[j], vInverse)
+// 					sInverse[j] = new(operation.Scalar).Mul(sInverse[j], v)
+// 				}
+// 			}
+// 		}
 
-		lVector := make([]*operation.Scalar, N)
-		rVector := make([]*operation.Scalar, N)
+// 		lVector := make([]*operation.Scalar, N)
+// 		rVector := make([]*operation.Scalar, N)
 
-		vectorSum := make([]*operation.Scalar, N)
-		zTmp := new(operation.Scalar).Set(z)
-		for j := 0; j < numValuePad; j++ {
-			zTmp.Mul(zTmp, z)
-			for i := 0; i < maxExp; i++ {
-				vectorSum[j*maxExp+i] = new(operation.Scalar).Mul(twoVectorN[i], zTmp)
-			}
-		}
-		yInverse := new(operation.Scalar).Invert(y)
-		yTmp := new(operation.Scalar).Set(y)
-		for j := 0; j < N; j++ {
-			yTmp.Mul(yTmp, yInverse)
-			lVector[j] = new(operation.Scalar).Add(s[j], z)
-			rVector[j] = new(operation.Scalar).Sub(sInverse[j], vectorSum[j])
-			rVector[j].Mul(rVector[j], yTmp)
-			rVector[j].Sub(rVector[j], z)
+// 		vectorSum := make([]*operation.Scalar, N)
+// 		zTmp := new(operation.Scalar).Set(z)
+// 		for j := 0; j < numValuePad; j++ {
+// 			zTmp.Mul(zTmp, z)
+// 			for i := 0; i < maxExp; i++ {
+// 				vectorSum[j*maxExp+i] = new(operation.Scalar).Mul(twoVectorN[i], zTmp)
+// 			}
+// 		}
+// 		yInverse := new(operation.Scalar).Invert(y)
+// 		yTmp := new(operation.Scalar).Set(y)
+// 		for j := 0; j < N; j++ {
+// 			yTmp.Mul(yTmp, yInverse)
+// 			lVector[j] = new(operation.Scalar).Add(s[j], z)
+// 			rVector[j] = new(operation.Scalar).Sub(sInverse[j], vectorSum[j])
+// 			rVector[j].Mul(rVector[j], yTmp)
+// 			rVector[j].Sub(rVector[j], z)
 
-			lVector[j].Mul(lVector[j], beta)
-			rVector[j].Mul(rVector[j], beta)
-		}
+// 			lVector[j].Mul(lVector[j], beta)
+// 			rVector[j].Mul(rVector[j], beta)
+// 		}
 
-		list_lVector = append(list_lVector, lVector...)
-		list_rVector = append(list_rVector, rVector...)
+// 		list_lVector = append(list_lVector, lVector...)
+// 		list_rVector = append(list_rVector, rVector...)
 
-		tmp1 := new(operation.Point).MultiScalarMult(vSquareList, L)
-		tmp2 := new(operation.Point).MultiScalarMult(vInverseSquareList, R)
-		list_LR = append(list_LR, new(operation.Point).Add(tmp1, tmp2))
+// 		tmp1 := new(operation.Point).MultiScalarMult(vSquareList, L)
+// 		tmp2 := new(operation.Point).MultiScalarMult(vInverseSquareList, R)
+// 		list_LR = append(list_LR, new(operation.Point).Add(tmp1, tmp2))
 
-		list_gVector = append(list_gVector, aggParam.g...)
-		list_hVector = append(list_hVector, aggParam.h...)
+// 		list_gVector = append(list_gVector, aggParam.g...)
+// 		list_hVector = append(list_hVector, aggParam.h...)
 
-		sum_mu.Add(sum_mu, new(operation.Scalar).Mul(proof.mu, beta))
-		ab := new(operation.Scalar).Mul(proof.innerProductProof.a, proof.innerProductProof.b)
-		absubthat := new(operation.Scalar).Sub(ab, proof.tHat)
-		absubthat.Mul(absubthat, operation.HashToScalar(x.ToBytesS()))
-		sum_absubthat.Add(sum_absubthat, new(operation.Scalar).Mul(absubthat, beta))
-		list_A = append(list_A, proof.a)
-		list_S = append(list_S, proof.s)
-	}
+// 		sum_mu.Add(sum_mu, new(operation.Scalar).Mul(proof.mu, beta))
+// 		ab := new(operation.Scalar).Mul(proof.innerProductProof.a, proof.innerProductProof.b)
+// 		absubthat := new(operation.Scalar).Sub(ab, proof.tHat)
+// 		absubthat.Mul(absubthat, operation.HashToScalar(x.ToBytesS()))
+// 		sum_absubthat.Add(sum_absubthat, new(operation.Scalar).Mul(absubthat, beta))
+// 		list_A = append(list_A, proof.a)
+// 		list_S = append(list_S, proof.s)
+// 	}
 
-	tmp1 := new(operation.Point).MultiScalarMult(list_lVector, list_gVector)
-	tmp2 := new(operation.Point).MultiScalarMult(list_rVector, list_hVector)
-	tmp3 := new(operation.Point).ScalarMult(AggParam.u, sum_absubthat)
-	tmp4 := new(operation.Point).ScalarMult(baseH, sum_mu)
-	LHSPrime := new(operation.Point).Add(tmp1, tmp2)
-	LHSPrime.Add(LHSPrime, tmp3)
-	LHSPrime.Add(LHSPrime, tmp4)
+// 	tmp1 := new(operation.Point).MultiScalarMult(list_lVector, list_gVector)
+// 	tmp2 := new(operation.Point).MultiScalarMult(list_rVector, list_hVector)
+// 	tmp3 := new(operation.Point).ScalarMult(AggParam.u, sum_absubthat)
+// 	tmp4 := new(operation.Point).ScalarMult(baseH, sum_mu)
+// 	LHSPrime := new(operation.Point).Add(tmp1, tmp2)
+// 	LHSPrime.Add(LHSPrime, tmp3)
+// 	LHSPrime.Add(LHSPrime, tmp4)
 
-	LHS := new(operation.Point).AddPedersen(sum_tHat, baseG, sum_tauX, baseH)
-	LHSPrime.Add(LHSPrime, LHS)
+// 	LHS := new(operation.Point).AddPedersen(sum_tHat, baseG, sum_tauX, baseH)
+// 	LHSPrime.Add(LHSPrime, LHS)
 
-	tmp5 := new(operation.Point).MultiScalarMult(list_beta, list_A)
-	tmp6 := new(operation.Point).MultiScalarMult(list_x_beta, list_S)
-	RHSPrime := new(operation.Point).Add(tmp5, tmp6)
-	RHSPrime.Add(RHSPrime, new(operation.Point).MultiScalarMult(list_beta, list_LR))
+// 	tmp5 := new(operation.Point).MultiScalarMult(list_beta, list_A)
+// 	tmp6 := new(operation.Point).MultiScalarMult(list_x_beta, list_S)
+// 	RHSPrime := new(operation.Point).Add(tmp5, tmp6)
+// 	RHSPrime.Add(RHSPrime, new(operation.Point).MultiScalarMult(list_beta, list_LR))
 
-	part1 := new(operation.Point).MultiScalarMult(list_x_alpha, list_t1)
-	part2 := new(operation.Point).MultiScalarMult(list_xSquare, list_t2)
-	RHS := new(operation.Point).Add(part1, part2)
-	RHS.Add(RHS, new(operation.Point).MultiScalarMult(list_zSquare, list_V))
-	RHSPrime.Add(RHSPrime, RHS)
-	//fmt.Println("Batch Verification ", LHSPrime)
-	//fmt.Println("Batch Verification ", RHSPrime)
+// 	part1 := new(operation.Point).MultiScalarMult(list_x_alpha, list_t1)
+// 	part2 := new(operation.Point).MultiScalarMult(list_xSquare, list_t2)
+// 	RHS := new(operation.Point).Add(part1, part2)
+// 	RHS.Add(RHS, new(operation.Point).MultiScalarMult(list_zSquare, list_V))
+// 	RHSPrime.Add(RHSPrime, RHS)
+// 	//fmt.Println("Batch Verification ", LHSPrime)
+// 	//fmt.Println("Batch Verification ", RHSPrime)
 
-	if !operation.IsPointEqual(LHSPrime, RHSPrime) {
-		Logger.Log.Errorf("batch verify aggregated range proof failed")
-		return false, errors.New("batch verify aggregated range proof failed"), -1
-	}
-	return true, nil, -1
-}
+// 	if !operation.IsPointEqual(LHSPrime, RHSPrime) {
+// 		Logger.Log.Errorf("batch verify aggregated range proof failed")
+// 		return false, errors.New("batch verify aggregated range proof failed"), -1
+// 	}
+// 	return true, nil, -1
+// }
 
 // estimateMultiRangeProofSize estimate multi range proof size
 func EstimateMultiRangeProofSize(nOutput int) uint64 {

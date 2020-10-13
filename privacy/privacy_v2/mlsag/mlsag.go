@@ -3,7 +3,7 @@
 package mlsag
 
 import (
-	"bytes"
+	// "bytes"
 	"errors"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
@@ -294,49 +294,49 @@ func (this *Mlsag) calculateC(message [common.HashSize]byte, alpha []*operation.
 }
 
 // check l*KI = 0 by checking KI is a valid point
-func verifyKeyImages(keyImages []*operation.Point) bool {
-	var check bool = true
-	for i := 0; i < len(keyImages); i += 1 {
-		if keyImages[i]==nil{
-			return false
-		}
-		lKI := new(operation.Point).ScalarMult(keyImages[i], CurveOrder)
-		check = check && lKI.IsIdentity()
-	}
-	return check
-}
+// func verifyKeyImages(keyImages []*operation.Point) bool {
+// 	var check bool = true
+// 	for i := 0; i < len(keyImages); i += 1 {
+// 		if keyImages[i]==nil{
+// 			return false
+// 		}
+// 		lKI := new(operation.Point).ScalarMult(keyImages[i], CurveOrder)
+// 		check = check && lKI.IsIdentity()
+// 	}
+// 	return check
+// }
 
-func verifyRing(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, error) {
-	c := *sig.c
-	cBefore := *sig.c
-	if len(R.keys) != len(sig.r){
-		return false, errors.New("MLSAG Error : Malformed Ring")
-	}
-	for i := 0; i < len(sig.r); i += 1 {
-		nextC, err := calculateNextC(
-			message,
-			sig.r[i], &c,
-			R.keys[i],
-			sig.keyImages,
-		)
-		if err != nil {
-			return false, err
-		}
-		c = *nextC
-	}
-	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
-}
+// func verifyRing(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, error) {
+// 	c := *sig.c
+// 	cBefore := *sig.c
+// 	if len(R.keys) != len(sig.r){
+// 		return false, errors.New("MLSAG Error : Malformed Ring")
+// 	}
+// 	for i := 0; i < len(sig.r); i += 1 {
+// 		nextC, err := calculateNextC(
+// 			message,
+// 			sig.r[i], &c,
+// 			R.keys[i],
+// 			sig.keyImages,
+// 		)
+// 		if err != nil {
+// 			return false, err
+// 		}
+// 		c = *nextC
+// 	}
+// 	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
+// }
 
-func Verify(sig *MlsagSig, K *Ring, message []byte) (bool, error) {
-	if len(message) != common.HashSize {
-		return false, errors.New("Cannot mlsag verify the message because its length is not 32, maybe it has not been hashed")
-	}
-	message32byte := [32]byte{}
-	copy(message32byte[:], message)
-	b1 := verifyKeyImages(sig.keyImages)
-	b2, err := verifyRing(sig, K, message32byte)
-	return (b1 && b2), err
-}
+// func Verify(sig *MlsagSig, K *Ring, message []byte) (bool, error) {
+// 	if len(message) != common.HashSize {
+// 		return false, errors.New("Cannot mlsag verify the message because its length is not 32, maybe it has not been hashed")
+// 	}
+// 	message32byte := [32]byte{}
+// 	copy(message32byte[:], message)
+// 	b1 := verifyKeyImages(sig.keyImages)
+// 	b2, err := verifyRing(sig, K, message32byte)
+// 	return (b1 && b2), err
+// }
 
 func (this *Mlsag) Sign(message []byte) (*MlsagSig, error) {
 	if len(message) != common.HashSize {

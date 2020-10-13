@@ -19,7 +19,13 @@ import (
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 	zku "github.com/incognitochain/incognito-chain/privacy/privacy_v1/zeroknowledge/utils"
 	"github.com/incognitochain/incognito-chain/transaction/utils"
+	"github.com/incognitochain/incognito-chain/wallet"
 )
+
+type WalletHelper struct{}
+func (w *WalletHelper) IsPublicKeyBurningAddress(pk privacy.PublicKey) bool{
+	return wallet.IsPublicKeyBurningAddress(pk)
+}
 
 type RandomCommitmentsProcessParam struct {
 	usableInputCoins []coin.PlainCoin

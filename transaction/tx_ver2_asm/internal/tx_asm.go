@@ -509,11 +509,6 @@ func (tx *Tx) sign(inp []privacy.PlainCoin, out []*privacy.CoinV2, params *InitP
 
 func (tx *Tx) InitASM(params *InitParamsAsm) error {
 	innerParams := params.GetGenericParams()
-
-	if err := ValidateTxParams(innerParams); err != nil {
-		return err
-	}
-
 	// Init tx and params (tx and params will be changed)
 	if err := tx.initializeTxAndParams(innerParams); err != nil {
 		return err
@@ -548,25 +543,6 @@ func (tx *TxBase) initializeTxAndParams(params *TxPrivacyInitParams) error {
 	// Params: update balance if overbalance
 	if err = updateParamsWhenOverBalance(params, senderPaymentAddress); err != nil {
 		return err
-	}
-	return nil
-}
-
-func ValidateTxParams(params *TxPrivacyInitParams) error {
-	if len(params.InputCoins) > 255 {
-		return genericError
-	}
-	if len(params.PaymentInfo) > 254 {
-		return genericError
-	}
-
-	if params.TokenID == nil {
-		// using default PRV
-		params.TokenID = &common.Hash{}
-		err := params.TokenID.SetBytes(PRVCoinID[:])
-		if err != nil {
-			return genericError
-		}
 	}
 	return nil
 }
@@ -616,6 +592,7 @@ func updateParamsWhenOverBalance(params *TxPrivacyInitParams, senderPaymentAddre
 	// Calculate sum of all input coins' value
 	sumInputValue := uint64(0)
 	for _, coin := range params.InputCoins {
+		fmt.Printf("Input amount is %v - Mask is %v\nAsset tag is %v\n", coin.GetValue(), coin.GetRandomness(), coin.(*privacy.CoinV2).GetAssetTag())
 		sumInputValue += coin.GetValue()
 	}
 

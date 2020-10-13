@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
 	"github.com/incognitochain/incognito-chain/privacy/key"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
@@ -85,16 +84,12 @@ type CoinV2 struct {
 }
 
 func (c CoinV2) ParsePrivateKeyOfCoin(privKey key.PrivateKey) (*operation.Scalar, error) {
-	keySet := new(incognitokey.KeySet)
-	if err := keySet.InitFromPrivateKey(&privKey); err != nil {
-		err := errors.New("Cannot init keyset from privateKey")
-		return nil, errhandler.NewPrivacyErr(errhandler.InvalidPrivateKeyErr, err)
-	}
+	readonlyKey := key.GenerateViewingKey(privKey[:])
 	txRandomPoint, index, err := c.GetTxRandomDetail()
 	if err != nil {
 		return nil, err
 	}
-	rK := new(operation.Point).ScalarMult(txRandomPoint, keySet.ReadonlyKey.GetPrivateView()) //rG * k = rK
+	rK := new(operation.Point).ScalarMult(txRandomPoint, readonlyKey.GetPrivateView()) //rG * k = rK
 	H := operation.HashToScalar(append(rK.ToBytesS(), common.Uint32ToBytes(index)...))        // Hash(rK, index)
 
 	k := new(operation.Scalar).FromBytesS(privKey)
@@ -147,10 +142,10 @@ func (c *CoinV2) ConcealInputCoin() {
 	c.SetTxRandomDetail(new(operation.Point).Identity(), 0)
 }
 
-func (c *CoinV2) Decrypt(keySet *incognitokey.KeySet) (PlainCoin, error) {
+func (c *CoinV2) Decrypt(keySet IKeySet) (PlainCoin, error) {
 	// Must parse keyImage first in any situation
-	if len(keySet.PrivateKey) > 0 {
-		keyImage, err := c.ParseKeyImageWithPrivateKey(keySet.PrivateKey)
+	if len(keySet.GetPrivateKey()) > 0 {
+		keyImage, err := c.ParseKeyImageWithPrivateKey(keySet.GetPrivateKey())
 		if err != nil {
 			errReturn := errors.New("Cannot parse key image with privateKey CoinV2" + err.Error())
 			return nil, errhandler.NewPrivacyErr(errhandler.ParseKeyImageWithPrivateKeyErr, errReturn)
@@ -164,8 +159,8 @@ func (c *CoinV2) Decrypt(keySet *incognitokey.KeySet) (PlainCoin, error) {
 		err := errors.New("Cannot Decrypt CoinV2: Keyset is empty")
 		return nil, errhandler.NewPrivacyErr(errhandler.DecryptOutputCoinErr, err)
 	}
-	viewKey := keySet.ReadonlyKey
-	if len(viewKey.Rk) == 0 && len(keySet.PrivateKey) == 0 {
+	viewKey := keySet.GetReadOnlyKey()
+	if len(viewKey.Rk) == 0 && len(keySet.GetPrivateKey()) == 0 {
 		err := errors.New("Cannot Decrypt CoinV2: Keyset does not contain viewkey or privatekey")
 		return nil, errhandler.NewPrivacyErr(errhandler.DecryptOutputCoinErr, err)
 	}

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/crypto/sha3"
 
-	"github.com/ethereum/go-ethereum/crypto"
+	// "github.com/ethereum/go-ethereum/crypto"
 )
 
 var InvalidMaxHashSizeErr = errors.New("invalid max hash size")
@@ -165,12 +165,12 @@ func (hashObj *Hash) Cmp(target *Hash) (int, error) {
 }
 
 // Keccak256 returns Keccak256 hash as a Hash object for storing and comparing
-func Keccak256(data ...[]byte) Hash {
-	h := crypto.Keccak256(data...)
-	r := Hash{}
-	copy(r[:], h)
-	return r
-}
+// func Keccak256(data ...[]byte) Hash {
+// 	h := crypto.Keccak256(data...)
+// 	r := Hash{}
+// 	copy(r[:], h)
+// 	return r
+// }
 
 func HashArrayInterface(target interface{}) (Hash, error) {
 	arr := InterfaceSlice(target)

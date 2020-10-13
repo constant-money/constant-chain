@@ -2,7 +2,7 @@ package bulletproofs
 
 import (
 	"errors"
-	"math"
+	// "math"
 
 	"github.com/incognitochain/incognito-chain/privacy/operation"
 )
@@ -34,20 +34,20 @@ func (inner *InnerProductProof) Init() *InnerProductProof {
 	return inner
 }
 
-func (proof InnerProductProof) ValidateSanity() bool {
-	if len(proof.l) != len(proof.r) {
-		return false
-	}
-	for i := 0; i < len(proof.l); i++ {
-		if !proof.l[i].PointValid() || !proof.r[i].PointValid() {
-			return false
-		}
-	}
-	if !proof.a.ScalarValid() || !proof.b.ScalarValid() {
-		return false
-	}
-	return proof.p.PointValid()
-}
+// func (proof InnerProductProof) ValidateSanity() bool {
+// 	if len(proof.l) != len(proof.r) {
+// 		return false
+// 	}
+// 	for i := 0; i < len(proof.l); i++ {
+// 		if !proof.l[i].PointValid() || !proof.r[i].PointValid() {
+// 			return false
+// 		}
+// 	}
+// 	if !proof.a.ScalarValid() || !proof.b.ScalarValid() {
+// 		return false
+// 	}
+// 	return proof.p.PointValid()
+// }
 
 func (proof InnerProductProof) Bytes() []byte {
 	var res []byte
@@ -223,125 +223,125 @@ func (wit InnerProductWitness) Prove(GParam []*operation.Point, HParam []*operat
 
 	return proof, nil
 }
-func (proof InnerProductProof) Verify(GParam []*operation.Point, HParam []*operation.Point, uParam *operation.Point, hashCache []byte) bool {
-	//var aggParam = newBulletproofParams(1)
-	p := new(operation.Point)
-	p.Set(proof.p)
+// func (proof InnerProductProof) Verify(GParam []*operation.Point, HParam []*operation.Point, uParam *operation.Point, hashCache []byte) bool {
+// 	//var aggParam = newBulletproofParams(1)
+// 	p := new(operation.Point)
+// 	p.Set(proof.p)
 
-	n := len(GParam)
-	G := make([]*operation.Point, n)
-	H := make([]*operation.Point, n)
-	for i := range G {
-		G[i] = new(operation.Point).Set(GParam[i])
-		H[i] = new(operation.Point).Set(HParam[i])
-	}
+// 	n := len(GParam)
+// 	G := make([]*operation.Point, n)
+// 	H := make([]*operation.Point, n)
+// 	for i := range G {
+// 		G[i] = new(operation.Point).Set(GParam[i])
+// 		H[i] = new(operation.Point).Set(HParam[i])
+// 	}
 
-	for i := range proof.l {
-		nPrime := n / 2
-		x := generateChallenge(hashCache, []*operation.Point{proof.l[i], proof.r[i]})
-		hashCache = new(operation.Scalar).Set(x).ToBytesS()
-		xInverse := new(operation.Scalar).Invert(x)
-		xSquare := new(operation.Scalar).Mul(x, x)
-		xSquareInverse := new(operation.Scalar).Mul(xInverse, xInverse)
+// 	for i := range proof.l {
+// 		nPrime := n / 2
+// 		x := generateChallenge(hashCache, []*operation.Point{proof.l[i], proof.r[i]})
+// 		hashCache = new(operation.Scalar).Set(x).ToBytesS()
+// 		xInverse := new(operation.Scalar).Invert(x)
+// 		xSquare := new(operation.Scalar).Mul(x, x)
+// 		xSquareInverse := new(operation.Scalar).Mul(xInverse, xInverse)
 
-		// calculate GPrime, HPrime, PPrime for the next loop
-		GPrime := make([]*operation.Point, nPrime)
-		HPrime := make([]*operation.Point, nPrime)
+// 		// calculate GPrime, HPrime, PPrime for the next loop
+// 		GPrime := make([]*operation.Point, nPrime)
+// 		HPrime := make([]*operation.Point, nPrime)
 
-		for j := 0; j < len(GPrime); j++ {
-			GPrime[j] = new(operation.Point).AddPedersen(xInverse, G[j], x, G[j+nPrime])
-			HPrime[j] = new(operation.Point).AddPedersen(x, H[j], xInverse, H[j+nPrime])
-		}
-		// calculate x^2 * l + P + xInverse^2 * r
-		PPrime := new(operation.Point).AddPedersen(xSquare, proof.l[i], xSquareInverse, proof.r[i])
-		PPrime.Add(PPrime, p)
+// 		for j := 0; j < len(GPrime); j++ {
+// 			GPrime[j] = new(operation.Point).AddPedersen(xInverse, G[j], x, G[j+nPrime])
+// 			HPrime[j] = new(operation.Point).AddPedersen(x, H[j], xInverse, H[j+nPrime])
+// 		}
+// 		// calculate x^2 * l + P + xInverse^2 * r
+// 		PPrime := new(operation.Point).AddPedersen(xSquare, proof.l[i], xSquareInverse, proof.r[i])
+// 		PPrime.Add(PPrime, p)
 
-		p = PPrime
-		G = GPrime
-		H = HPrime
-		n = nPrime
-	}
+// 		p = PPrime
+// 		G = GPrime
+// 		H = HPrime
+// 		n = nPrime
+// 	}
 
-	c := new(operation.Scalar).Mul(proof.a, proof.b)
-	rightPoint := new(operation.Point).AddPedersen(proof.a, G[0], proof.b, H[0])
-	rightPoint.Add(rightPoint, new(operation.Point).ScalarMult(uParam, c))
-	res := operation.IsPointEqual(rightPoint, p)
-	if !res {
-		Logger.Log.Error("Inner product argument failed:")
-		Logger.Log.Error("p: %v\n", p)
-		Logger.Log.Error("RightPoint: %v\n", rightPoint)
-	}
+// 	c := new(operation.Scalar).Mul(proof.a, proof.b)
+// 	rightPoint := new(operation.Point).AddPedersen(proof.a, G[0], proof.b, H[0])
+// 	rightPoint.Add(rightPoint, new(operation.Point).ScalarMult(uParam, c))
+// 	res := operation.IsPointEqual(rightPoint, p)
+// 	if !res {
+// 		Logger.Log.Error("Inner product argument failed:")
+// 		Logger.Log.Error("p: %v\n", p)
+// 		Logger.Log.Error("RightPoint: %v\n", rightPoint)
+// 	}
 
-	return res
-}
+// 	return res
+// }
 
-func (proof InnerProductProof) VerifyFaster(GParam []*operation.Point, HParam []*operation.Point, uParam *operation.Point, hashCache []byte) bool {
-	//var aggParam = newBulletproofParams(1)
-	p := new(operation.Point)
-	p.Set(proof.p)
-	n := len(GParam)
-	G := make([]*operation.Point, n)
-	H := make([]*operation.Point, n)
-	s := make([]*operation.Scalar, n)
-	sInverse := make([]*operation.Scalar, n)
+// func (proof InnerProductProof) VerifyFaster(GParam []*operation.Point, HParam []*operation.Point, uParam *operation.Point, hashCache []byte) bool {
+// 	//var aggParam = newBulletproofParams(1)
+// 	p := new(operation.Point)
+// 	p.Set(proof.p)
+// 	n := len(GParam)
+// 	G := make([]*operation.Point, n)
+// 	H := make([]*operation.Point, n)
+// 	s := make([]*operation.Scalar, n)
+// 	sInverse := make([]*operation.Scalar, n)
 
-	for i := range G {
-		G[i] = new(operation.Point).Set(GParam[i])
-		H[i] = new(operation.Point).Set(HParam[i])
-		s[i] = new(operation.Scalar).FromUint64(1)
-		sInverse[i] = new(operation.Scalar).FromUint64(1)
-	}
-	logN := int(math.Log2(float64(n)))
-	xList := make([]*operation.Scalar, logN)
-	xInverseList := make([]*operation.Scalar, logN)
-	xSquareList := make([]*operation.Scalar, logN)
-	xInverseSquare_List := make([]*operation.Scalar, logN)
+// 	for i := range G {
+// 		G[i] = new(operation.Point).Set(GParam[i])
+// 		H[i] = new(operation.Point).Set(HParam[i])
+// 		s[i] = new(operation.Scalar).FromUint64(1)
+// 		sInverse[i] = new(operation.Scalar).FromUint64(1)
+// 	}
+// 	logN := int(math.Log2(float64(n)))
+// 	xList := make([]*operation.Scalar, logN)
+// 	xInverseList := make([]*operation.Scalar, logN)
+// 	xSquareList := make([]*operation.Scalar, logN)
+// 	xInverseSquare_List := make([]*operation.Scalar, logN)
 
-	//a*s ; b*s^-1
+// 	//a*s ; b*s^-1
 
-	for i := range proof.l {
-		// calculate challenge x = hash(hash(G || H || u || p) || x || l || r)
-		xList[i] = generateChallenge(hashCache, []*operation.Point{proof.l[i], proof.r[i]})
-		hashCache = new(operation.Scalar).Set(xList[i]).ToBytesS()
+// 	for i := range proof.l {
+// 		// calculate challenge x = hash(hash(G || H || u || p) || x || l || r)
+// 		xList[i] = generateChallenge(hashCache, []*operation.Point{proof.l[i], proof.r[i]})
+// 		hashCache = new(operation.Scalar).Set(xList[i]).ToBytesS()
 
-		xInverseList[i] = new(operation.Scalar).Invert(xList[i])
-		xSquareList[i] = new(operation.Scalar).Mul(xList[i], xList[i])
-		xInverseSquare_List[i] = new(operation.Scalar).Mul(xInverseList[i], xInverseList[i])
+// 		xInverseList[i] = new(operation.Scalar).Invert(xList[i])
+// 		xSquareList[i] = new(operation.Scalar).Mul(xList[i], xList[i])
+// 		xInverseSquare_List[i] = new(operation.Scalar).Mul(xInverseList[i], xInverseList[i])
 
-		//Update s, s^-1
-		for j := 0; j < n; j++ {
-			if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
-				s[j] = new(operation.Scalar).Mul(s[j], xList[i])
-				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], xInverseList[i])
-			} else {
-				s[j] = new(operation.Scalar).Mul(s[j], xInverseList[i])
-				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], xList[i])
-			}
-		}
-	}
+// 		//Update s, s^-1
+// 		for j := 0; j < n; j++ {
+// 			if j&int(math.Pow(2, float64(logN-i-1))) != 0 {
+// 				s[j] = new(operation.Scalar).Mul(s[j], xList[i])
+// 				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], xInverseList[i])
+// 			} else {
+// 				s[j] = new(operation.Scalar).Mul(s[j], xInverseList[i])
+// 				sInverse[j] = new(operation.Scalar).Mul(sInverse[j], xList[i])
+// 			}
+// 		}
+// 	}
 
-	// Compute (g^s)^a (h^-s)^b u^(ab) = p l^(x^2) r^(-x^2)
-	c := new(operation.Scalar).Mul(proof.a, proof.b)
-	rightHSPart1 := new(operation.Point).MultiScalarMult(s, G)
-	rightHSPart1.ScalarMult(rightHSPart1, proof.a)
-	rightHSPart2 := new(operation.Point).MultiScalarMult(sInverse, H)
-	rightHSPart2.ScalarMult(rightHSPart2, proof.b)
+// 	// Compute (g^s)^a (h^-s)^b u^(ab) = p l^(x^2) r^(-x^2)
+// 	c := new(operation.Scalar).Mul(proof.a, proof.b)
+// 	rightHSPart1 := new(operation.Point).MultiScalarMult(s, G)
+// 	rightHSPart1.ScalarMult(rightHSPart1, proof.a)
+// 	rightHSPart2 := new(operation.Point).MultiScalarMult(sInverse, H)
+// 	rightHSPart2.ScalarMult(rightHSPart2, proof.b)
 
-	rightHS := new(operation.Point).Add(rightHSPart1, rightHSPart2)
-	rightHS.Add(rightHS, new(operation.Point).ScalarMult(uParam, c))
+// 	rightHS := new(operation.Point).Add(rightHSPart1, rightHSPart2)
+// 	rightHS.Add(rightHS, new(operation.Point).ScalarMult(uParam, c))
 
-	leftHSPart1 := new(operation.Point).MultiScalarMult(xSquareList, proof.l)
-	leftHSPart2 := new(operation.Point).MultiScalarMult(xInverseSquare_List, proof.r)
+// 	leftHSPart1 := new(operation.Point).MultiScalarMult(xSquareList, proof.l)
+// 	leftHSPart2 := new(operation.Point).MultiScalarMult(xInverseSquare_List, proof.r)
 
-	leftHS := new(operation.Point).Add(leftHSPart1, leftHSPart2)
-	leftHS.Add(leftHS, proof.p)
+// 	leftHS := new(operation.Point).Add(leftHSPart1, leftHSPart2)
+// 	leftHS.Add(leftHS, proof.p)
 
-	res := operation.IsPointEqual(rightHS, leftHS)
-	if !res {
-		Logger.Log.Error("Inner product argument failed:")
-		Logger.Log.Error("LHS: %v\n", leftHS)
-		Logger.Log.Error("RHS: %v\n", rightHS)
-	}
+// 	res := operation.IsPointEqual(rightHS, leftHS)
+// 	if !res {
+// 		Logger.Log.Error("Inner product argument failed:")
+// 		Logger.Log.Error("LHS: %v\n", leftHS)
+// 		Logger.Log.Error("RHS: %v\n", rightHS)
+// 	}
 
-	return res
-}
+// 	return res
+// }

@@ -1,7 +1,7 @@
 package schnorr
 
 import (
-	"crypto/subtle"
+	// "crypto/subtle"
 	"errors"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -114,20 +114,20 @@ func (privateKey SchnorrPrivateKey) Sign(data []byte) (*SchnSignature, error) {
 }
 
 //Verify is function which using for verify that the given signature was signed by by privatekey of the public key
-func (publicKey SchnorrPublicKey) Verify(signature *SchnSignature, data []byte) bool {
-	if signature == nil {
-		return false
-	}
-	rv := new(operation.Point).ScalarMult(publicKey.publicKey, signature.e)
-	rv.Add(rv, new(operation.Point).ScalarMult(publicKey.g, signature.z1))
-	if signature.z2 != nil {
-		rv.Add(rv, new(operation.Point).ScalarMult(publicKey.h, signature.z2))
-	}
-	msg := append(rv.ToBytesS(), data...)
+// func (publicKey SchnorrPublicKey) Verify(signature *SchnSignature, data []byte) bool {
+// 	if signature == nil {
+// 		return false
+// 	}
+// 	rv := new(operation.Point).ScalarMult(publicKey.publicKey, signature.e)
+// 	rv.Add(rv, new(operation.Point).ScalarMult(publicKey.g, signature.z1))
+// 	if signature.z2 != nil {
+// 		rv.Add(rv, new(operation.Point).ScalarMult(publicKey.h, signature.z2))
+// 	}
+// 	msg := append(rv.ToBytesS(), data...)
 
-	ev := operation.HashToScalar(msg)
-	return subtle.ConstantTimeCompare(ev.ToBytesS(), signature.e.ToBytesS()) == 1
-}
+// 	ev := operation.HashToScalar(msg)
+// 	return subtle.ConstantTimeCompare(ev.ToBytesS(), signature.e.ToBytesS()) == 1
+// }
 
 func (sig SchnSignature) Bytes() []byte {
 	bytes := append(sig.e.ToBytesS(), sig.z1.ToBytesS()...)

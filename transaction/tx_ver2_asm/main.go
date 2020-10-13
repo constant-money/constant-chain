@@ -7,16 +7,17 @@ import (
 	"syscall/js"
 )
 
-func createTx(_ js.Value, args []js.Value) interface{} {
-	if len(args)<2{
+var stopper chan int
+
+func createTx(_ js.Value, _js_inputs []js.Value) interface{}{
+	if len(_js_inputs)<2{
 		println("Invalid parameters")
 		return nil
 	}
-	result, err := internal.CreateTransaction(args[0].String(), int64(args[1].Int()))
+	result, err := internal.CreateTransaction(_js_inputs[0].String(), int64(_js_inputs[1].Int()))
 	if err != nil {
 		return nil
 	}
-
 	return result
 }
 
@@ -47,12 +48,13 @@ func cacheCoins(_ js.Value, args []js.Value) interface{} {
 }
 
 func main() {
-	c := make(chan struct{}, 0)
+	stopper = make(chan int, 0)
 	println("WASM resource loaded !")
 
 	js.Global().Set("createTransaction", js.FuncOf(createTx))
 	js.Global().Set("decompressCoins", js.FuncOf(decompressCoins))
 	js.Global().Set("cacheCoins", js.FuncOf(cacheCoins))
 
-	<-c
+	<-stopper
+	println("Exited !")
 }

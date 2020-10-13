@@ -5,7 +5,7 @@ type AggregatedRangeProof interface {
 	IsNil() bool
 	Bytes() []byte
 	SetBytes([]byte) error
-	Verify() (bool, error)
+	// Verify() (bool, error)
 }
 
 // type AggregatedRangeProofV1 = aggregatedrange.AggregatedRangeProof

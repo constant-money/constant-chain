@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
+	// "github.com/ethereum/go-ethereum/common"
 	"log"
 	"math/big"
 	"net"
@@ -562,12 +562,12 @@ func IndexOfUint64(target uint64, arr []uint64) int {
 	return -1
 }
 
-func TokenHashToString(h *Hash) string {
-	var propertyID [HashSize]byte
-	copy(propertyID[:], h[:])
-	propID := common.Hash(propertyID)
-	return propID.String()
-}
+// func TokenHashToString(h *Hash) string {
+// 	var propertyID [HashSize]byte
+// 	copy(propertyID[:], h[:])
+// 	propID := common.Hash(propertyID)
+// 	return propID.String()
+// }
 
 func TokenStringToHash(s string) (*Hash, error) {
 	return Hash{}.NewHashFromStr(s)

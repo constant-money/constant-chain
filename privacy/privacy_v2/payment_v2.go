@@ -7,7 +7,7 @@ import (
 	// "fmt"
 	"github.com/incognitochain/incognito-chain/privacy/proof/agg_interface"
 	"github.com/incognitochain/incognito-chain/wallet"
-	"strconv"
+	// "strconv"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
@@ -44,7 +44,8 @@ func (proof *PaymentProofV2) SetInputCoins(v []coin.PlainCoin) error {
 	proof.inputCoins = make([]coin.PlainCoin, len(v))
 	for i := 0; i < len(v); i += 1 {
 		b := v[i].Bytes()
-		if proof.inputCoins[i], err = coin.NewPlainCoinFromByte(b); err != nil {
+		proof.inputCoins[i] = &coin.CoinV2{}
+		if err = proof.inputCoins[i].SetBytes(b); err != nil {
 			Logger.Log.Errorf("Proofv2 cannot create inputCoins from new plain coin from bytes: err %v", err)
 			return err
 		}
@@ -206,7 +207,8 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 		}
 		coinBytes := proofbytes[offset : offset+lenInputCoin]
-		proof.inputCoins[i], err = coin.NewPlainCoinFromByte(coinBytes)
+		proof.inputCoins[i] = &coin.CoinV2{}
+		err = proof.inputCoins[i].SetBytes(coinBytes)
 		if err != nil {
 			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, err)
 		}
@@ -297,63 +299,63 @@ func (proof *PaymentProofV2) IsConfidentialAsset() (bool, error){
 	return false, errhandler.NewPrivacyErr(errhandler.UnexpectedErr, errors.New("Error : TX contains both confidential asset & non-CA coins"))
 }
 
-func (proof PaymentProofV2) ValidateSanity() (bool, error) {
-	if len(proof.GetInputCoins()) > 255 {
-		return false, errors.New("Input coins in tx are very large:" + strconv.Itoa(len(proof.GetInputCoins())))
-	}
+// func (proof PaymentProofV2) ValidateSanity() (bool, error) {
+// 	if len(proof.GetInputCoins()) > 255 {
+// 		return false, errors.New("Input coins in tx are very large:" + strconv.Itoa(len(proof.GetInputCoins())))
+// 	}
 
-	if len(proof.GetOutputCoins()) > 255 {
-		return false, errors.New("Output coins in tx are very large:" + strconv.Itoa(len(proof.GetOutputCoins())))
-	}
+// 	if len(proof.GetOutputCoins()) > 255 {
+// 		return false, errors.New("Output coins in tx are very large:" + strconv.Itoa(len(proof.GetOutputCoins())))
+// 	}
 
-	if !proof.aggregatedRangeProof.ValidateSanity() {
-		return false, errors.New("validate sanity Aggregated range proof failed")
-	}
+// 	if !proof.aggregatedRangeProof.ValidateSanity() {
+// 		return false, errors.New("validate sanity Aggregated range proof failed")
+// 	}
 
-	// check output coins with privacy
-	duplicatePublicKeys := make(map[string]bool)
-	outputCoins := proof.GetOutputCoins()
-	// cmsValues := proof.aggregatedRangeProof.GetCommitments()
-	for i, outputCoin := range outputCoins {
-		if outputCoin.GetPublicKey()==nil || !outputCoin.GetPublicKey().PointValid() {
-			return false, errors.New("validate sanity Public key of output coin failed")
-		}
+// 	// check output coins with privacy
+// 	duplicatePublicKeys := make(map[string]bool)
+// 	outputCoins := proof.GetOutputCoins()
+// 	// cmsValues := proof.aggregatedRangeProof.GetCommitments()
+// 	for i, outputCoin := range outputCoins {
+// 		if outputCoin.GetPublicKey()==nil || !outputCoin.GetPublicKey().PointValid() {
+// 			return false, errors.New("validate sanity Public key of output coin failed")
+// 		}
 
-		//check duplicate output addresses
-		pubkeyStr := string(outputCoin.GetPublicKey().ToBytesS())
-		if _, ok := duplicatePublicKeys[pubkeyStr]; ok {
-			return false, errors.New("Cannot have duplicate publickey ")
-		}
-		duplicatePublicKeys[pubkeyStr] = true
+// 		//check duplicate output addresses
+// 		pubkeyStr := string(outputCoin.GetPublicKey().ToBytesS())
+// 		if _, ok := duplicatePublicKeys[pubkeyStr]; ok {
+// 			return false, errors.New("Cannot have duplicate publickey ")
+// 		}
+// 		duplicatePublicKeys[pubkeyStr] = true
 
-		if !outputCoin.GetCommitment().PointValid() {
-			return false, errors.New("validate sanity Coin commitment of output coin failed")
-		}
+// 		if !outputCoin.GetCommitment().PointValid() {
+// 			return false, errors.New("validate sanity Coin commitment of output coin failed")
+// 		}
 
-		//re-compute the commitment if the output coin's address is the burning address
-		// burn TX cannot use confidential asset
-		if wallet.IsPublicKeyBurningAddress(outputCoins[i].GetPublicKey().ToBytesS()){
-			value := outputCoin.GetValue()
-			rand := outputCoin.GetRandomness()
-			commitment := operation.PedCom.CommitAtIndex(new(operation.Scalar).FromUint64(value), rand, coin.PedersenValueIndex)
-			outputCoin_specific, ok := outputCoin.(*coin.CoinV2)
-			if !ok{
-				return false, errors.New("Validate sanity - Cannot cast a coin to v2")
-			}
-			if outputCoin_specific.GetAssetTag()!=nil{
-				com, err := outputCoin_specific.ComputeCommitmentCA()
-				if err != nil{
-					return false, errors.New("Cannot compute commitment for confidential asset")
-				}
-				commitment = com
-			}
-			if !operation.IsPointEqual(commitment, outputCoin.GetCommitment()){
-				return false, errors.New("validate sanity Coin commitment of burned coin failed")
-			}
-		}
-	}
-	return true, nil
-}
+// 		//re-compute the commitment if the output coin's address is the burning address
+// 		// burn TX cannot use confidential asset
+// 		if wallet.IsPublicKeyBurningAddress(outputCoins[i].GetPublicKey().ToBytesS()){
+// 			value := outputCoin.GetValue()
+// 			rand := outputCoin.GetRandomness()
+// 			commitment := operation.PedCom.CommitAtIndex(new(operation.Scalar).FromUint64(value), rand, coin.PedersenValueIndex)
+// 			outputCoin_specific, ok := outputCoin.(*coin.CoinV2)
+// 			if !ok{
+// 				return false, errors.New("Validate sanity - Cannot cast a coin to v2")
+// 			}
+// 			if outputCoin_specific.GetAssetTag()!=nil{
+// 				com, err := outputCoin_specific.ComputeCommitmentCA()
+// 				if err != nil{
+// 					return false, errors.New("Cannot compute commitment for confidential asset")
+// 				}
+// 				commitment = com
+// 			}
+// 			if !operation.IsPointEqual(commitment, outputCoin.GetCommitment()){
+// 				return false, errors.New("validate sanity Coin commitment of burned coin failed")
+// 			}
+// 		}
+// 	}
+// 	return true, nil
+// }
 
 func Prove(inputCoins []coin.PlainCoin, outputCoins []*coin.CoinV2, sharedSecrets []*operation.Point, hasConfidentialAsset bool, paymentInfo []*key.PaymentInfo) (*PaymentProofV2, error) {
 	var err error
@@ -453,106 +455,106 @@ func Prove(inputCoins []coin.PlainCoin, outputCoins []*coin.CoinV2, sharedSecret
 }
 
 // TODO PRIVACY (recheck before devnet)
-func (proof PaymentProofV2) verifyHasConfidentialAsset(isBatch bool) (bool, error) {
-	cmsValues := proof.aggregatedRangeProof.GetCommitments()
-	if len(proof.GetOutputCoins())!=len(cmsValues){
-		return false, errors.New("Commitment length mismatch")
-	}
-	// Verify the proof that output values and sum of them do not exceed v_max
-	for i := 0; i < len(proof.outputCoins); i += 1 {
+// func (proof PaymentProofV2) verifyHasConfidentialAsset(isBatch bool) (bool, error) {
+// 	cmsValues := proof.aggregatedRangeProof.GetCommitments()
+// 	if len(proof.GetOutputCoins())!=len(cmsValues){
+// 		return false, errors.New("Commitment length mismatch")
+// 	}
+// 	// Verify the proof that output values and sum of them do not exceed v_max
+// 	for i := 0; i < len(proof.outputCoins); i += 1 {
 
-		if !proof.outputCoins[i].IsEncrypted() {
-			if wallet.IsPublicKeyBurningAddress(proof.outputCoins[i].GetPublicKey().ToBytesS()) {
-				continue
-			}
-			return false, errors.New("Verify has privacy should have every coin encrypted")
-		}
-		//check if output coins' commitment is the same as in the proof
-		if !operation.IsPointEqual(cmsValues[i], proof.outputCoins[i].GetCommitment()){
-			return false, errors.New("Coin & Proof Commitments mismatch")
-		}
-	}
-	// TODO : handle for batch
-	if isBatch == false {
-		theBase, err := bulletproofs.GetFirstAssetTag(proof.outputCoins)
-		if err != nil {
-			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
-		}
-		valid, err := proof.aggregatedRangeProof.VerifyUsingBase(theBase)
-		if !valid {
-			Logger.Log.Errorf("VERIFICATION PAYMENT PROOF V2: Multi-range failed")
-			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
-		}
-	}
-	return true, nil
-}
+// 		if !proof.outputCoins[i].IsEncrypted() {
+// 			if wallet.IsPublicKeyBurningAddress(proof.outputCoins[i].GetPublicKey().ToBytesS()) {
+// 				continue
+// 			}
+// 			return false, errors.New("Verify has privacy should have every coin encrypted")
+// 		}
+// 		//check if output coins' commitment is the same as in the proof
+// 		if !operation.IsPointEqual(cmsValues[i], proof.outputCoins[i].GetCommitment()){
+// 			return false, errors.New("Coin & Proof Commitments mismatch")
+// 		}
+// 	}
+// 	// TODO : handle for batch
+// 	if isBatch == false {
+// 		theBase, err := bulletproofs.GetFirstAssetTag(proof.outputCoins)
+// 		if err != nil {
+// 			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
+// 		}
+// 		valid, err := proof.aggregatedRangeProof.VerifyUsingBase(theBase)
+// 		if !valid {
+// 			Logger.Log.Errorf("VERIFICATION PAYMENT PROOF V2: Multi-range failed")
+// 			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
+// 		}
+// 	}
+// 	return true, nil
+// }
 
-func (proof PaymentProofV2) verifyHasNoPrivacy(isBatch bool) (bool, error) {
-	cmsValues := proof.aggregatedRangeProof.GetCommitments()
-	if len(proof.GetOutputCoins())!=len(cmsValues){
-		return false, errors.New("Commitment length mismatch")
-	}
-	// Verify the proof that output values and sum of them do not exceed v_max
-	for i := 0; i < len(proof.outputCoins); i += 1 {
+// func (proof PaymentProofV2) verifyHasNoPrivacy(isBatch bool) (bool, error) {
+// 	cmsValues := proof.aggregatedRangeProof.GetCommitments()
+// 	if len(proof.GetOutputCoins())!=len(cmsValues){
+// 		return false, errors.New("Commitment length mismatch")
+// 	}
+// 	// Verify the proof that output values and sum of them do not exceed v_max
+// 	for i := 0; i < len(proof.outputCoins); i += 1 {
 
-		if !proof.outputCoins[i].IsEncrypted() {
-			if wallet.IsPublicKeyBurningAddress(proof.outputCoins[i].GetPublicKey().ToBytesS()) {
-				continue
-			}
-			return false, errors.New("Verify has privacy should have every coin encrypted")
-		}
-		//check if output coins' commitment is the same as in the proof
-		if !operation.IsPointEqual(cmsValues[i], proof.outputCoins[i].GetCommitment()){
-			return false, errors.New("Coin & Proof Commitments mismatch")
-		}
-	}
-	if isBatch == false {
-		valid, err := proof.aggregatedRangeProof.Verify()
-		if !valid {
-			Logger.Log.Errorf("VERIFICATION PAYMENT PROOF V2: Multi-range failed")
-			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
-		}
-	}
-	return true, nil
+// 		if !proof.outputCoins[i].IsEncrypted() {
+// 			if wallet.IsPublicKeyBurningAddress(proof.outputCoins[i].GetPublicKey().ToBytesS()) {
+// 				continue
+// 			}
+// 			return false, errors.New("Verify has privacy should have every coin encrypted")
+// 		}
+// 		//check if output coins' commitment is the same as in the proof
+// 		if !operation.IsPointEqual(cmsValues[i], proof.outputCoins[i].GetCommitment()){
+// 			return false, errors.New("Coin & Proof Commitments mismatch")
+// 		}
+// 	}
+// 	if isBatch == false {
+// 		valid, err := proof.aggregatedRangeProof.Verify()
+// 		if !valid {
+// 			Logger.Log.Errorf("VERIFICATION PAYMENT PROOF V2: Multi-range failed")
+// 			return false, errhandler.NewPrivacyErr(errhandler.VerifyAggregatedProofFailedErr, err)
+// 		}
+// 	}
+// 	return true, nil
 
-	// sumInput, sumOutput := uint64(0), uint64(0)
-	// for i := 0; i < len(proof.inputCoins); i += 1 {
-	// 	if proof.inputCoins[i].IsEncrypted() {
-	// 		return false, errors.New("Verify has no privacy should not have any coin encrypted")
-	// 	}
-	// 	sumInput += proof.inputCoins[i].GetValue()
-	// }
-	// for i := 0; i < len(proof.outputCoins); i += 1 {
-	// 	if proof.outputCoins[i].IsEncrypted() {
-	// 		return false, errors.New("Verify has no privacy should not have any coin encrypted")
-	// 	}
-	// 	sumOutput += proof.outputCoins[i].GetValue()
-	// }
-	// tmpSum := sumOutput + fee
-	// if tmpSum < sumOutput || tmpSum < fee {
-	// 	return false, errors.New(fmt.Sprintf("Overflown sumOutput+fee: output value = %v, fee = %v, tmpSum = %v\n", sumOutput, fee, tmpSum))
-	// }
+// 	// sumInput, sumOutput := uint64(0), uint64(0)
+// 	// for i := 0; i < len(proof.inputCoins); i += 1 {
+// 	// 	if proof.inputCoins[i].IsEncrypted() {
+// 	// 		return false, errors.New("Verify has no privacy should not have any coin encrypted")
+// 	// 	}
+// 	// 	sumInput += proof.inputCoins[i].GetValue()
+// 	// }
+// 	// for i := 0; i < len(proof.outputCoins); i += 1 {
+// 	// 	if proof.outputCoins[i].IsEncrypted() {
+// 	// 		return false, errors.New("Verify has no privacy should not have any coin encrypted")
+// 	// 	}
+// 	// 	sumOutput += proof.outputCoins[i].GetValue()
+// 	// }
+// 	// tmpSum := sumOutput + fee
+// 	// if tmpSum < sumOutput || tmpSum < fee {
+// 	// 	return false, errors.New(fmt.Sprintf("Overflown sumOutput+fee: output value = %v, fee = %v, tmpSum = %v\n", sumOutput, fee, tmpSum))
+// 	// }
 
-	// if sumInput != tmpSum {
-	// 	return false, errors.New("VerifyHasNo privacy has sum input different from sum output with fee")
-	// }
-	// return true, nil
-}
+// 	// if sumInput != tmpSum {
+// 	// 	return false, errors.New("VerifyHasNo privacy has sum input different from sum output with fee")
+// 	// }
+// 	// return true, nil
+// }
 
-func (proof PaymentProofV2) Verify(hasConfidentialAsset bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, isBatch bool, additionalData interface{}) (bool, error) {
-	inputCoins := proof.GetInputCoins()
-	dupMap := make(map[string]bool)
-	for _,coin := range inputCoins{
-		identifier := base64.StdEncoding.EncodeToString(coin.GetKeyImage().ToBytesS())
-		_, exists := dupMap[identifier]
-		if exists{
-			return false, errors.New("Duplicate input coin in PaymentProofV2")
-		}
-		dupMap[identifier] = true
-	}
+// func (proof PaymentProofV2) Verify(hasConfidentialAsset bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, isBatch bool, additionalData interface{}) (bool, error) {
+// 	inputCoins := proof.GetInputCoins()
+// 	dupMap := make(map[string]bool)
+// 	for _,coin := range inputCoins{
+// 		identifier := base64.StdEncoding.EncodeToString(coin.GetKeyImage().ToBytesS())
+// 		_, exists := dupMap[identifier]
+// 		if exists{
+// 			return false, errors.New("Duplicate input coin in PaymentProofV2")
+// 		}
+// 		dupMap[identifier] = true
+// 	}
 
-	if !hasConfidentialAsset{
-		return proof.verifyHasNoPrivacy(isBatch)
-	}
-	return proof.verifyHasConfidentialAsset(isBatch)
-}
+// 	if !hasConfidentialAsset{
+// 		return proof.verifyHasNoPrivacy(isBatch)
+// 	}
+// 	return proof.verifyHasConfidentialAsset(isBatch)
+// }

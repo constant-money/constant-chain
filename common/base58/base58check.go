@@ -7,7 +7,7 @@ package base58
 import (
 	"bytes"
 	"errors"
-	lru "github.com/hashicorp/golang-lru"
+	// lru "github.com/hashicorp/golang-lru"
 
 	"github.com/incognitochain/incognito-chain/common"
 )
@@ -34,17 +34,17 @@ func ChecksumFirst4Bytes(data []byte) (ckSum []byte) {
 type Base58Check struct {
 }
 
-var base58Cache, _ = lru.New(10000)
+// var base58Cache, _ = lru.New(10000)
 
 // Encode prepends a version byte and appends a four byte checksum.
 func (self Base58Check) Encode(input []byte, version byte) string {
 	/*if len(input) == 0 {
 		return ""
 	}*/
-	value, exist := base58Cache.Get(string(input))
-	if exist {
-		return value.(string)
-	}
+	// value, exist := base58Cache.Get(string(input))
+	// if exist {
+	// 	return value.(string)
+	// }
 
 	b := make([]byte, 0, 1+len(input)+common.CheckSumLen)
 	b = append(b, version)
@@ -52,7 +52,7 @@ func (self Base58Check) Encode(input []byte, version byte) string {
 	cksum := ChecksumFirst4Bytes(b)
 	b = append(b, cksum[:]...)
 	encodeData := Base58{}.Encode(b)
-	base58Cache.Add(string(input), encodeData)
+	// base58Cache.Add(string(input), encodeData)
 	return encodeData
 }
 

@@ -499,6 +499,9 @@ func (txToken TxToken) ValidateTransaction(hasPrivacyCoin bool, transactionState
 }
 
 func (txToken TxToken) ValidateSanityData(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) (bool, error) {
+	if txToken.GetTxBase() == nil && txToken.TxTokenData.TxNormal == nil {
+		return false, errors.New("Malform TX token")
+	}
 	if txToken.GetTxBase().GetProof() == nil && txToken.TxTokenData.TxNormal.GetProof() == nil {
 		return false, errors.New("Tx Privacy Ver 2 must have a proof")
 	}

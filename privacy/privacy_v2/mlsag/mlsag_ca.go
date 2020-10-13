@@ -2,7 +2,7 @@ package mlsag
 
 import (
 	"errors"
-	"bytes"
+	// "bytes"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
@@ -27,16 +27,16 @@ func (ml *Mlsag) SignConfidentialAsset(message []byte) (*MlsagSig, error) {
 	}, nil
 }
 
-func VerifyConfidentialAsset(sig *MlsagSig, K *Ring, message []byte) (bool, error) {
-	if len(message) != common.HashSize {
-		return false, errors.New("Cannot mlsag verify the message because its length is not 32, maybe it has not been hashed")
-	}
-	message32byte := [32]byte{}
-	copy(message32byte[:], message)
-	b1 := verifyKeyImages(sig.keyImages)
-	b2, err := verifyRingCA(sig, K, message32byte)
-	return (b1 && b2), err
-}
+// func VerifyConfidentialAsset(sig *MlsagSig, K *Ring, message []byte) (bool, error) {
+// 	if len(message) != common.HashSize {
+// 		return false, errors.New("Cannot mlsag verify the message because its length is not 32, maybe it has not been hashed")
+// 	}
+// 	message32byte := [32]byte{}
+// 	copy(message32byte[:], message)
+// 	b1 := verifyKeyImages(sig.keyImages)
+// 	b2, err := verifyRingCA(sig, K, message32byte)
+// 	return (b1 && b2), err
+// }
 
 func NewMlsagCA(privateKeys []*operation.Scalar, R *Ring, pi int) *Mlsag {
 	return &Mlsag{
@@ -186,23 +186,23 @@ func (this *Mlsag) calculateCCA(message [common.HashSize]byte, alpha []*operatio
 	return c, nil
 }
 
-func verifyRingCA(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, error) {
-	c := *sig.c
-	cBefore := *sig.c
-	if len(R.keys) != len(sig.r){
-		return false, errors.New("MLSAG Error : Malformed Ring")
-	}
-	for i := 0; i < len(sig.r); i += 1 {
-		nextC, err := calculateNextCCA(
-			message,
-			sig.r[i], &c,
-			R.keys[i],
-			sig.keyImages,
-		)
-		if err != nil {
-			return false, err
-		}
-		c = *nextC
-	}
-	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
-}
+// func verifyRingCA(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, error) {
+// 	c := *sig.c
+// 	cBefore := *sig.c
+// 	if len(R.keys) != len(sig.r){
+// 		return false, errors.New("MLSAG Error : Malformed Ring")
+// 	}
+// 	for i := 0; i < len(sig.r); i += 1 {
+// 		nextC, err := calculateNextCCA(
+// 			message,
+// 			sig.r[i], &c,
+// 			R.keys[i],
+// 			sig.keyImages,
+// 		)
+// 		if err != nil {
+// 			return false, err
+// 		}
+// 		c = *nextC
+// 	}
+// 	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
+// }

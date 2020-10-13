@@ -22,6 +22,16 @@ type KeySet struct {
 	OTAKey 		   key.OTAKey
 }
 
+func (keySet *KeySet) GetPrivateKey() key.PrivateKey{
+	return keySet.PrivateKey
+}
+func (keySet *KeySet) GetPaymentAddress() key.PaymentAddress{
+	return keySet.PaymentAddress
+}
+func (keySet *KeySet) GetReadOnlyKey() key.ViewingKey{
+	return keySet.ReadonlyKey
+}
+
 // GenerateKey generates key set from seed in byte array
 func (keySet *KeySet) GenerateKey(seed []byte) *KeySet {
 	keySet.PrivateKey = key.GeneratePrivateKey(seed)
@@ -83,26 +93,26 @@ func (keySet KeySet) Sign(data []byte) ([]byte, error) {
 // Verify receives data and signature
 // It checks whether the given signature is the signature of data
 // and was signed by private key corresponding to public key in keySet or not
-func (keySet KeySet) Verify(data, signature []byte) (bool, error) {
-	hash := common.HashB(data)
-	isValid := false
+// func (keySet KeySet) Verify(data, signature []byte) (bool, error) {
+// 	hash := common.HashB(data)
+// 	isValid := false
 
-	pubKeySig := new(schnorr.SchnorrPublicKey)
-	PK, err := new(operation.Point).FromBytesS(keySet.PaymentAddress.Pk)
-	if err != nil {
-		return false, NewCashecError(InvalidVerificationKeyErr, nil)
-	}
-	pubKeySig.Set(PK)
+// 	pubKeySig := new(schnorr.SchnorrPublicKey)
+// 	PK, err := new(operation.Point).FromBytesS(keySet.PaymentAddress.Pk)
+// 	if err != nil {
+// 		return false, NewCashecError(InvalidVerificationKeyErr, nil)
+// 	}
+// 	pubKeySig.Set(PK)
 
-	signatureSetBytes := new(schnorr.SchnSignature)
-	err = signatureSetBytes.SetBytes(signature)
-	if err != nil {
-		return false, err
-	}
+// 	signatureSetBytes := new(schnorr.SchnSignature)
+// 	err = signatureSetBytes.SetBytes(signature)
+// 	if err != nil {
+// 		return false, err
+// 	}
 
-	isValid = pubKeySig.Verify(signatureSetBytes, hash)
-	return isValid, nil
-}
+// 	isValid = pubKeySig.Verify(signatureSetBytes, hash)
+// 	return isValid, nil
+// }
 
 // GetPublicKeyInBase58CheckEncode returns the public key which is base58 check encoded
 func (keySet KeySet) GetPublicKeyInBase58CheckEncode() string {
@@ -131,29 +141,29 @@ func (keySet KeySet) SignDataInBase58CheckEncode(data []byte) (string, error) {
 // and a base58 check encoded public key (pbkB58)
 // It decodes pbkB58 and sigB58
 // after that, it verifies the given signature is corresponding to data using verification key is pbkB58
-func ValidateDataB58(publicKeyInBase58CheckEncode string, signatureInBase58CheckEncode string, data []byte) error {
-	// decode public key (verification key)
-	decodedPubKey, _, err := base58.Base58Check{}.Decode(publicKeyInBase58CheckEncode)
-	if err != nil {
-		return NewCashecError(B58DecodePubKeyErr, nil)
-	}
-	validatorKeySet := KeySet{}
-	validatorKeySet.PaymentAddress.Pk = make([]byte, len(decodedPubKey))
-	copy(validatorKeySet.PaymentAddress.Pk[:], decodedPubKey)
+// func ValidateDataB58(publicKeyInBase58CheckEncode string, signatureInBase58CheckEncode string, data []byte) error {
+// 	// decode public key (verification key)
+// 	decodedPubKey, _, err := base58.Base58Check{}.Decode(publicKeyInBase58CheckEncode)
+// 	if err != nil {
+// 		return NewCashecError(B58DecodePubKeyErr, nil)
+// 	}
+// 	validatorKeySet := KeySet{}
+// 	validatorKeySet.PaymentAddress.Pk = make([]byte, len(decodedPubKey))
+// 	copy(validatorKeySet.PaymentAddress.Pk[:], decodedPubKey)
 
-	// decode the signature
-	decodedSig, _, err := base58.Base58Check{}.Decode(signatureInBase58CheckEncode)
-	if err != nil {
-		return NewCashecError(B58DecodeSigErr, nil)
-	}
+// 	// decode the signature
+// 	decodedSig, _, err := base58.Base58Check{}.Decode(signatureInBase58CheckEncode)
+// 	if err != nil {
+// 		return NewCashecError(B58DecodeSigErr, nil)
+// 	}
 
-	// validate the data and signature
-	isValid, err := validatorKeySet.Verify(data, decodedSig)
-	if err != nil {
-		return NewCashecError(B58ValidateErr, nil)
-	}
-	if !isValid {
-		return NewCashecError(InvalidDataValidateErr, nil)
-	}
-	return nil
-}
+// 	// validate the data and signature
+// 	isValid, err := validatorKeySet.Verify(data, decodedSig)
+// 	if err != nil {
+// 		return NewCashecError(B58ValidateErr, nil)
+// 	}
+// 	if !isValid {
+// 		return NewCashecError(InvalidDataValidateErr, nil)
+// 	}
+// 	return nil
+// }
