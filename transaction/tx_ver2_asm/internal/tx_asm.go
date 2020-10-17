@@ -12,6 +12,7 @@ import(
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/privacy/privacy_v2/mlsag"
+	"github.com/incognitochain/incognito-chain/transaction/tx_ver2_asm/internal/metadata"
 )
 
 const MaxSizeByte = (1 << 8) - 1
@@ -100,13 +101,14 @@ func (sigPub *SigPubKey) SetBytes(b []byte) error {
 	return nil
 }
 
-type TxBase struct {
+type Tx struct {
 	// Basic data, required
 	Version  int8   `json:"Version"`
 	Type     string `json:"Type"` // Transaction type
 	LockTime int64  `json:"LockTime"`
 	Fee      uint64 `json:"Fee"` // Fee applies: always consant
 	Info     []byte // 512 bytes
+	Metadata metadata.Metadata
 	// Sign and Privacy proof, required
 	SigPubKey            []byte `json:"SigPubKey,omitempty"` // 33 bytes
 	Sig                  []byte `json:"Sig,omitempty"`       //
@@ -114,10 +116,6 @@ type TxBase struct {
 	PubKeyLastByteSender byte
 	// private field, not use for json parser, only use as temp variable
 	sigPrivKey       []byte       // is ALWAYS private property of struct, if privacy: 64 bytes, and otherwise, 32 bytes
-}
-
-type Tx struct {
-	TxBase
 }
 
 type CoinCache struct{
@@ -179,7 +177,7 @@ func (params *InitParamsAsm) GetGenericParams() *TxPrivacyInitParams{
 	for _, payInf := range params.PaymentInfo{
 		pInfos = append(pInfos, &payInf)
 	}
-	var tid common.Hash 
+	var tid common.Hash
 	tid.NewHashFromStr(params.TokenID)
 	// TODO : handle metadata for ASM
 	return &TxPrivacyInitParams{SenderSK: &params.SenderSK, PaymentInfo: pInfos, InputCoins: params.GetInputCoins(), Fee: params.Fee, HasPrivacy: params.HasPrivacy, TokenID: &tid, Info: params.Info}
@@ -328,7 +326,7 @@ func (c *CoinInter) SetBytes(coinBytes []byte) error {
 	if err != nil {
 		return genericError
 	}
-	
+
 	if offset >=len(coinBytes){
 		// for parsing old serialization, which does not have assetTag field
 		c.AssetTag = nil
@@ -354,7 +352,7 @@ func (ci CoinInter) GetCoinV2() *privacy.CoinV2{
 	return c
 }
 
-func (tx TxBase) String() string {
+func (tx Tx) String() string {
 	record := strconv.Itoa(int(tx.Version))
 	record += strconv.FormatInt(tx.LockTime, 10)
 	record += strconv.FormatUint(tx.Fee, 10)
@@ -365,7 +363,7 @@ func (tx TxBase) String() string {
 	return record
 }
 
-func (tx TxBase) Hash() *common.Hash {
+func (tx Tx) Hash() *common.Hash {
 	inBytes := []byte(tx.String())
 	hash := common.HashH(inBytes)
 	return &hash
@@ -524,7 +522,7 @@ func (tx *Tx) InitASM(params *InitParamsAsm) error {
 	return nil
 }
 
-func (tx *TxBase) initializeTxAndParams(params *TxPrivacyInitParams) error {
+func (tx *Tx) initializeTxAndParams(params *TxPrivacyInitParams) error {
 	var err error
 	// Get Keyset from param
 	skBytes := *params.SenderSK
