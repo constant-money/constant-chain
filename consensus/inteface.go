@@ -21,6 +21,7 @@ type NodeInterface interface {
 	GetMiningKeys() string
 	GetPrivateKey() string
 	GetUserMiningState() (role string, chainID int)
+	GetUserMiningStateDetail() (role string, chainID int, idx int32)
 	RequestMissingViewViaStream(peerID string, hashes [][]byte, fromCID int, chainName string) (err error)
 	GetSelfPeerID() peer.ID
 }

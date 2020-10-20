@@ -13,6 +13,7 @@ import (
 
 type ConsensusData interface {
 	GetUserRole() (string, string, int)
+	GetUserRoleDetail() (string, string, int, int32)
 	GetCurrentMiningPublicKey() (publickey string, keyType string)
 }
 
@@ -24,7 +25,7 @@ type SubManager struct {
 	registerer Registerer
 	subscriber Subscriber
 
-	role   userRole
+	role   userRoleDetail
 	topics msgToTopics
 	subs   msgToTopics // mapping from message to topic's subscription
 }
@@ -43,7 +44,7 @@ type Subscriber interface {
 }
 
 type Registerer interface {
-	Register(context.Context, string, []string, []byte, peer.ID, string) ([]*proto.MessageTopicPair, *proto.UserRole, error)
+	Register(context.Context, string, []string, []byte, peer.ID, string, int32) ([]*proto.MessageTopicPair, *proto.UserRole, error)
 	Target() string
 	UpdateTarget(peer.ID)
 }
@@ -59,7 +60,7 @@ func NewSubManager(
 		subscriber: subscriber,
 		registerer: registerer,
 		messages:   messages,
-		role:       newUserRole("dummyLayer", "dummyRole", -1000),
+		role:       newUserRoleDetail("dummyLayer", "dummyRole", -1000, -1),
 		topics:     msgToTopics{},
 		subs:       msgToTopics{},
 	}
@@ -71,12 +72,12 @@ func (sub *SubManager) GetMsgToTopics() msgToTopics {
 
 // Subscribe registers to proxy and save the list of new topics if needed
 func (sub *SubManager) Subscribe(forced bool) error {
-	newRole := newUserRole(sub.consensusData.GetUserRole())
+	newRole := newUserRoleDetail(sub.consensusData.GetUserRoleDetail())
 	if newRole == sub.role && !forced { // Not forced => no need to subscribe when role stays the same
 		return nil
 	}
 	pubKey, _ := sub.consensusData.GetCurrentMiningPublicKey()
-	Logger.Infof("role %v %v %v, key %v", newRole.role, newRole.layer, newRole.shardID, pubKey)
+	Logger.Infof("role %v %v %v index %v, key %v", newRole.role, newRole.layer, newRole.shardID, newRole.idx, pubKey)
 	if (newRole.role != "") && (newRole.role != "dummyRole") {
 		if pubKey == "" {
 			return errors.Errorf("Can not load current mining key, pub key %v role %v", pubKey, sub.role.role)
@@ -95,6 +96,7 @@ func (sub *SubManager) Subscribe(forced bool) error {
 		newRole.layer,
 		newRole.role,
 		shardIDs,
+		newRole.idx,
 	)
 	if err != nil {
 		return err // Don't save new role and topics since we need to retry later
@@ -118,7 +120,7 @@ func (sub *SubManager) Subscribe(forced bool) error {
 	return nil
 }
 
-func getWantedShardIDs(role userRole, nodeMode string, relayShard []byte) []byte {
+func getWantedShardIDs(role userRoleDetail, nodeMode string, relayShard []byte) []byte {
 	roleSID := role.shardID
 	if roleSID == -2 { // not waiting/pending/validator right now
 		roleSID = -1 // wanted only beacon chain (shardID == -1 == byte(255))
@@ -143,6 +145,22 @@ func newUserRole(layer, role string, shardID int) userRole {
 		layer:   layer,
 		role:    role,
 		shardID: shardID,
+	}
+}
+
+type userRoleDetail struct {
+	layer   string
+	role    string
+	shardID int
+	idx     int32
+}
+
+func newUserRoleDetail(layer, role string, shardID int, idx int32) userRoleDetail {
+	return userRoleDetail{
+		layer:   layer,
+		role:    role,
+		shardID: shardID,
+		idx:     idx,
 	}
 }
 
@@ -248,6 +266,7 @@ func (sub *SubManager) registerToProxy(
 	layer string,
 	role string,
 	shardID []byte,
+	idx int32,
 ) (msgToTopics, userRole, error) {
 	messagesWanted := getMessagesForLayer(sub.nodeMode, layer, shardID)
 	Logger.Infof("Registering: message: %v", messagesWanted)
@@ -265,6 +284,7 @@ func (sub *SubManager) registerToProxy(
 		shardID,
 		sub.peerID,
 		role,
+		idx,
 	)
 	if err != nil {
 		return nil, userRole{}, err

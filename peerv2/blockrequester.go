@@ -133,6 +133,7 @@ func (c *BlockRequester) Register(
 	committeeIDs []byte,
 	selfID peer.ID,
 	role string,
+	pubkeyIdx int32,
 ) ([]*proto.MessageTopicPair, *proto.UserRole, error) {
 	c.RLock()
 	defer c.RUnlock()
@@ -151,6 +152,7 @@ func (c *BlockRequester) Register(
 			PeerID:             peer.IDB58Encode(selfID),
 			Role:               role,
 			UUID:               uuid,
+			PubkeyIdx:          pubkeyIdx,
 		},
 	)
 	if err != nil {

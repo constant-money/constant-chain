@@ -2162,6 +2162,69 @@ func (serverObj *Server) requestBlocksByHashViaStream(ctx context.Context, peerI
 	return blockCh, nil
 }
 
+func (s *Server) GetUserMiningStateDetail() (role string, chainID int, idx int32) {
+	//TODO: check synker is in FewBlockBehind
+	userPk := s.consensusEngine.GetMiningPublicKeys()
+	if s.blockChain == nil || userPk == nil {
+		return "", -2, -1
+	}
+
+	//For Beacon, check in beacon state, if user is in committee
+	for i, v := range s.blockChain.BeaconChain.GetCommittee() {
+		if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) {
+			return common.CommitteeRole, -1, int32(i)
+		}
+	}
+	for _, v := range s.blockChain.BeaconChain.GetPendingCommittee() {
+		if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) {
+			return common.PendingRole, -1, -1
+		}
+	}
+
+	//For Shard
+	shardPendingCommiteeFromBeaconView := s.blockChain.GetBeaconBestState().GetShardPendingValidator()
+	shardCommiteeFromBeaconView := s.blockChain.GetBeaconBestState().GetShardCommittee()
+	shardCandidateFromBeaconView := s.blockChain.GetBeaconBestState().GetShardCandidate()
+	//check if in committee of any shard
+	for _, chain := range s.blockChain.ShardChain {
+		for i, v := range chain.GetCommittee() {
+			if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) { // in shard commitee in shard state
+				return common.CommitteeRole, chain.GetShardID(), int32(i)
+			}
+		}
+
+		for _, v := range chain.GetPendingCommittee() {
+			if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) { // in shard pending ommitee in shard state
+				return common.PendingRole, chain.GetShardID(), -1
+			}
+		}
+	}
+
+	//check if in committee or pending committee in beacon
+	for _, chain := range s.blockChain.ShardChain {
+		for _, v := range shardPendingCommiteeFromBeaconView[byte(chain.GetShardID())] { //if in pending commitee in beacon state
+			if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) {
+				return common.PendingRole, chain.GetShardID(), -1
+			}
+		}
+
+		for _, v := range shardCommiteeFromBeaconView[byte(chain.GetShardID())] { //if in commitee in beacon state, but not in shard
+			if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) {
+				return common.SyncingRole, chain.GetShardID(), -1
+			}
+		}
+	}
+
+	//if is waiting for assigning
+	for _, v := range shardCandidateFromBeaconView {
+		if v.IsEqualMiningPubKey(common.BlsConsensus, userPk) {
+			return common.WaitingRole, -2, -1
+		}
+	}
+
+	return "", -2, -1
+}
+
 func (s *Server) GetUserMiningState() (role string, chainID int) {
 	//TODO: check synker is in FewBlockBehind
 	userPk := s.consensusEngine.GetMiningPublicKeys()

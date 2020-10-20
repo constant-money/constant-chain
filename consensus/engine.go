@@ -2,9 +2,10 @@ package consensus
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/metrics/monitor"
 	"sync"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/metrics/monitor"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/consensus/blsbft"
@@ -44,6 +45,16 @@ func (s *Engine) GetUserRole() (string, string, int) {
 		layer = "shard"
 	}
 	return layer, s.curringMiningState.role, s.curringMiningState.chainID
+}
+
+func (s *Engine) GetUserRoleDetail() (string, string, int, int32) {
+	layer := s.curringMiningState.layer
+	_, _, idx := s.config.Node.GetUserMiningStateDetail()
+	if s.curringMiningState.role == common.WaitingRole {
+		layer = "shard"
+	}
+	// s.ValidateProducerPosition(blk common.BlockInterface, lastProposerIdx int, committee []incognitokey.CommitteePublicKey, minCommitteeSize int)
+	return layer, s.curringMiningState.role, s.curringMiningState.chainID, idx
 }
 
 func (engine *Engine) IsOngoing(chainName string) bool {
