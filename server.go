@@ -1749,12 +1749,13 @@ func (serverObj *Server) GetPrivateKey() string {
 
 func (serverObj *Server) PushMessageToChain(msg wire.Message, chain common.ChainInterface) error {
 	chainID := chain.GetShardID()
+	var err error
 	if chainID == -1 {
-		serverObj.PushMessageToBeacon(msg, map[libp2p.ID]bool{})
+		err = serverObj.PushMessageToBeacon(msg, map[libp2p.ID]bool{})
 	} else {
-		serverObj.PushMessageToShard(msg, byte(chainID), map[libp2p.ID]bool{})
+		err = serverObj.PushMessageToShard(msg, byte(chainID), map[libp2p.ID]bool{})
 	}
-	return nil
+	return err
 }
 
 func (serverObj *Server) PushBlockToAll(block common.BlockInterface, isBeacon bool) error {

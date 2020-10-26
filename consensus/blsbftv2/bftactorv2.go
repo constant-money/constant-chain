@@ -502,9 +502,12 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 	key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CreateNewBlock", e1)
 	go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
-	go e.Node.PushMessageToChain(msg, e.Chain)
-
-	return block, nil
+	st2 := time.Now()
+	err = e.Node.PushMessageToChain(msg, e.Chain)
+	e2 := time.Since(st2)
+	e.Logger.Infof("[debugbft] Got %v to push to chain", e2)
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "PushToChain", e2)
+	return block, err
 }
 
 func (e *BLSBFT_V2) ProcessBFTMsg(msgBFT *wire.MessageBFT) {
