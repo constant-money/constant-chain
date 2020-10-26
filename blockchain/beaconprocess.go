@@ -92,7 +92,7 @@ func (blockchain *BlockChain) InsertBeaconBlock(beaconBlock *BeaconBlock, should
 	blockHash := beaconBlock.Hash().String()
 	preHash := beaconBlock.Header.PreviousBlockHash
 	Logger.log.Infof("BEACON | InsertBeaconBlock  %+v with hash %+v \nPrev hash:", beaconBlock.Header.Height, blockHash, preHash)
-	if beaconBlock.GetHeight()%1000 == 0 {
+	if beaconBlock.GetHeight()%100 == 0 {
 		// uuid :=
 		simplemetric.ConsensusTimer.Report(blockchain.config.NodeName)
 	}
