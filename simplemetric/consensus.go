@@ -4,7 +4,6 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"sort"
@@ -223,15 +222,14 @@ func (cc *ConsensusCounter) Report(name string) string {
 		return err.Error()
 	}
 	currentTime := time.Now()
-	ioutil.WriteFile(name+currentTime.Format("2006-01-02")+".json", resStr, os.ModePerm)
+	// ioutil.WriteFile(name+currentTime.Format("2006-01-02")+".json", resStr, os.ModePerm)
 	f, err := os.Create(name + currentTime.Format("2006-01-02") + ".csv")
-	defer f.Close()
-
 	if err != nil {
 		log.Fatalln("failed to open file", err)
 	}
+	defer f.Close()
 
 	w := csv.NewWriter(f)
-	err = w.WriteAll(records)
+	_ = w.WriteAll(records)
 	return string(resStr)
 }
