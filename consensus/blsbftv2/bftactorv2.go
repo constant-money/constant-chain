@@ -13,6 +13,7 @@ import (
 	"github.com/incognitochain/incognito-chain/consensus/signatureschemes/blsmultisig"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/metadata"
+	"github.com/incognitochain/incognito-chain/simplemetric"
 	"github.com/incognitochain/incognito-chain/wire"
 )
 
@@ -111,6 +112,7 @@ func (e *BLSBFT_V2) Start() error {
 				return
 			case proposeMsg := <-e.ProposeMessageCh:
 				//fmt.Println("debug receive propose message", string(proposeMsg.Block))
+				st1 := time.Now()
 				blockIntf, err := e.Chain.UnmarshalBlock(proposeMsg.Block)
 				if err != nil || blockIntf == nil {
 					e.Logger.Info(err)
@@ -118,7 +120,10 @@ func (e *BLSBFT_V2) Start() error {
 				}
 				block := blockIntf.(common.BlockInterface)
 				blkHash := block.Hash().String()
-
+				e1 := time.Since(st1)
+				e.Logger.Infof("[BenchmarkTime] Unmarshal msg propose of block %v %v cost %v", blockIntf.GetHeight(), blockIntf.Hash().String(), e1)
+				key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
+				simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "UnmarshalBlock", e1)
 				if _, ok := e.receiveBlockByHash[blkHash]; !ok {
 					e.receiveBlockByHash[blkHash] = &ProposeBlockInfo{
 						block:      block,
@@ -373,6 +378,7 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 	//not connected
 	e.Logger.Info("validateAndVote")
+	st1 := time.Now()
 	view := e.Chain.GetViewByHash(v.block.GetPrevHash())
 	if view == nil {
 		e.Logger.Info("view is null")
@@ -387,7 +393,9 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 		e.Logger.Error(err)
 		return err
 	}
-
+	e1 := time.Since(st1)
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, v.block.GetHeight(), v.block.Hash().String(), v.block.GetNumTxsPrivacy(), v.block.GetNumTxsNoPrivacy())
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "ValidateNewBlock", e1)
 	//if valid then vote
 	var Vote = new(BFTVote)
 	bytelist := []blsmultisig.PublicKey{}
@@ -451,12 +459,14 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 	time1 := time.Now()
 	b58Str, _ := proposerPk.ToBase58()
 	var err error
+	st1 := time.Now()
 	if block == nil {
 		ctx := context.Background()
 		ctx, cancel := context.WithTimeout(ctx, common.TIMESLOT/2)
 		defer cancel()
 		//block, _ = e.Chain.CreateNewBlock(ctx, e.currentTimeSlot, e.UserKeySet.GetPublicKeyBase58())
 		e.Logger.Info("debug CreateNewBlock")
+
 		block, err = e.Chain.CreateNewBlock(2, b58Str, 1, e.currentTime)
 	} else {
 		e.Logger.Info("debug CreateNewBlockFromOldBlock")
@@ -464,6 +474,8 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 		//b58Str, _ := proposerPk.ToBase58()
 		//block = e.voteHistory[e.Chain.GetBestViewHeight()+1]
 	}
+	e1 := time.Since(st1)
+	e.Logger.Infof("[BenchmarkTime] %v Create new block %v %v cost %v ", e.ChainID, block.GetHeight(), block.Hash().String(), e1)
 	if err != nil {
 		return nil, NewConsensusError(BlockCreationError, err)
 	}
@@ -485,7 +497,8 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 	proposeCtn.PeerID = pKey.GetMiningKeyBase58("bls")
 	msg, _ := MakeBFTProposeMsg(proposeCtn, e.ChainKey, e.currentTimeSlot, block.GetHeight())
 	e.Logger.Infof("[debugbft] BFT msg pubkey %v", msg.(*wire.MessageBFT).PeerID)
-
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CreateNewBlock", e1)
 	go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 	go e.Node.PushMessageToChain(msg, e.Chain)
 

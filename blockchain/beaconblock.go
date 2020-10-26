@@ -3,8 +3,9 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"strconv"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 type BeaconBlock struct {
@@ -127,6 +128,15 @@ func (beaconBlock BeaconBlock) GetValidationField() string {
 func (beaconBlock BeaconBlock) GetRound() int {
 	return beaconBlock.Header.Round
 }
+
+func (beaconBlock BeaconBlock) GetNumTxsNoPrivacy() int {
+	return 0
+}
+
+func (beaconBlock BeaconBlock) GetNumTxsPrivacy() int {
+	return 0
+}
+
 func (beaconBlock BeaconBlock) GetRoundKey() string {
 	return fmt.Sprint(beaconBlock.Header.Height, "_", beaconBlock.Header.Round)
 }

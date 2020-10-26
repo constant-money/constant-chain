@@ -334,6 +334,7 @@ func (serverObj *Server) NewServer(
 		ConsensusEngine: serverObj.consensusEngine,
 		Highway:         serverObj.highway,
 		GenesisParams:   blockchain.GenesisParam,
+		NodeName:        cfg.Nodename,
 	})
 	if err != nil {
 		return err

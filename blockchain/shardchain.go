@@ -155,10 +155,10 @@ func (chain *ShardChain) CreateNewBlock(version int, proposer string, round int,
 		Logger.log.Error(err)
 		return nil, err
 	}
-	if version == 2 {
-		newBlock.Header.Proposer = proposer
-		newBlock.Header.ProposeTime = startTime
-	}
+	// if version == 2 {
+	// 	newBlock.Header.Proposer = proposer
+	// 	newBlock.Header.ProposeTime = startTime
+	// }
 
 	Logger.log.Infof("Finish Create New Block")
 	return newBlock, nil

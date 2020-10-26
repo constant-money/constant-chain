@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/transaction"
-	"sort"
 )
 
 type ShardBlock struct {
@@ -548,6 +549,37 @@ func (block ShardBlock) GetRoundKey() string {
 
 func (block ShardBlock) GetInstructions() [][]string {
 	return block.Body.Instructions
+}
+
+func (block ShardBlock) GetNumTxsNoPrivacy() int {
+	res := 0
+	for _, tx := range block.Body.Transactions {
+		if tx.IsPrivacy() {
+			continue
+		}
+		res++
+	}
+	return res
+}
+
+func (block ShardBlock) GetNumTxsPrivacy() int {
+	res := 0
+	for _, tx := range block.Body.Transactions {
+		if tx.IsPrivacy() {
+			res++
+		}
+	}
+	return res
+}
+
+func (block CrossShardBlock) GetNumTxsNoPrivacy() int {
+	res := 0
+	return res
+}
+
+func (block CrossShardBlock) GetNumTxsPrivacy() int {
+	res := 0
+	return res
 }
 
 func (block CrossShardBlock) GetProducer() string {

@@ -22,6 +22,8 @@ type BlockInterface interface {
 	GetRound() int
 	GetRoundKey() string
 	GetInstructions() [][]string
+	GetNumTxsPrivacy() int
+	GetNumTxsNoPrivacy() int
 	GetConsensusType() string
 	GetCurrentEpoch() uint64
 	GetProduceTime() int64

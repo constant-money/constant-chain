@@ -60,6 +60,7 @@ type Config struct {
 	Server            Server
 	ConsensusEngine   ConsensusEngine
 	Highway           Highway
+	NodeName          string
 }
 
 func NewBlockChain(config *Config, isTest bool) *BlockChain {

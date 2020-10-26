@@ -14,6 +14,7 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
+	"github.com/incognitochain/incognito-chain/simplemetric"
 	"github.com/incognitochain/incognito-chain/wallet"
 
 	"github.com/incognitochain/incognito-chain/blockchain/btc"
@@ -91,6 +92,10 @@ func (blockchain *BlockChain) InsertBeaconBlock(beaconBlock *BeaconBlock, should
 	blockHash := beaconBlock.Hash().String()
 	preHash := beaconBlock.Header.PreviousBlockHash
 	Logger.log.Infof("BEACON | InsertBeaconBlock  %+v with hash %+v \nPrev hash:", beaconBlock.Header.Height, blockHash, preHash)
+	if beaconBlock.GetHeight()%1000 == 0 {
+		// uuid :=
+		simplemetric.ConsensusTimer.Report(blockchain.config.NodeName)
+	}
 	// if beaconBlock.GetHeight() == 2 {
 	// 	bcTmp = 0
 	// 	bcStart = time.Now()

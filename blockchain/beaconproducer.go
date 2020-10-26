@@ -225,6 +225,10 @@ func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version i
 	beaconBlock.Header.ShardStateHash = tempShardStateHash
 	beaconBlock.Header.InstructionHash = tempInstructionHash
 	beaconBlock.Header.AutoStakingRoot = tempAutoStakingRoot
+	if version == 2 {
+		beaconBlock.Header.Proposer = proposer
+		beaconBlock.Header.ProposeTime = startTime
+	}
 	copy(beaconBlock.Header.InstructionMerkleRoot[:], GetKeccak256MerkleRoot(flattenInsts))
 	beaconBlock.Header.Timestamp = startTime
 	//============END Build Header Hash=========
