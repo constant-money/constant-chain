@@ -121,9 +121,11 @@ func (e *BLSBFT_V2) Start() error {
 				block := blockIntf.(common.BlockInterface)
 				blkHash := block.Hash().String()
 				e1 := time.Since(st1)
-				e.Logger.Infof("[BenchmarkTime] Unmarshal msg propose of block %v %v cost %v", blockIntf.GetHeight(), blockIntf.Hash().String(), e1)
+				sizeJson := len(proposeMsg.Block)
+				e.Logger.Infof("[BenchmarkTime] Unmarshal msg propose of block %v %v cost %v size %v", blockIntf.GetHeight(), blockIntf.Hash().String(), e1, sizeJson>>10)
 				key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
 				simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "UnmarshalBlock", e1)
+				simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "BlockSizeMicro", time.Duration(sizeJson)*time.Microsecond)
 				if _, ok := e.receiveBlockByHash[blkHash]; !ok {
 					e.receiveBlockByHash[blkHash] = &ProposeBlockInfo{
 						block:      block,
