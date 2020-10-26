@@ -23,6 +23,7 @@ import (
 	"github.com/incognitochain/incognito-chain/peerv2/proto"
 	"github.com/incognitochain/incognito-chain/peerv2/wrapper"
 	bnbrelaying "github.com/incognitochain/incognito-chain/relaying/bnb"
+	"github.com/incognitochain/incognito-chain/simplemetric"
 	"github.com/incognitochain/incognito-chain/syncker"
 
 	"github.com/incognitochain/incognito-chain/peerv2"
@@ -429,7 +430,7 @@ func (serverObj *Server) NewServer(
 	//===============
 
 	serverObj.addrManager = addrmanager.NewAddrManager(cfg.DataDir, common.HashH(common.Uint32ToBytes(activeNetParams.Params.Net))) // use network param Net as key for storage
-
+	simplemetric.DataDir = cfg.DataDir
 	// Init Net Sync manager to process messages
 	serverObj.netSync = &netsync.NetSync{}
 	serverObj.netSync.Init(&netsync.NetSyncConfig{

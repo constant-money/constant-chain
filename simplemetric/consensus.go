@@ -7,9 +7,12 @@ import (
 	"log"
 	"os"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 )
+
+var DataDir string
 
 type TimeCounter interface {
 	AddKey(string)
@@ -189,7 +192,7 @@ func (cc *ConsensusCounter) Report(name string) string {
 		}
 	}
 	record := []string{}
-	record = append(record, "Key")
+	record = append(record, []string{"CID", "Height", "Hash", "PrivacyTXs", "NonPrivacyTXs"}...)
 	for sk := range listSubKey {
 		record = append(record, sk)
 		subKeys = append(subKeys, sk)
@@ -198,8 +201,9 @@ func (cc *ConsensusCounter) Report(name string) string {
 	records = append(records, record)
 
 	for k, km := range cc.KeyMap {
+		values := strings.Split(k, "-")
 		record := []string{}
-		record = append(record, k)
+		record = append(record, values...)
 		for _, sk := range subKeys {
 			if skm, ok := km.FeatureMap[sk]; ok {
 				record = append(record, fmt.Sprintf("%v", skm.summary))
@@ -223,7 +227,7 @@ func (cc *ConsensusCounter) Report(name string) string {
 	}
 	currentTime := time.Now()
 	// ioutil.WriteFile(name+currentTime.Format("2006-01-02")+".json", resStr, os.ModePerm)
-	f, err := os.Create(name + currentTime.Format("2006-01-02") + ".csv")
+	f, err := os.Create(DataDir + "/" + name + currentTime.Format("2006-01-02") + ".csv")
 	if err != nil {
 		log.Fatalln("failed to open file", err)
 	}

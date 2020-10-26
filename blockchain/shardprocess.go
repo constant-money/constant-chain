@@ -27,6 +27,7 @@ import (
 // Used for PBFT consensus
 // this block doesn't have full information (incomplete block)
 func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, shardID byte) error {
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardID, shardBlock.GetHeight(), shardBlock.Hash().String(), shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy())
 	//get view that block link to
 	st1 := time.Now()
 	preHash := shardBlock.Header.PreviousBlockHash
@@ -55,6 +56,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 	curView := view.(*ShardBestState)
 	Logger.log.Infof("SHARD %+v | Verify ShardBlock for signing process %d, with hash %+v", shardID, shardBlock.Header.Height, *shardBlock.Hash())
 	e1 := time.Since(st1) // End of get view
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSGetView", e1)
 	st2 := time.Now()
 	// fetch beacon blocks
 	previousBeaconHeight := curView.BeaconHeight
@@ -81,6 +83,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e2 := time.Since(st2) // End of fetch beacon
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPrepareBeacon", e2)
 	st3 := time.Now()
 	//========Verify shardBlock only
 	if err := blockchain.verifyPreProcessingShardBlock(curView, shardBlock, beaconBlocks, shardID, true); err != nil {
@@ -88,6 +91,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 	}
 	//========Verify shardBlock with previous best state
 	e3 := time.Since(st3) // End of Verify Pre Process
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyPreProcess", e3)
 	st4 := time.Now()
 	// Verify shardBlock with previous best state
 	// DO NOT verify agg signature in this function
@@ -95,6 +99,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e4 := time.Since(st4) // End of verify best state
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyBestState", e4)
 	st5 := time.Now()
 	//========updateShardBestState best state with new shardBlock
 	newBeststate, err := curView.updateShardBestState(blockchain, shardBlock, beaconBlocks, newCommitteeChange())
@@ -102,18 +107,13 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e5 := time.Since(st5) // End of update shard best state???
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSUpdateBeststate", e5)
 	st6 := time.Now()
 	//========Post verififcation: verify new beaconstate with corresponding shardBlock
 	if err := blockchain.verifyPostProcessingShardBlock(newBeststate, shardBlock, shardID); err != nil {
 		return err
 	}
 	e6 := time.Since(st6)
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardID, shardBlock.GetHeight(), shardBlock.Hash().String(), shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy())
-	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSGetView", e1)
-	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPrepareBeacon", e2)
-	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyPreProcess", e3)
-	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyBestState", e4)
-	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSUpdateBeststate", e5)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyPostProcess", e6)
 	Logger.log.Infof("SHARD %+v | Block %d, with hash %+v is VALID for 🖋 signing", shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 	return nil
