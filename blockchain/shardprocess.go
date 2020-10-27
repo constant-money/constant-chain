@@ -27,7 +27,7 @@ import (
 // Used for PBFT consensus
 // this block doesn't have full information (incomplete block)
 func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, shardID byte) error {
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardBlock.GetHeight(), shardBlock.Hash().String(), shardID)
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 	//get view that block link to
 	st1 := time.Now()
 	preHash := shardBlock.Header.PreviousBlockHash
@@ -56,6 +56,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 	curView := view.(*ShardBestState)
 	Logger.log.Infof("SHARD %+v | Verify ShardBlock for signing process %d, with hash %+v", shardID, shardBlock.Header.Height, *shardBlock.Hash())
 	e1 := time.Since(st1) // End of get view
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign get view cost %v", shardBlock.Hash().String(), e1)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSGetView", e1)
 	st2 := time.Now()
 	// fetch beacon blocks
@@ -83,6 +84,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e2 := time.Since(st2) // End of fetch beacon
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign prepare beacon cost %v", shardBlock.Hash().String(), e2)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPrepareBeacon", e2)
 	st3 := time.Now()
 	//========Verify shardBlock only
@@ -91,6 +93,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 	}
 	//========Verify shardBlock with previous best state
 	e3 := time.Since(st3) // End of Verify Pre Process
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign verify pre process cost %v", shardBlock.Hash().String(), e3)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyPreProcess", e3)
 	st4 := time.Now()
 	// Verify shardBlock with previous best state
@@ -99,6 +102,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e4 := time.Since(st4) // End of verify best state
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign verify best state cost %v", shardBlock.Hash().String(), e4)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyBestState", e4)
 	st5 := time.Now()
 	//========updateShardBestState best state with new shardBlock
@@ -107,6 +111,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e5 := time.Since(st5) // End of update shard best state???
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign Update best state cost %v", shardBlock.Hash().String(), e5)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSUpdateBeststate", e5)
 	st6 := time.Now()
 	//========Post verififcation: verify new beaconstate with corresponding shardBlock
@@ -114,6 +119,7 @@ func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, sh
 		return err
 	}
 	e6 := time.Since(st6)
+	Logger.log.Infof("[DebugBenchmark] %v VerifyPreSign Verify post process cost %v", shardBlock.Hash().String(), e6)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSVerifyPostProcess", e6)
 	Logger.log.Infof("SHARD %+v | Block %d, with hash %+v is VALID for 🖋 signing", shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 	return nil
@@ -228,7 +234,7 @@ func (blockchain *BlockChain) InsertShardBlock(shardBlock *ShardBlock, shouldVal
 	go blockchain.config.PubSubManager.PublishMessage(pubsub.NewMessage(pubsub.ShardBeststateTopic, newBestState))
 	Logger.log.Infof("SHARD %+v | Finish Insert new block %d, with hash %+v 🔗", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
 	if shouldValidate {
-		key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardBlock.GetHeight(), shardBlock.Hash().String(), shardID)
+		key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VCheckView", e1)
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPrepareBeacon", e2)
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VVerifyPreProcess", e3)
@@ -292,6 +298,7 @@ func (shardBestState *ShardBestState) updateNumOfBlocksByProducers(shardBlock *S
 //	- Validate Response Transaction From Transaction with Metadata
 //	- ALL Transaction in block: see in verifyTransactionFromNewBlock
 func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestState, shardBlock *ShardBlock, beaconBlocks []*BeaconBlock, shardID byte, isPreSign bool) error {
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 	startTimeVerifyPreProcessingShardBlock := time.Now()
 	Logger.log.Debugf("SHARD %+v | Begin verifyPreProcessingShardBlock Block with height %+v at hash %+v", shardBlock.Header.ShardID, shardBlock.Header.Height, shardBlock.Hash())
 	if shardBlock.Header.ShardID != shardID {
@@ -302,6 +309,7 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 		return NewBlockChainError(WrongBlockHeightError, fmt.Errorf("Expect shardBlock height %+v but get %+v", curView.ShardHeight+1, shardBlock.Header.Height))
 	}
 	// Verify parent hash exist or not
+	st1 := time.Now()
 	previousBlockHash := shardBlock.Header.PreviousBlockHash
 	previousShardBlockData, err := rawdbv2.GetShardBlockByHash(blockchain.GetShardChainDatabase(shardID), previousBlockHash)
 	if err != nil {
@@ -313,6 +321,12 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	if err != nil {
 		return NewBlockChainError(UnmashallJsonShardBlockError, err)
 	}
+	e1 := time.Since(st1)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessGetPrevious", e1)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessGetPrevious", e1)
+	}
 	// Verify shardBlock height with parent shardBlock
 	if previousShardBlock.Header.Height+1 != shardBlock.Header.Height {
 		return NewBlockChainError(WrongBlockHeightError, fmt.Errorf("Expect receive shardBlock height %+v but get %+v", previousShardBlock.Header.Height+1, shardBlock.Header.Height))
@@ -322,6 +336,7 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 		return NewBlockChainError(WrongTimestampError, fmt.Errorf("Expect receive shardBlock has timestamp must be greater than %+v but get %+v", previousShardBlock.Header.Timestamp, shardBlock.Header.Timestamp))
 	}
 	// Verify transaction root
+	st2 := time.Now()
 	txMerkleTree := Merkle{}.BuildMerkleTreeStore(shardBlock.Body.Transactions)
 	txRoot := &common.Hash{}
 	if len(txMerkleTree) > 0 {
@@ -329,6 +344,12 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	}
 	if !bytes.Equal(shardBlock.Header.TxRoot.GetBytes(), txRoot.GetBytes()) && (blockchain.config.ChainParams.Net == Testnet && shardBlock.Header.Height != 487260 && shardBlock.Header.Height != 487261 && shardBlock.Header.Height != 494144) {
 		return NewBlockChainError(TransactionRootHashError, fmt.Errorf("Expect transaction root hash %+v but get %+v", shardBlock.Header.TxRoot, txRoot))
+	}
+	e2 := time.Since(st2)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessGetPrevious", e2)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessGetPrevious", e2)
 	}
 	// Verify ShardTx Root
 	_, shardTxMerkleData := CreateShardTxRoot(shardBlock.Body.Transactions)
