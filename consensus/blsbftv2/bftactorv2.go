@@ -470,12 +470,13 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 		e.Logger.Info("debug CreateNewBlock")
 
 		block, err = e.Chain.CreateNewBlock(2, b58Str, 1, e.currentTime)
-	} else {
-		e.Logger.Info("debug CreateNewBlockFromOldBlock")
-		block, err = e.Chain.CreateNewBlockFromOldBlock(block, b58Str, e.currentTime)
-		//b58Str, _ := proposerPk.ToBase58()
-		//block = e.voteHistory[e.Chain.GetBestViewHeight()+1]
 	}
+	//  else {
+	// 	e.Logger.Info("debug CreateNewBlockFromOldBlock")
+	// 	block, err = e.Chain.CreateNewBlockFromOldBlock(block, b58Str, e.currentTime)
+	// 	//b58Str, _ := proposerPk.ToBase58()
+	// 	//block = e.voteHistory[e.Chain.GetBestViewHeight()+1]
+	// }
 	e1 := time.Since(st1)
 	e.Logger.Infof("[BenchmarkTime] %v Create new block %v %v cost %v ", e.ChainID, block.GetHeight(), block.Hash().String(), e1)
 	if err != nil {
