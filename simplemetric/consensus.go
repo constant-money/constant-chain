@@ -192,12 +192,13 @@ func (cc *ConsensusCounter) Report(name string) string {
 		}
 	}
 	record := []string{}
-	record = append(record, []string{"CID", "Height", "Hash", "PrivacyTXs", "NonPrivacyTXs"}...)
+	record = append(record, []string{"PrivacyTXs", "NonPrivacyTXs", "CID", "Height", "Hash"}...)
 	for sk := range listSubKey {
-		record = append(record, sk)
+		// record = append(record, sk)
 		subKeys = append(subKeys, sk)
 	}
 	sort.Strings(subKeys)
+	record = append(record, subKeys...)
 	records = append(records, record)
 
 	for k, km := range cc.KeyMap {
@@ -208,7 +209,7 @@ func (cc *ConsensusCounter) Report(name string) string {
 			if skm, ok := km.FeatureMap[sk]; ok {
 				record = append(record, fmt.Sprintf("%v", skm.summary))
 			} else {
-				record = append(record, "")
+				record = append(record, "0")
 			}
 		}
 		res[k] = map[string]int64{}

@@ -27,7 +27,7 @@ import (
 // Used for PBFT consensus
 // this block doesn't have full information (incomplete block)
 func (blockchain *BlockChain) VerifyPreSignShardBlock(shardBlock *ShardBlock, shardID byte) error {
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardID, shardBlock.GetHeight(), shardBlock.Hash().String(), shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy())
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardBlock.GetHeight(), shardBlock.Hash().String(), shardID)
 	//get view that block link to
 	st1 := time.Now()
 	preHash := shardBlock.Header.PreviousBlockHash
@@ -228,7 +228,7 @@ func (blockchain *BlockChain) InsertShardBlock(shardBlock *ShardBlock, shouldVal
 	go blockchain.config.PubSubManager.PublishMessage(pubsub.NewMessage(pubsub.ShardBeststateTopic, newBestState))
 	Logger.log.Infof("SHARD %+v | Finish Insert new block %d, with hash %+v 🔗", shardBlock.Header.ShardID, shardBlock.Header.Height, blockHash)
 	if shouldValidate {
-		key := fmt.Sprintf("%v-%v-%v-%v-%v", shardID, shardBlock.GetHeight(), shardBlock.Hash().String(), shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy())
+		key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardBlock.GetHeight(), shardBlock.Hash().String(), shardID)
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VCheckView", e1)
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPrepareBeacon", e2)
 		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VVerifyPreProcess", e3)

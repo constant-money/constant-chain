@@ -287,7 +287,7 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 	newShardBlock.Header.Timestamp = start.Unix()
 	copy(newShardBlock.Header.InstructionMerkleRoot[:], instMerkleRoot)
 	e9 := time.Since(st9) // End of build merkle and root
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardID, newShardBlock.GetHeight(), newShardBlock.Hash().String(), newShardBlock.GetNumTxsPrivacy(), newShardBlock.GetNumTxsNoPrivacy())
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", newShardBlock.GetNumTxsPrivacy(), newShardBlock.GetNumTxsNoPrivacy(), shardID, newShardBlock.GetHeight(), newShardBlock.Hash().String())
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CPrepareState", e1)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CPrepareBeaconBlock", e2)
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CPrepareXShard", e3)

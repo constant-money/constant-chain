@@ -123,7 +123,7 @@ func (e *BLSBFT_V2) Start() error {
 				e1 := time.Since(st1)
 				sizeJson := len(proposeMsg.Block)
 				e.Logger.Infof("[BenchmarkTime] Unmarshal msg propose of block %v %v cost %v size %v", blockIntf.GetHeight(), blockIntf.Hash().String(), e1, sizeJson>>10)
-				key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
+				key := fmt.Sprintf("%v-%v-%v-%v-%v", block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy(), e.ChainID, block.GetHeight(), block.Hash().String())
 				simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "UnmarshalBlock", e1)
 				simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "BlockSizeMicro", time.Duration(sizeJson)*time.Microsecond)
 				if _, ok := e.receiveBlockByHash[blkHash]; !ok {
@@ -396,7 +396,7 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 		return err
 	}
 	e1 := time.Since(st1)
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, v.block.GetHeight(), v.block.Hash().String(), v.block.GetNumTxsPrivacy(), v.block.GetNumTxsNoPrivacy())
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", v.block.GetNumTxsPrivacy(), v.block.GetNumTxsNoPrivacy(), e.ChainID, v.block.GetHeight(), v.block.Hash().String())
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "ValidateNewBlock", e1)
 	//if valid then vote
 	var Vote = new(BFTVote)
@@ -500,7 +500,7 @@ func (e *BLSBFT_V2) proposeBlock(proposerPk incognitokey.CommitteePublicKey, blo
 	proposeCtn.PeerID = pKey.GetMiningKeyBase58("bls")
 	msg, _ := MakeBFTProposeMsg(proposeCtn, e.ChainKey, e.currentTimeSlot, block.GetHeight())
 	e.Logger.Infof("[debugbft] BFT msg pubkey %v", msg.(*wire.MessageBFT).PeerID)
-	key := fmt.Sprintf("%v-%v-%v-%v-%v", e.ChainID, block.GetHeight(), block.Hash().String(), block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy())
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", block.GetNumTxsPrivacy(), block.GetNumTxsNoPrivacy(), e.ChainID, block.GetHeight(), block.Hash().String())
 	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "CreateNewBlock", e1)
 	go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 	st2 := time.Now()
