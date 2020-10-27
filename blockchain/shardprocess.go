@@ -347,21 +347,37 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	}
 	e2 := time.Since(st2)
 	if isPreSign {
-		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessGetPrevious", e2)
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyTxsRoot", e2)
 	} else {
-		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessGetPrevious", e2)
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyTxsRoot", e2)
 	}
+	st3 := time.Now()
 	// Verify ShardTx Root
 	_, shardTxMerkleData := CreateShardTxRoot(shardBlock.Body.Transactions)
 	shardTxRoot := shardTxMerkleData[len(shardTxMerkleData)-1]
 	if !bytes.Equal(shardBlock.Header.ShardTxRoot.GetBytes(), shardTxRoot.GetBytes()) {
 		return NewBlockChainError(ShardTransactionRootHashError, fmt.Errorf("Expect shard transaction root hash %+v but get %+v", shardBlock.Header.ShardTxRoot, shardTxRoot))
 	}
+	e3 := time.Since(st3)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyShardTxsRoot", e3)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyShardTxsRoot", e3)
+	}
+	st4 := time.Now()
 	// Verify crossTransaction coin
 	if !VerifyMerkleCrossTransaction(shardBlock.Body.CrossTransactions, shardBlock.Header.CrossTransactionRoot) {
 		return NewBlockChainError(CrossShardTransactionRootHashError, fmt.Errorf("Expect cross shard transaction root hash %+v", shardBlock.Header.CrossTransactionRoot))
 	}
+	e4 := time.Since(st4)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyXShardTxsRoot", e4)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyXShardTxsRoot", e4)
+	}
+
 	// Verify Action
+	st5 := time.Now()
 	txInstructions, err := CreateShardInstructionsFromTransactionAndInstruction(shardBlock.Body.Transactions, blockchain, shardID)
 	if err != nil {
 		Logger.log.Error(err)
@@ -379,7 +395,15 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 			return NewBlockChainError(InstructionsHashError, fmt.Errorf("Expect instruction hash to be %+v but get %+v at block %+v hash %+v", shardBlock.Header.InstructionsRoot, hash, shardBlock.Header.Height, shardBlock.Hash().String()))
 		}
 	}
+	e5 := time.Since(st5)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyAction", e5)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyAction", e5)
+	}
 	totalTxsFee := make(map[common.Hash]uint64)
+	//???
+	st6 := time.Now()
 	for _, tx := range shardBlock.Body.Transactions {
 		totalTxsFee[*tx.GetTokenID()] += tx.GetTxFee()
 		txType := tx.GetType()
@@ -415,6 +439,13 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 			return NewBlockChainError(WrongBlockTotalFeeError, fmt.Errorf("Expect Total Fee to be equal, From Txs %+v, From Block Header %+v", totalTxsFee[tokenID], shardBlock.Header.TotalTxsFee[tokenID]))
 		}
 	}
+	e6 := time.Since(st6)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyTxFeeToken", e6)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyTxFeeToken", e6)
+	}
+	st7 := time.Now()
 	// Verify Cross Shards
 	crossShards := CreateCrossShardByteArray(shardBlock.Body.Transactions, shardID)
 	if len(crossShards) != len(shardBlock.Header.CrossShardBitMap) {
@@ -470,6 +501,13 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	for _, beaconBlock := range beaconBlocks {
 		instsForValidations = append(instsForValidations, beaconBlock.Body.Instructions...)
 	}
+	e7 := time.Since(st7)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifySanity", e7)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifySanity", e7)
+	}
+	st8 := time.Now()
 	invalidTxs, err := blockchain.verifyMinerCreatedTxBeforeGettingInBlock(instsForValidations, shardBlock.Body.Transactions, shardID)
 	if err != nil {
 		return NewBlockChainError(TransactionCreatedByMinerError, err)
@@ -485,10 +523,19 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	if err != nil {
 		return NewBlockChainError(ResponsedTransactionWithMetadataError, err)
 	}
+	e8 := time.Since(st8)
+	if isPreSign {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyNetworkTx", e8)
+	} else {
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyNetworkTx", e8)
+	}
 	shardVerifyPreprocesingTimer.UpdateSince(startTimeVerifyPreProcessingShardBlock)
 	// Get cross shard shardBlock from pool
 	if isPreSign {
+		st9 := time.Now()
 		err := blockchain.verifyPreProcessingShardBlockForSigning(curView, shardBlock, beaconBlocks, txInstructions, shardID)
+		e9 := time.Since(st9)
+		simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPreProcessVerifyForSign", e9)
 		if err != nil {
 			return err
 		}
@@ -504,15 +551,19 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 //	- Get Cross Tx Custom Token from cross shard block (shard pool) then verify
 //
 func (blockchain *BlockChain) verifyPreProcessingShardBlockForSigning(curView *ShardBestState, shardBlock *ShardBlock, beaconBlocks []*BeaconBlock, txInstructions [][]string, shardID byte) error {
+	key := fmt.Sprintf("%v-%v-%v-%v-%v", shardBlock.GetNumTxsPrivacy(), shardBlock.GetNumTxsNoPrivacy(), shardID, shardBlock.GetHeight(), shardBlock.Hash().String())
 	var err error
 	var isOldBeaconHeight = false
 	startTimeVerifyPreProcessingShardBlockForSigning := time.Now()
 	// Verify Transaction
 	//get beacon height from shard block
 	beaconHeight := shardBlock.Header.BeaconHeight
+	st1 := time.Now()
 	if err := blockchain.verifyTransactionFromNewBlock(shardID, shardBlock.Body.Transactions, int64(beaconHeight), curView); err != nil {
 		return NewBlockChainError(TransactionFromNewBlockError, err)
 	}
+	e1 := time.Since(st1)
+	simplemetric.ConsensusTimer.AddSubKeyWithValue(key, "VPSPreProcessVerifyUserTxs", e1)
 	// Verify Instruction
 	instructions := [][]string{}
 	shardCommittee, err := incognitokey.CommitteeKeyListToString(curView.ShardCommittee)
