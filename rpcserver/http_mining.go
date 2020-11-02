@@ -185,3 +185,33 @@ func (httpServer *HttpServer) handleGetMinerRewardFromMiningKey(params interface
 
 	return rewardAmountResult, nil
 }
+
+func (httpServer *HttpServer) handleGetRewardOfIncPubKeyByBlock(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	if arrayParams == nil || len(arrayParams) < 1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param empty"))
+	}
+
+	incPK, ok := arrayParams[0].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("key param is invalid"))
+	}
+	sHeight, ok := arrayParams[1].(float64)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("shard Height is invalid"))
+	}
+	incPKByte, ver, err := base58.Base58Check{}.Decode(incPK)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("key param is invalid"))
+	}
+	if ver != common.Base58Version {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Base58 decode failed"))
+	}
+
+	rewardAmountResult, err := httpServer.blockService.GetRewardOfIncPubKeyByBlock(incPKByte, uint64(sHeight))
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	}
+
+	return rewardAmountResult, nil
+}

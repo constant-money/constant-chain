@@ -646,6 +646,37 @@ func (blockService BlockService) GetMinerRewardFromMiningKey(incPublicKey []byte
 	return rewardAmountResult, nil
 }
 
+func (blockService BlockService) GetRewardOfIncPubKeyByBlock(incPublicKey []byte, shardHeight uint64) (map[string]uint64, error) {
+	shardID := common.GetShardIDFromLastByte(incPublicKey[len(incPublicKey)-1])
+	allCoinIDs, err := blockService.GetAllCoinIDWithPRV(shardID)
+	if err != nil {
+		return nil, err
+	}
+	rewardAmountResult := make(map[string]uint64)
+	rootHash, err := blockService.BlockChain.GetShardRootsHash(nil, shardID, shardHeight)
+	if err != nil {
+		return nil, err
+	}
+	rewardStateDB, err := statedb.NewWithPrefixTrie(rootHash.RewardStateDBRootHash, statedb.NewDatabaseAccessWarper(blockService.BlockChain.GetShardChainDatabase(shardID)))
+	if err != nil {
+		return nil, err
+	}
+	tempIncPublicKey := base58.Base58Check{}.Encode(incPublicKey, common.Base58Version)
+	for _, coinID := range allCoinIDs {
+		amount, err := statedb.GetCommitteeReward(rewardStateDB, tempIncPublicKey, coinID)
+		if err != nil {
+			return nil, err
+		}
+		if coinID == common.PRVCoinID {
+			rewardAmountResult["PRV"] = amount
+		} else {
+			if amount > 0 {
+				rewardAmountResult[coinID.String()] = amount
+			}
+		}
+	}
+	return rewardAmountResult, nil
+}
 func (blockService BlockService) ListRewardAmount() (map[string]map[common.Hash]uint64, error) {
 	m := make(map[string]map[common.Hash]uint64)
 	beaconBestState := blockService.BlockChain.GetBeaconBestState()

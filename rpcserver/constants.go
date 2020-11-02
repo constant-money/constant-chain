@@ -171,6 +171,7 @@ const (
 	getRoleByValidatorKey       = "getrolebyvalidatorkey"
 	getIncognitoPublicKeyRole   = "getincognitopublickeyrole"
 	getMinerRewardFromMiningKey = "getminerrewardfromminingkey"
+	getRewardOfIncPubKeyByBlock = "getrewardofincpubkeybyblock"
 
 	// slash
 	getProducersBlackList       = "getproducersblacklist"
