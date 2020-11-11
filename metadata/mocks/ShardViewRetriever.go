@@ -45,6 +45,34 @@ func (_m *ShardViewRetriever) GetCopiedFeatureStateDB() *statedb.StateDB {
 	return r0
 }
 
+// GetEpoch provides a mock function with given fields:
+func (_m *ShardViewRetriever) GetEpoch() uint64 {
+	ret := _m.Called()
+
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func() uint64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	return r0
+}
+
+// GetShardID provides a mock function with given fields:
+func (_m *ShardViewRetriever) GetShardID() byte {
+	ret := _m.Called()
+
+	var r0 byte
+	if rf, ok := ret.Get(0).(func() byte); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(byte)
+	}
+
+	return r0
+}
+
 // GetShardRewardStateDB provides a mock function with given fields:
 func (_m *ShardViewRetriever) GetShardRewardStateDB() *statedb.StateDB {
 	ret := _m.Called()

@@ -104,6 +104,20 @@ func (_m *ChainRetriever) GetCentralizedWebsitePaymentAddress(_a0 uint64) string
 	return r0
 }
 
+// GetETHRemoveBridgeSigEpoch provides a mock function with given fields:
+func (_m *ChainRetriever) GetETHRemoveBridgeSigEpoch() uint64 {
+	ret := _m.Called()
+
+	var r0 uint64
+	if rf, ok := ret.Get(0).(func() uint64); ok {
+		r0 = rf()
+	} else {
+		r0 = ret.Get(0).(uint64)
+	}
+
+	return r0
+}
+
 // GetFixedRandomForShardIDCommitment provides a mock function with given fields: beaconHeight
 func (_m *ChainRetriever) GetFixedRandomForShardIDCommitment(beaconHeight uint64) *privacy.Scalar {
 	ret := _m.Called(beaconHeight)
@@ -132,6 +146,29 @@ func (_m *ChainRetriever) GetPortalFeederAddress() string {
 	}
 
 	return r0
+}
+
+// GetShardStakingTx provides a mock function with given fields: shardID, beaconHeight
+func (_m *ChainRetriever) GetShardStakingTx(shardID byte, beaconHeight uint64) (map[string]string, error) {
+	ret := _m.Called(shardID, beaconHeight)
+
+	var r0 map[string]string
+	if rf, ok := ret.Get(0).(func(byte, uint64) map[string]string); ok {
+		r0 = rf(shardID, beaconHeight)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(map[string]string)
+		}
+	}
+
+	var r1 error
+	if rf, ok := ret.Get(1).(func(byte, uint64) error); ok {
+		r1 = rf(shardID, beaconHeight)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
 }
 
 // GetStakingAmountShard provides a mock function with given fields:

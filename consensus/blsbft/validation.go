@@ -3,6 +3,8 @@ package blsbft
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -94,14 +96,14 @@ func CheckValidationDataWithCommittee(valData *ValidationData, committee []incog
 	return true
 }
 
-func ValidateCommitteeSig(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
+func ValidateCommitteeSig(block types.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
 	valData, err := DecodeValidationData(block.GetValidationField())
 	if err != nil {
 		return NewConsensusError(UnExpectedError, err)
 	}
 	valid := CheckValidationDataWithCommittee(valData, committee)
 	if !valid {
-		return NewConsensusError(UnExpectedError, errors.Errorf("This validation Idx %v is not valid with this committee %v", valData.ValidatiorsIdx, committee))
+		return NewConsensusError(UnExpectedError, fmt.Errorf("This validation Idx %v is not valid with this committee %v", valData.ValidatiorsIdx, committee))
 	}
 	committeeBLSKeys := []blsmultisig.PublicKey{}
 	for _, member := range committee {

@@ -2,12 +2,9 @@ package blsbftv2
 
 import (
 	"errors"
-	"encoding/json"
 	"fmt"
+
 	"github.com/incognitochain/incognito-chain/blockchain/types"
-
-	"github.com/pkg/errors"
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/consensus/consensustypes"
@@ -47,7 +44,7 @@ func ValidateProducerSig(block types.BlockInterface) error {
 	return nil
 }
 
-func CheckValidationDataWithCommittee(valData *ValidationData, committee []incognitokey.CommitteePublicKey) bool {
+func CheckValidationDataWithCommittee(valData *consensustypes.ValidationData, committee []incognitokey.CommitteePublicKey) bool {
 	if len(committee) < 1 {
 		return false
 	}
@@ -62,14 +59,14 @@ func CheckValidationDataWithCommittee(valData *ValidationData, committee []incog
 	return true
 }
 
-func ValidateCommitteeSig(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
-	valData, err := DecodeValidationData(block.GetValidationField())
+func ValidateCommitteeSig(block types.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
+	valData, err := consensustypes.DecodeValidationData(block.GetValidationField())
 	if err != nil {
 		return NewConsensusError(UnExpectedError, err)
 	}
 	valid := CheckValidationDataWithCommittee(valData, committee)
 	if !valid {
-		return NewConsensusError(UnExpectedError, errors.Errorf("This validation Idx %v is not valid with this committee %v", valData.ValidatiorsIdx, committee))
+		return NewConsensusError(UnExpectedError, fmt.Errorf("This validation Idx %v is not valid with this committee %v", valData.ValidatiorsIdx, committee))
 	}
 	committeeBLSKeys := []blsmultisig.PublicKey{}
 	for _, member := range committee {
