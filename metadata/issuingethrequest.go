@@ -215,7 +215,11 @@ func (iReq *IssuingETHRequest) verifyProofAndParseReceipt() (*types.Receipt, err
 		Logger.log.Info("WARNING: Could not find the most recent block height on Ethereum")
 		return nil, NewMetadataTxError(IssuingEthRequestVerifyProofAndParseReceipt, err)
 	}
+	if mostRecentBlkNum == nil {
+		Logger.log.Info("WARNING: Could not find out the mostRecentBlkNum")
+		return nil, NewMetadataTxError(IssuingEthRequestVerifyProofAndParseReceipt, errors.New("WARNING: Could not find out the mostRecentBlkNum"))
 
+	}
 	if mostRecentBlkNum.Cmp(big.NewInt(0).Add(ethHeader.Number, big.NewInt(ETHConfirmationBlocks))) == -1 {
 		errMsg := fmt.Sprintf("WARNING: It needs 15 confirmation blocks for the process, the requested block (%s) but the latest block (%s)", ethHeader.Number.String(), mostRecentBlkNum.String())
 		Logger.log.Info(errMsg)
