@@ -3,7 +3,7 @@ package rpcserver
 import (
 	"encoding/json"
 	"errors"
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/pubsub"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
@@ -35,7 +35,7 @@ func (wsServer *WsServer) handleSubscribeNewShardBlock(params interface{}, subcr
 		select {
 		case msg := <-subChan:
 			{
-				shardBlock, ok := msg.Value.(*blockchain.ShardBlock)
+				shardBlock, ok := msg.Value.(*types.ShardBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.ShardBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -83,7 +83,7 @@ func (wsServer *WsServer) handleSubscribeNewBeaconBlock(params interface{}, subc
 		select {
 		case msg := <-subChan:
 			{
-				beaconBlock, ok := msg.Value.(*blockchain.BeaconBlock)
+				beaconBlock, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue

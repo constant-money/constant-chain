@@ -3,6 +3,7 @@ package rpcserver
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"strconv"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
@@ -98,7 +99,7 @@ func getBurnProofByHeightV2(
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, fmt.Errorf("cannot find inst %s in beacon block %d", txID.String(), height))
 	}
 
-	beaconInstProof, err := getBurnProofOnBeacon(inst, []*blockchain.BeaconBlock{beaconBlock}, httpServer.config.ConsensusEngine)
+	beaconInstProof, err := getBurnProofOnBeacon(inst, []*types.BeaconBlock{beaconBlock}, httpServer.config.ConsensusEngine)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
@@ -146,7 +147,7 @@ func getBurnProofByHeight(
 func getBurnProofOnBridge(
 	burningMetaType int,
 	txID *common.Hash,
-	bridgeBlock *blockchain.ShardBlock,
+	bridgeBlock *types.ShardBlock,
 	ce ConsensusEngine,
 ) (*swapProof, error) {
 	insts := bridgeBlock.Body.Instructions
@@ -166,7 +167,7 @@ func getBurnProofOnBridge(
 // getBurnProofOnBeacon finds in given beacon blocks a BurningConfirm instruction and returns its proof
 func getBurnProofOnBeacon(
 	inst []string,
-	beaconBlocks []*blockchain.BeaconBlock,
+	beaconBlocks []*types.BeaconBlock,
 	ce ConsensusEngine,
 ) (*swapProof, error) {
 	// Get beacon block and check if it contains beacon swap instruction
@@ -181,7 +182,7 @@ func getBurnProofOnBeacon(
 }
 
 // findBeaconBlockWithBurnInst finds a beacon block with a specific burning instruction and the instruction's index; nil if not found
-func findBeaconBlockWithBurnInst(beaconBlocks []*blockchain.BeaconBlock, inst []string) (*blockchain.BeaconBlock, int) {
+func findBeaconBlockWithBurnInst(beaconBlocks []*types.BeaconBlock, inst []string) (*types.BeaconBlock, int) {
 	for _, b := range beaconBlocks {
 		for k, blkInst := range b.Body.Instructions {
 			diff := false
@@ -270,7 +271,7 @@ func (httpServer *HttpServer) handleGetBurningAddress(params interface{}, closeC
 	return burningAddress, nil
 }
 
-func getSingleBeaconBlockByHeight(bc *blockchain.BlockChain, height uint64) (*blockchain.BeaconBlock, error) {
+func getSingleBeaconBlockByHeight(bc *blockchain.BlockChain, height uint64) (*types.BeaconBlock, error) {
 	beaconBlock, err := bc.GetBeaconBlockByView(bc.BeaconChain.GetFinalView(), height)
 	if err != nil {
 		return nil, fmt.Errorf("cannot find beacon block with height %d %w", height, err)

@@ -1,14 +1,16 @@
-package blockchain
+package types
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/transaction"
-	"sort"
 )
 
 type ShardBlock struct {
@@ -40,6 +42,7 @@ type ShardHeader struct {
 	PendingValidatorRoot  common.Hash            `json:"PendingValidatorRoot"`  // hash from public key list of all pending validators designated to this ShardID
 	StakingTxRoot         common.Hash            `json:"StakingTxRoot"`         // hash from staking transaction map in shard best state
 	InstructionMerkleRoot common.Hash            `json:"InstructionMerkleRoot"` // Merkle root of all instructions (using Keccak256 hash func) to relay to Ethreum
+	CommitteeFromBlock    common.Hash            `json:"CommitteeFromBlock"`    // Block Hash Of Swapped Committees Block
 	// This obsoletes InstructionMerkleRoot but for simplicity, we keep it for now
 
 	//for version 2
@@ -97,6 +100,10 @@ func NewShardBlockFull(header ShardHeader, body ShardBody) *ShardBlock {
 	}
 }
 
+func (shardBlock *ShardBlock) CommitteeFromBlock() common.Hash {
+	return shardBlock.Header.CommitteeFromBlock
+}
+
 func (shardBlock *ShardBlock) GetProposer() string {
 	return shardBlock.Header.Proposer
 }
@@ -121,6 +128,10 @@ func (shardBlock *ShardBlock) BuildShardBlockBody(instructions [][]string, cross
 	shardBlock.Body.Instructions = append(shardBlock.Body.Instructions, instructions...)
 	shardBlock.Body.CrossTransactions = crossTransaction
 	shardBlock.Body.Transactions = append(shardBlock.Body.Transactions, transactions...)
+}
+
+func (crossShardBlock CrossShardBlock) CommitteeFromBlock() common.Hash {
+	return common.Hash{}
 }
 
 func (crossShardBlock CrossShardBlock) GetProposer() string {
@@ -155,102 +166,102 @@ func (shardBlock ShardBlock) Hash() *common.Hash {
 func (shardBlock *ShardBlock) validateSanityData() (bool, error) {
 	//Check Header
 	if shardBlock.Header.Height == 1 && len(shardBlock.ValidationData) != 0 {
-		return false, NewBlockChainError(ShardBlockSanityError, errors.New("Expect Shard Block with Height 1 to not have validationData"))
+		return false, errors.New("Expect Shard Block with Height 1 to not have validationData")
 	}
 	// producer address must have 66 bytes: 33-byte public key, 33-byte transmission key
 	if shardBlock.Header.Height > 1 && len(shardBlock.ValidationData) == 0 {
-		return false, NewBlockChainError(ShardBlockSanityError, errors.New("Expect Shard Block to have validationData"))
+		return false, errors.New("Expect Shard Block to have validationData")
 	}
 	if int(shardBlock.Header.ShardID) < 0 || int(shardBlock.Header.ShardID) > 256 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block ShardID in range 0 - 255 but get %+v ", shardBlock.Header.ShardID))
+		return false, fmt.Errorf("Expect Shard Block ShardID in range 0 - 255 but get %+v ", shardBlock.Header.ShardID)
 	}
 	if shardBlock.Header.Version < SHARD_BLOCK_VERSION {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Version greater or equal than %+v but get %+v ", SHARD_BLOCK_VERSION, shardBlock.Header.Version))
+		return false, fmt.Errorf("Expect Shard Block Version greater or equal than %+v but get %+v ", SHARD_BLOCK_VERSION, shardBlock.Header.Version)
 	}
 	if len(shardBlock.Header.PreviousBlockHash[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Previous Hash in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Previous Hash in the right format")
 	}
 	if shardBlock.Header.Height < 1 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Height to be greater than 0"))
+		return false, fmt.Errorf("Expect Shard Block Height to be greater than 0")
 	}
 	if shardBlock.Header.Height == 1 && !shardBlock.Header.PreviousBlockHash.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Height 1 (first block) have Zero Hash Value"))
+		return false, fmt.Errorf("Expect Shard Block with Height 1 (first block) have Zero Hash Value")
 	}
 	if shardBlock.Header.Height > 1 && shardBlock.Header.PreviousBlockHash.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Height greater than 1 have Non-Zero Hash Value"))
+		return false, fmt.Errorf("Expect Shard Block with Height greater than 1 have Non-Zero Hash Value")
 	}
 	if shardBlock.Header.Round < 1 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Round greater or equal than 1"))
+		return false, fmt.Errorf("Expect Shard Block Round greater or equal than 1")
 	}
 	if shardBlock.Header.Epoch < 1 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Epoch greater or equal than 1"))
+		return false, fmt.Errorf("Expect Shard Block Epoch greater or equal than 1")
 	}
 	if shardBlock.Header.Timestamp <= 0 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Time greater than 0"))
+		return false, fmt.Errorf("Expect Shard Block Time greater than 0")
 	}
 	if len(shardBlock.Header.TxRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Tx Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Tx Root in the right format")
 	}
 	if len(shardBlock.Header.ShardTxRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Shard Tx Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Shard Tx Root in the right format")
 	}
 	if len(shardBlock.Header.CrossTransactionRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Cross Transaction Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Cross Transaction Root in the right format")
 	}
 	if len(shardBlock.Header.InstructionsRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Instructions Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Instructions Root in the right format")
 	}
 	if len(shardBlock.Header.CommitteeRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Committee Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Committee Root in the right format")
 	}
 	if shardBlock.Header.Height == 1 && !shardBlock.Header.CommitteeRoot.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Height 1 have Zero Hash Value"))
+		return false, fmt.Errorf("Expect Shard Block with Height 1 have Zero Hash Value")
 	}
 	if shardBlock.Header.Height > 1 && shardBlock.Header.CommitteeRoot.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Height greater than 1 have Non-Zero Hash Value"))
+		return false, fmt.Errorf("Expect Shard Block with Height greater than 1 have Non-Zero Hash Value")
 	}
 	if len(shardBlock.Header.PendingValidatorRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Committee Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Committee Root in the right format")
 	}
 	if len(shardBlock.Header.StakingTxRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Staking Tx Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Staking Tx Root in the right format")
 	}
 	if len(shardBlock.Header.CrossShardBitMap) > 254 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Cross Shard Length Less Than 255"))
+		return false, fmt.Errorf("Expect Shard Block Cross Shard Length Less Than 255")
 	}
 	if shardBlock.Header.BeaconHeight < 1 {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block has Beacon Height greater or equal than 1"))
+		return false, fmt.Errorf("Expect Shard Block has Beacon Height greater or equal than 1")
 	}
 	//if shardBlock.Header.BeaconHeight == 1 && !shardBlock.Header.BeaconHash.IsPointEqual(&common.Hash{}) {
-	//	return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Beacon Height 1 have Zero Hash Value"))
+	//	return false fmt.Errorf("Expect Shard Block with Beacon Height 1 have Zero Hash Value")
 	//}
 	if shardBlock.Header.BeaconHeight > 1 && shardBlock.Header.BeaconHash.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block with Beacon Height greater or equal than 1 have Non-Zero Hash Value"))
+		return false, fmt.Errorf("Expect Shard Block with Beacon Height greater or equal than 1 have Non-Zero Hash Value")
 	}
 	if shardBlock.Header.TotalTxsFee == nil {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Total Txs Fee have nil value"))
+		return false, fmt.Errorf("Expect Shard Block Total Txs Fee have nil value")
 	}
 	if len(shardBlock.Header.InstructionMerkleRoot[:]) != common.HashSize {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Instruction Merkle Root in the right format"))
+		return false, fmt.Errorf("Expect Shard Block Instruction Merkle Root in the right format")
 	}
 	// body
 	if shardBlock.Body.Instructions == nil {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Instruction is not nil"))
+		return false, fmt.Errorf("Expect Shard Block Instruction is not nil")
 	}
 	if len(shardBlock.Body.Instructions) != 0 && shardBlock.Header.InstructionMerkleRoot.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Instruction Merkle Root have Non-Zero Hash Value because Instrucstion List is not empty"))
+		return false, fmt.Errorf("Expect Shard Block Instruction Merkle Root have Non-Zero Hash Value because Instrucstion List is not empty")
 	}
 	if shardBlock.Body.CrossTransactions == nil {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Cross Transactions Map is not nil"))
+		return false, fmt.Errorf("Expect Shard Block Cross Transactions Map is not nil")
 	}
 	if len(shardBlock.Body.CrossTransactions) != 0 && shardBlock.Header.CrossTransactionRoot.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Cross Transaction Root have Non-Zero Hash Value because Cross Transaction List is not empty"))
+		return false, fmt.Errorf("Expect Shard Block Cross Transaction Root have Non-Zero Hash Value because Cross Transaction List is not empty")
 	}
 	if shardBlock.Body.Transactions == nil {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Transactions is not nil"))
+		return false, fmt.Errorf("Expect Shard Block Transactions is not nil")
 	}
 	if len(shardBlock.Body.Transactions) != 0 && shardBlock.Header.TxRoot.IsEqual(&common.Hash{}) {
-		return false, NewBlockChainError(ShardBlockSanityError, fmt.Errorf("Expect Shard Block Tx Root have Non-Zero Hash Value because Transactions List is not empty"))
+		return false, fmt.Errorf("Expect Shard Block Tx Root have Non-Zero Hash Value because Transactions List is not empty")
 	}
 	return true, nil
 }
@@ -263,14 +274,14 @@ func (shardBlock *ShardBlock) UnmarshalJSON(data []byte) error {
 	}{}
 	err := json.Unmarshal(data, &tempShardBlock)
 	if err != nil {
-		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		return err
 	}
 	shardBlock.ValidationData = tempShardBlock.ValidationData
 
 	blkBody := ShardBody{}
 	err = blkBody.UnmarshalJSON(*tempShardBlock.Body)
 	if err != nil {
-		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		return err
 	}
 	shardBlock.Header = tempShardBlock.Header
 	if shardBlock.Body.Transactions == nil {
@@ -287,7 +298,7 @@ func (shardBlock *ShardBlock) UnmarshalJSON(data []byte) error {
 	}
 	if ok, err := shardBlock.validateSanityData(); !ok || err != nil {
 		// panic(string(data) + err.Error())
-		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		return err
 	}
 	shardBlock.Body = blkBody
 	return nil
@@ -295,7 +306,7 @@ func (shardBlock *ShardBlock) UnmarshalJSON(data []byte) error {
 
 func (shardBlock *ShardBlock) AddTransaction(tx metadata.Transaction) error {
 	if shardBlock.Body.Transactions == nil {
-		return NewBlockChainError(UnExpectedError, errors.New("not init tx arrays"))
+		return errors.New("not init tx arrays")
 	}
 	shardBlock.Body.Transactions = append(shardBlock.Body.Transactions, tx)
 	return nil
@@ -370,20 +381,18 @@ func (shardBody *ShardBody) UnmarshalJSON(data []byte) error {
 
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
-		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		return err
 	}
 
 	// process tx from tx interface of temp
 	for _, txTemp := range temp.Transactions {
 		txTempJson, _ := json.MarshalIndent(txTemp, "", "\t")
-		//Logger.log.Debugf("Tx json data: ", string(txTempJson))
-
 		var tx metadata.Transaction
 		var parseErr error
 		txType := ""
 		err = json.Unmarshal(*txTemp["Type"], &txType)
 		if err != nil {
-			return NewBlockChainError(UnmashallJsonShardBlockError, err)
+			return err
 		}
 		switch txType {
 		case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType:
@@ -398,11 +407,11 @@ func (shardBody *ShardBody) UnmarshalJSON(data []byte) error {
 			}
 		default:
 			{
-				return NewBlockChainError(UnmashallJsonShardBlockError, errors.New("can not parse a wrong tx"))
+				return errors.New("can not parse a wrong tx")
 			}
 		}
 		if parseErr != nil {
-			return NewBlockChainError(UnmashallJsonShardBlockError, parseErr)
+			return parseErr
 		}
 		shardBody.Transactions = append(shardBody.Transactions, tx)
 	}
@@ -440,20 +449,6 @@ func (shardBody ShardBody) Hash() common.Hash {
 	return common.HashH(res)
 }
 
-/*
-- Concatenate all transaction in one shard as a string
-- Then each shard producer a string value include all transactions within this block
-- For each string value: Convert string value to hash value
-- So if we have 256 shard, we will have 256 leaf value for merkle tree
-- Make merkle root from these value
-*/
-
-func (shardBody ShardBody) CalcMerkleRootTx() *common.Hash {
-	merkleRoots := Merkle{}.BuildMerkleTreeStore(shardBody.Transactions)
-	merkleRoot := merkleRoots[len(merkleRoots)-1]
-	return merkleRoot
-}
-
 func (shardBody ShardBody) ExtractIncomingCrossShardMap() (map[byte][]common.Hash, error) {
 	crossShardMap := make(map[byte][]common.Hash)
 	for shardID, crossblocks := range shardBody.CrossTransactions {
@@ -469,49 +464,9 @@ func (shardBody ShardBody) ExtractOutgoingCrossShardMap() (map[byte][]common.Has
 	return crossShardMap, nil
 }
 
-func (shardBlock *ShardBlock) CreateAllCrossShardBlock(activeShards int) map[byte]*CrossShardBlock {
-	allCrossShard := make(map[byte]*CrossShardBlock)
-	if activeShards == 1 {
-		return allCrossShard
-	}
-	for i := 0; i < activeShards; i++ {
-		shardID := common.GetShardIDFromLastByte(byte(i))
-		if shardID != shardBlock.Header.ShardID {
-			crossShard, err := shardBlock.CreateCrossShardBlock(shardID)
-			if crossShard != nil {
-				Logger.log.Criticalf("Create CrossShardBlock from Shard %+v to Shard %+v: %+v \n", shardBlock.Header.ShardID, shardID, crossShard)
-			}
-			if crossShard != nil && err == nil {
-				allCrossShard[byte(i)] = crossShard
-			}
-		}
-	}
-	return allCrossShard
-}
-
-func (shardBlock ShardBlock) CreateCrossShardBlock(shardID byte) (*CrossShardBlock, error) {
-	crossShard := &CrossShardBlock{}
-	crossOutputCoin, crossCustomTokenPrivacyData := getCrossShardData(shardBlock.Body.Transactions, shardID)
-	// Return nothing if nothing to cross
-	if len(crossOutputCoin) == 0 && len(crossCustomTokenPrivacyData) == 0 {
-		return nil, NewBlockChainError(CreateCrossShardBlockError, errors.New("No cross Outputcoin, Cross Custom Token, Cross Custom Token Privacy"))
-	}
-	merklePathShard, merkleShardRoot := GetMerklePathCrossShard(shardBlock.Body.Transactions, shardID)
-	if merkleShardRoot != shardBlock.Header.ShardTxRoot {
-		return crossShard, NewBlockChainError(VerifyCrossShardBlockShardTxRootError, fmt.Errorf("Expect Shard Tx Root To be %+v but get %+v", shardBlock.Header.ShardTxRoot, merkleShardRoot))
-	}
-	crossShard.ValidationData = shardBlock.ValidationData
-	crossShard.Header = shardBlock.Header
-	crossShard.MerklePathShard = merklePathShard
-	crossShard.CrossOutputCoin = crossOutputCoin
-	crossShard.CrossTxTokenPrivacyData = crossCustomTokenPrivacyData
-	crossShard.ToShardID = shardID
-	return crossShard, nil
-}
-
-func (block *ShardBlock) AddValidationField(validationData string) error {
+func (block *ShardBlock) AddValidationField(validationData string) {
 	block.ValidationData = validationData
-	return nil
+	return
 }
 
 func (block ShardBlock) GetCurrentEpoch() uint64 {
@@ -588,4 +543,99 @@ func (block ShardBlock) GetConsensusType() string {
 
 func (block CrossShardBlock) GetConsensusType() string {
 	return block.Header.ConsensusType
+}
+
+type CrossOutputCoin struct {
+	BlockHeight uint64
+	BlockHash   common.Hash
+	OutputCoin  []privacy.OutputCoin
+}
+
+type CrossTokenPrivacyData struct {
+	BlockHeight      uint64
+	BlockHash        common.Hash
+	TokenPrivacyData []ContentCrossShardTokenPrivacyData
+}
+type CrossTransaction struct {
+	BlockHeight      uint64
+	BlockHash        common.Hash
+	TokenPrivacyData []ContentCrossShardTokenPrivacyData
+	OutputCoin       []privacy.OutputCoin
+}
+type ContentCrossShardTokenPrivacyData struct {
+	OutputCoin     []privacy.OutputCoin
+	PropertyID     common.Hash // = hash of TxCustomTokenprivacy data
+	PropertyName   string
+	PropertySymbol string
+	Type           int    // action type
+	Mintable       bool   // default false
+	Amount         uint64 // init amount
+}
+type CrossShardTokenPrivacyMetaData struct {
+	TokenID        common.Hash
+	PropertyName   string
+	PropertySymbol string
+	Type           int    // action type
+	Mintable       bool   // default false
+	Amount         uint64 // init amount
+}
+
+func (contentCrossShardTokenPrivacyData ContentCrossShardTokenPrivacyData) Bytes() []byte {
+	res := []byte{}
+	for _, item := range contentCrossShardTokenPrivacyData.OutputCoin {
+		res = append(res, item.Bytes()...)
+	}
+	res = append(res, contentCrossShardTokenPrivacyData.PropertyID.GetBytes()...)
+	res = append(res, []byte(contentCrossShardTokenPrivacyData.PropertyName)...)
+	res = append(res, []byte(contentCrossShardTokenPrivacyData.PropertySymbol)...)
+	typeBytes := make([]byte, 4)
+	binary.LittleEndian.PutUint32(typeBytes, uint32(contentCrossShardTokenPrivacyData.Type))
+	res = append(res, typeBytes...)
+	amountBytes := make([]byte, 8)
+	binary.LittleEndian.PutUint32(amountBytes, uint32(contentCrossShardTokenPrivacyData.Amount))
+	res = append(res, amountBytes...)
+	if contentCrossShardTokenPrivacyData.Mintable {
+		res = append(res, []byte("true")...)
+	} else {
+		res = append(res, []byte("false")...)
+	}
+	return res
+}
+func (contentCrossShardTokenPrivacyData ContentCrossShardTokenPrivacyData) Hash() common.Hash {
+	return common.HashH(contentCrossShardTokenPrivacyData.Bytes())
+}
+func (crossOutputCoin CrossOutputCoin) Hash() common.Hash {
+	res := []byte{}
+	res = append(res, crossOutputCoin.BlockHash.GetBytes()...)
+	for _, coins := range crossOutputCoin.OutputCoin {
+		res = append(res, coins.Bytes()...)
+	}
+	return common.HashH(res)
+}
+func (crossTransaction CrossTransaction) Bytes() []byte {
+	res := []byte{}
+	res = append(res, crossTransaction.BlockHash.GetBytes()...)
+	for _, coins := range crossTransaction.OutputCoin {
+		res = append(res, coins.Bytes()...)
+	}
+	for _, coins := range crossTransaction.TokenPrivacyData {
+		res = append(res, coins.Bytes()...)
+	}
+	return res
+}
+func (crossTransaction CrossTransaction) Hash() common.Hash {
+	return common.HashH(crossTransaction.Bytes())
+}
+
+func CloneTxTokenPrivacyDataForCrossShard(txTokenPrivacyData transaction.TxPrivacyTokenData) ContentCrossShardTokenPrivacyData {
+	newContentCrossTokenPrivacyData := ContentCrossShardTokenPrivacyData{
+		PropertyID:     txTokenPrivacyData.PropertyID,
+		PropertyName:   txTokenPrivacyData.PropertyName,
+		PropertySymbol: txTokenPrivacyData.PropertySymbol,
+		Mintable:       txTokenPrivacyData.Mintable,
+		Amount:         txTokenPrivacyData.Amount,
+		Type:           transaction.CustomTokenCrossShard,
+	}
+	newContentCrossTokenPrivacyData.OutputCoin = []privacy.OutputCoin{}
+	return newContentCrossTokenPrivacyData
 }

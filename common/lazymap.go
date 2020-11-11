@@ -1,16 +1,30 @@
-package blockchain
+package common
 
 import (
 	"sort"
-
-	"github.com/incognitochain/incognito-chain/common"
 )
 
 //MapStringString ...
 type MapStringString struct {
 	data    map[string]string
-	hash    *common.Hash
+	hash    *Hash
 	updated bool
+}
+
+func (s *MapStringString) Data() map[string]string {
+	return s.data
+}
+
+func (s *MapStringString) SetUpdated(updated bool) {
+	s.updated = updated
+}
+
+func (s *MapStringString) SetHash(hash *Hash) {
+	s.hash = hash
+}
+
+func (s *MapStringString) SetData(data map[string]string) {
+	s.data = data
 }
 
 //NewMapStringString ...
@@ -71,7 +85,7 @@ func (s *MapStringString) Get(k string) (string, bool) {
 }
 
 //GenerateHash ...
-func (s *MapStringString) GenerateHash() (common.Hash, error) {
+func (s *MapStringString) GenerateHash() (Hash, error) {
 	if s.hash != nil {
 		return *s.hash, nil
 	}
@@ -85,9 +99,9 @@ func (s *MapStringString) GenerateHash() (common.Hash, error) {
 		res = append(res, key)
 		res = append(res, s.data[key])
 	}
-	h, err := generateHashFromStringArray(res)
+	h, err := GenerateHashFromStringArray(res)
 	if err != nil {
-		return common.Hash{}, err
+		return Hash{}, err
 	}
 	s.hash = &h
 	return h, nil
@@ -95,7 +109,7 @@ func (s *MapStringString) GenerateHash() (common.Hash, error) {
 
 type MapStringBool struct {
 	data    map[string]bool
-	hash    *common.Hash
+	hash    *Hash
 	updated bool
 }
 
@@ -149,7 +163,7 @@ func (s *MapStringBool) Get(k string) (bool, bool) {
 	return r, ok
 }
 
-func (s *MapStringBool) GenerateHash() (common.Hash, error) {
+func (s *MapStringBool) GenerateHash() (Hash, error) {
 	if s.hash != nil {
 		return *s.hash, nil
 	}
@@ -167,9 +181,9 @@ func (s *MapStringBool) GenerateHash() (common.Hash, error) {
 			res = append(res, "false")
 		}
 	}
-	h, err := generateHashFromStringArray(res)
+	h, err := GenerateHashFromStringArray(res)
 	if err != nil {
-		return common.Hash{}, err
+		return Hash{}, err
 	}
 	s.hash = &h
 	return h, nil

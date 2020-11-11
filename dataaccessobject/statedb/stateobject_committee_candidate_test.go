@@ -49,7 +49,7 @@ func TestStateDB_GetCurrentEpochCandidateCommitteeState(t *testing.T) {
 func TestStateDB_GetAllCurrentEpochCandidateCommitteeKey512EightShard(t *testing.T) {
 	from, to := 0, 512
 	wantM := []incognitokey.CommitteePublicKey{}
-	tempRootHash, tempM := storeCommitteeObjectOneShard(CurrentEpochShardCandidate, emptyRoot, CandidateShardID, from, to)
+	tempRootHash, tempM := storeCommitteeObjectOneShard(CurrentEpochShardCandidate, emptyRoot, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantM = append(wantM, v.CommitteePublicKey())
 	}
@@ -128,7 +128,7 @@ func TestStateDB_GetAllCurrentEpochCandidateCommitteeKey(t *testing.T) {
 func TestStateDB_GetAllNextEpochCandidateCommitteeKey512EightShard(t *testing.T) {
 	from, to := 0, 512
 	wantM := []incognitokey.CommitteePublicKey{}
-	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, emptyRoot, CandidateShardID, from, to)
+	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, emptyRoot, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantM = append(wantM, v.CommitteePublicKey())
 	}

@@ -9,6 +9,10 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 )
 
+const (
+	SHARD_REWARD_INST = "shardRewardInst"
+)
+
 type ShardBlockRewardInfo struct {
 	ShardReward map[common.Hash]uint64
 	Epoch       uint64
@@ -35,7 +39,7 @@ func BuildInstForShardReward(reward map[common.Hash]uint64, epoch uint64, shardI
 	returnedInst := []string{
 		strconv.Itoa(ShardBlockRewardRequestMeta),
 		strconv.Itoa(int(shardID)),
-		"shardRewardInst", //TODO: change to constant
+		SHARD_REWARD_INST,
 		string(contentStr),
 	}
 	resIns = append(resIns, returnedInst)

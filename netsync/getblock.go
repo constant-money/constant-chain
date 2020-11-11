@@ -1,9 +1,10 @@
 package netsync
 
 import (
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"sort"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/peerv2/proto"
 	"github.com/incognitochain/incognito-chain/wire"
@@ -31,7 +32,7 @@ func (netSync *NetSync) GetBlockByHeight(
 		if err != nil {
 			return nil, err
 		}
-		return blk.CreateCrossShardBlock(tocID)
+		return blockchain.CreateCrossShardBlock(blk, tocID)
 	default:
 		return nil, errors.Errorf("Invalid block type")
 	}
@@ -65,7 +66,7 @@ func (netSync *NetSync) GetBlockByHash(
 		if err != nil {
 			return nil, err
 		}
-		return blk.CreateCrossShardBlock(tocID)
+		return blockchain.CreateCrossShardBlock(blk, tocID)
 	default:
 		return nil, errors.Errorf("Invalid block type")
 	}
@@ -277,7 +278,7 @@ func (netSync *NetSync) getBlockBeaconByHeightAndSend(peerID libp2p.ID, fromPool
 // 0: normal
 // 1: crossShard
 // 2: shardToBeacon
-func (netSync *NetSync) createBlockShardMsgByType(block *blockchain.ShardBlock, blkType byte, crossShardID byte) (wire.Message, error) {
+func (netSync *NetSync) createBlockShardMsgByType(block *types.ShardBlock, blkType byte, crossShardID byte) (wire.Message, error) {
 	var (
 		blkMsg wire.Message
 		err    error
@@ -291,7 +292,7 @@ func (netSync *NetSync) createBlockShardMsgByType(block *blockchain.ShardBlock, 
 		}
 		blkMsg.(*wire.MessageBlockShard).Block = block
 	case crossShard:
-		blkToSend, err := block.CreateCrossShardBlock(crossShardID)
+		blkToSend, err := blockchain.CreateCrossShardBlock(block, crossShardID)
 		if err != nil {
 			Logger.log.Error(err)
 			return nil, err

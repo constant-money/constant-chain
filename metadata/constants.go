@@ -22,10 +22,11 @@ const (
 	WithDrawRewardRequestMeta    = 44
 	WithDrawRewardResponseMeta   = 45
 
-	//statking
+	//staking
 	ShardStakingMeta    = 63
 	StopAutoStakingMeta = 127
 	BeaconStakingMeta   = 64
+	UnStakingMeta       = 210
 
 	// Incognito -> Ethereum bridge
 	BeaconSwapConfirmMeta = 70

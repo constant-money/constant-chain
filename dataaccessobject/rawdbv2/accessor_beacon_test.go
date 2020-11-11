@@ -2,7 +2,7 @@ package rawdbv2_test
 
 import (
 	"encoding/json"
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/incdb"
 	_ "github.com/incognitochain/incognito-chain/incdb/lvdb"
@@ -12,11 +12,11 @@ import (
 )
 
 var (
-	beaconBlocks       []*blockchain.BeaconBlock
-	forkedBeaconBlock1 = blockchain.NewBeaconBlock()
-	forkedBeaconBlock2 = blockchain.NewBeaconBlock()
-	randomBeaconBlock1 = blockchain.NewBeaconBlock()
-	randomBeaconBlock2 = blockchain.NewBeaconBlock()
+	beaconBlocks       []*types.BeaconBlock
+	forkedBeaconBlock1 = types.NewBeaconBlock()
+	forkedBeaconBlock2 = types.NewBeaconBlock()
+	randomBeaconBlock1 = types.NewBeaconBlock()
+	randomBeaconBlock2 = types.NewBeaconBlock()
 	max                = 5
 	db                 incdb.Database
 )
@@ -30,7 +30,7 @@ var _ = func() (_ struct{}) {
 		panic(err)
 	}
 	for i := 0; i < max; i++ {
-		beaconBlock := blockchain.NewBeaconBlock()
+		beaconBlock := types.NewBeaconBlock()
 		beaconBlock.Header.Height = uint64(i)
 		if i != 0 {
 			beaconBlock.Header.PreviousBlockHash = beaconBlocks[i-1].Header.Hash()
@@ -189,7 +189,7 @@ func TestGetBeaconBlockByHash(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		beaconBlock := blockchain.NewBeaconBlock()
+		beaconBlock := types.NewBeaconBlock()
 		err = json.Unmarshal(res, beaconBlock)
 		if err != nil {
 			t.Fatal(err)
@@ -205,7 +205,7 @@ func TestGetBeaconBlockByHash(t *testing.T) {
 	if err1 != nil {
 		t.Fatal(err1)
 	}
-	beaconBlock1 := blockchain.NewBeaconBlock()
+	beaconBlock1 := types.NewBeaconBlock()
 	err1 = json.Unmarshal(res1, beaconBlock1)
 	if err1 != nil {
 		t.Fatal(err1)
@@ -220,7 +220,7 @@ func TestGetBeaconBlockByHash(t *testing.T) {
 	if err2 != nil {
 		t.Fatal(err2)
 	}
-	beaconBlock2 := blockchain.NewBeaconBlock()
+	beaconBlock2 := types.NewBeaconBlock()
 	err2 = json.Unmarshal(res, beaconBlock2)
 	if err2 != nil {
 		t.Fatal(err2)
@@ -241,7 +241,7 @@ func TestGetBeaconBlockByIndex(t *testing.T) {
 	tempBeaconBlockHeight1, err := rawdbv2.GetBeaconBlockByIndex(db, 1)
 	count1 := 0
 	for h, data := range tempBeaconBlockHeight1 {
-		beaconBlock := blockchain.NewBeaconBlock()
+		beaconBlock := types.NewBeaconBlock()
 		err = json.Unmarshal(data, beaconBlock)
 		if err != nil {
 			t.Fatal(err)
@@ -261,7 +261,7 @@ func TestGetBeaconBlockByIndex(t *testing.T) {
 	tempBeaconBlockHeight2, err := rawdbv2.GetBeaconBlockByIndex(db, 2)
 	count2 := 0
 	for h, data := range tempBeaconBlockHeight2 {
-		beaconBlock := blockchain.NewBeaconBlock()
+		beaconBlock := types.NewBeaconBlock()
 		err = json.Unmarshal(data, beaconBlock)
 		if err != nil {
 			t.Fatal(err)
@@ -282,7 +282,7 @@ func TestGetBeaconBlockByIndex(t *testing.T) {
 		tempBeaconBlockHeight, err := rawdbv2.GetBeaconBlockByIndex(db, uint64(i))
 		count := 0
 		for h, data := range tempBeaconBlockHeight {
-			beaconBlock := blockchain.NewBeaconBlock()
+			beaconBlock := types.NewBeaconBlock()
 			err = json.Unmarshal(data, beaconBlock)
 			if err != nil {
 				t.Fatal(err)

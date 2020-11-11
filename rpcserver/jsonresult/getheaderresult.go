@@ -1,15 +1,17 @@
 package jsonresult
 
-import "github.com/incognitochain/incognito-chain/blockchain"
+import (
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+)
 
 type GetHeaderResult struct {
-	BlockNum  int                    `json:"Blocknum"`
-	ShardID   byte                   `json:"ShardID"`
-	BlockHash string                 `json:"Blockhash"`
-	Header    blockchain.ShardHeader `json:"Header"`
+	BlockNum  int               `json:"Blocknum"`
+	ShardID   byte              `json:"ShardID"`
+	BlockHash string            `json:"Blockhash"`
+	Header    types.ShardHeader `json:"Header"`
 }
 
-func NewHeaderResult(header blockchain.ShardHeader, blockNum int, blockHash string, shardID byte) (GetHeaderResult) {
+func NewHeaderResult(header types.ShardHeader, blockNum int, blockHash string, shardID byte) GetHeaderResult {
 	result := GetHeaderResult{}
 	result.Header = header
 	result.BlockNum = blockNum

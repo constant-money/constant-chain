@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+	"github.com/incognitochain/incognito-chain/instruction"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -23,7 +26,7 @@ type returnStakingInfo struct {
 
 func (blockchain *BlockChain) buildReturnStakingTxFromBeaconInstructions(
 	curView *ShardBestState,
-	beaconBlocks []*BeaconBlock,
+	beaconBlocks []*types.BeaconBlock,
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 ) (
@@ -68,8 +71,8 @@ func (blockchain *BlockChain) buildReturnStakingTxFromBeaconInstructions(
 
 func (blockchain *BlockChain) ValidateReturnStakingTxFromBeaconInstructions(
 	curView *ShardBestState,
-	beaconBlocks []*BeaconBlock,
-	shardBlock *ShardBlock,
+	beaconBlocks []*types.BeaconBlock,
+	shardBlock *types.ShardBlock,
 	shardID byte,
 ) error {
 	if shardID == 1 && shardBlock.GetHeight() == 432620 {
@@ -161,7 +164,7 @@ func (blockchain *BlockChain) buildReturnStakingAmountTx(
 
 func (blockchain *BlockChain) getReturnStakingInfoFromBeaconInstructions(
 	curView *ShardBestState,
-	beaconBlocks []*BeaconBlock,
+	beaconBlocks []*types.BeaconBlock,
 	shardID byte,
 ) (
 	map[common.Hash]returnStakingInfo,
@@ -177,9 +180,10 @@ func (blockchain *BlockChain) getReturnStakingInfoFromBeaconInstructions(
 	for _, beaconBlock := range beaconBlocks {
 		beaconConsensusStateDB = nil
 		for _, l := range beaconBlock.Body.Instructions {
-			if l[0] == SwapAction {
+			switch l[0] {
+			case instruction.SWAP_ACTION:
 				if beaconConsensusStateDB == nil {
-					beaconConsensusRootHash, err = blockchain.GetBeaconConsensusRootHash(beaconView, beaconBlock.GetHeight())
+					beaconConsensusRootHash, err = blockchain.GetBeaconConsensusRootHash(beaconView, beaconBlock.GetHeight()-1)
 					if err != nil {
 						return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Beacon Consensus Root Hash of Height %+v not found, error %+v", beaconBlock.GetHeight(), err))
 					}
@@ -243,8 +247,80 @@ func (blockchain *BlockChain) getReturnStakingInfoFromBeaconInstructions(
 						StakingAmount: txMeta.StakingAmountShard,
 					}
 				}
+			case instruction.RETURN_ACTION:
+				returnStakingIns, err := instruction.ValidateAndImportReturnStakingInstructionFromString(l)
+				if err != nil {
+					Logger.log.Errorf("SKIP unstake instruction %+v, error %+v", returnStakingIns, err)
+					continue
+					// return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, err)
+				}
+				if beaconConsensusStateDB == nil {
+					beaconConsensusRootHash, err = blockchain.GetBeaconConsensusRootHash(beaconView, beaconBlock.GetHeight()-1)
+					if err != nil {
+						return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Beacon Consensus Root Hash of Height %+v not found, error %+v", beaconBlock.GetHeight(), err))
+					}
+					beaconConsensusStateDB, err = statedb.NewWithPrefixTrie(beaconConsensusRootHash, statedb.NewDatabaseAccessWarper(blockchain.GetBeaconChainDatabase()))
+				}
+				for _, v := range returnStakingIns.GetPublicKey() {
+					stakerInfo, has, err := statedb.GetStakerInfo(beaconConsensusStateDB, v)
+					if err != nil {
+						Logger.log.Error(errors.Errorf("Error in trying get information of this public key %v", v))
+						continue
+					}
+					if !has || stakerInfo == nil {
+						Logger.log.Error(errors.Errorf("Can not found information of this public key %v", v))
+						continue
+					}
+					if stakerInfo.TxStakingID() == common.HashH([]byte{0}) {
+						Logger.log.Error(errors.Errorf("Staker info is null %v", stakerInfo.TxStakingID()))
+						continue
+					}
+					if _, ok := res[stakerInfo.TxStakingID()]; ok {
+						err = errors.Errorf("Duplicate return staking using tx staking %v", stakerInfo.TxStakingID())
+						Logger.log.Error(err)
+						return nil, nil, err
+					}
+					blockHash, index, err := rawdbv2.GetTransactionByHash(blockchain.GetShardChainDatabase(shardID), stakerInfo.TxStakingID())
+					if err != nil {
+						Logger.log.Error("Can't get transaction hash %v from database error %v", stakerInfo.TxStakingID(), err)
+						continue
+					}
+					shardBlock, _, err := blockchain.GetShardBlockByHash(blockHash)
+					if err != nil || shardBlock == nil {
+						Logger.log.Error("ERROR", err, "NO Transaction in block with hash", blockHash, "and index", index, "contains", shardBlock.Body.Transactions[index])
+						continue
+					}
+					txData := shardBlock.Body.Transactions[index]
+					txMeta, ok := txData.GetMetadata().(*metadata.StakingMetadata)
+					if !ok {
+						Logger.log.Errorf("Can not parse meta data of this tx %v", txData.Hash().String())
+						errorInstructions = append(errorInstructions, l)
+						continue
+					}
+					keyWallet, err := wallet.Base58CheckDeserialize(txMeta.FunderPaymentAddress)
+					if err != nil {
+						Logger.log.Error("SA: cannot get payment address", txMeta, shardID)
+						errorInstructions = append(errorInstructions, l)
+						continue
+					}
+					Logger.log.Info("SA: build salary tx", txMeta.FunderPaymentAddress, shardID)
+					paymentShardID := common.GetShardIDFromLastByte(keyWallet.KeySet.PaymentAddress.Pk[len(keyWallet.KeySet.PaymentAddress.Pk)-1])
+					if paymentShardID != shardID {
+						err = NewBlockChainError(WrongShardIDError, fmt.Errorf("Staking Payment Address ShardID %+v, Not From Current Shard %+v", paymentShardID, shardID))
+						errorInstructions = append(errorInstructions, l)
+						Logger.log.Error(err)
+						continue
+					}
+					res[stakerInfo.TxStakingID()] = returnStakingInfo{
+						SwapoutPubKey: v,
+						FunderAddress: keyWallet.KeySet.PaymentAddress,
+						StakingTx:     txData,
+						StakingAmount: txMeta.StakingAmountShard,
+					}
+				}
 			}
 		}
 	}
+
 	return res, errorInstructions, nil
 }

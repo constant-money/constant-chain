@@ -76,7 +76,7 @@ func TestStateDB_GetMixCommitteePublicKey(t *testing.T) {
 	to = from + 80
 	tempRootHash = rootHashes[8]
 	wantNextEpochCandidateM := []incognitokey.CommitteePublicKey{}
-	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantNextEpochCandidateM = append(wantNextEpochCandidateM, v.CommitteePublicKey())
 	}
@@ -84,7 +84,7 @@ func TestStateDB_GetMixCommitteePublicKey(t *testing.T) {
 	from += 80
 	to += 80
 	wantCurrentEpochCandidateM := []incognitokey.CommitteePublicKey{}
-	tempRootHash, tempM = storeCommitteeObjectOneShard(CurrentEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM = storeCommitteeObjectOneShard(CurrentEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantCurrentEpochCandidateM = append(wantCurrentEpochCandidateM, v.CommitteePublicKey())
 	}
@@ -212,14 +212,14 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 	}
 	to = from + 80
 	tempRootHash = rootHashes[8]
-	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantNextEpochCandidateM = append(wantNextEpochCandidateM, v.CommitteePublicKey())
 	}
 
 	from += 80
 	to += 80
-	tempRootHash, tempM = storeCommitteeObjectOneShard(CurrentEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM = storeCommitteeObjectOneShard(CurrentEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantCurrentEpochCandidateM = append(wantCurrentEpochCandidateM, v.CommitteePublicKey())
 	}
@@ -229,7 +229,7 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 		t.Fatal(err, tempStateDB)
 	}
 
-	gotCurrentValidatorM, gotSubstituteValidatorM, gotNextEpochCandidateM, gotCurrentEpochCandidateM, _, _ := tempStateDB.getAllCommitteeState(ids)
+	gotCurrentValidatorM, gotSubstituteValidatorM, gotNextEpochCandidateM, gotCurrentEpochCandidateM, _, _, _, _, _ := tempStateDB.getAllCommitteeState(ids)
 	for _, id := range ids {
 		temp, ok := gotCurrentValidatorM[id]
 		if !ok {

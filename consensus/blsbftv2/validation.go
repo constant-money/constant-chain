@@ -1,56 +1,34 @@
 package blsbftv2
 
 import (
+	"errors"
 	"encoding/json"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 
 	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
+	"github.com/incognitochain/incognito-chain/consensus/consensustypes"
 	"github.com/incognitochain/incognito-chain/consensus/signatureschemes/blsmultisig"
 	"github.com/incognitochain/incognito-chain/consensus/signatureschemes/bridgesig"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 )
 
 type blockValidation interface {
-	common.BlockInterface
-	AddValidationField(validationData string) error
+	types.BlockInterface
+	AddValidationField(validationData string)
 }
 
-type ValidationData struct {
-	ProducerBLSSig []byte
-	ProducerBriSig []byte
-	ValidatiorsIdx []int
-	AggSig         []byte
-	BridgeSig      [][]byte
-}
-
-func DecodeValidationData(data string) (*ValidationData, error) {
-	var valData ValidationData
-	err := json.Unmarshal([]byte(data), &valData)
-	if err != nil {
-		return nil, NewConsensusError(DecodeValidationDataError, err)
-	}
-	return &valData, nil
-}
-
-func EncodeValidationData(validationData ValidationData) (string, error) {
-	result, err := json.Marshal(validationData)
-	if err != nil {
-		return "", NewConsensusError(EncodeValidationDataError, err)
-	}
-	return string(result), nil
-}
-
-func (e BLSBFT_V2) CreateValidationData(block common.BlockInterface) ValidationData {
-	var valData ValidationData
+func (e BLSBFT_V2) CreateValidationData(block types.BlockInterface) consensustypes.ValidationData {
+	var valData consensustypes.ValidationData
 	valData.ProducerBLSSig, _ = e.UserKeySet.BriSignData(block.Hash().GetBytes())
 	return valData
 }
 
-func ValidateProducerSig(block common.BlockInterface) error {
-	valData, err := DecodeValidationData(block.GetValidationField())
+func ValidateProducerSig(block types.BlockInterface) error {
+	valData, err := consensustypes.DecodeValidationData(block.GetValidationField())
 	if err != nil {
 		return NewConsensusError(UnExpectedError, err)
 	}
@@ -174,7 +152,7 @@ func validateBLSSig(
 	return nil
 }
 
-func (e BLSBFT_V2) ValidateBlockWithConsensus(block common.BlockInterface) error {
+func (e BLSBFT_V2) ValidateBlockWithConsensus(block types.BlockInterface) error {
 
 	return nil
 }

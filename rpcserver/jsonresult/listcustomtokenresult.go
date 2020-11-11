@@ -1,7 +1,7 @@
 package jsonresult
 
 import (
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -36,7 +36,7 @@ func NewPrivacyToken(tokenState *statedb.TokenState) *CustomToken {
 	return customToken
 }
 
-func NewPrivacyForCrossShard(obj blockchain.CrossShardTokenPrivacyMetaData) *CustomToken {
+func NewPrivacyForCrossShard(obj types.CrossShardTokenPrivacyMetaData) *CustomToken {
 	customToken := &CustomToken{}
 	customToken.ID = obj.TokenID.String()
 	customToken.Symbol = obj.PropertySymbol

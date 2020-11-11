@@ -3,14 +3,13 @@ package syncker
 import (
 	"context"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"os"
 	"sync"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
-	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/wire"
 )
 
@@ -39,7 +38,7 @@ type ShardSyncProcess struct {
 
 func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInterface, chain ShardChainInterface) *ShardSyncProcess {
 	var isOutdatedBlock = func(blk interface{}) bool {
-		if blk.(*blockchain.ShardBlock).GetHeight() < chain.GetFinalViewHeight() {
+		if blk.(*types.ShardBlock).GetHeight() < chain.GetFinalViewHeight() {
 			return true
 		}
 		return false
@@ -75,6 +74,10 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 			case f := <-s.actionCh:
 				f()
 			case shardPeerState := <-s.shardPeerStateCh:
+				//TODO: @tin
+				// receive peer state here
+				// process peer state
+
 				for sid, peerShardState := range shardPeerState.Shards {
 					if int(sid) == s.shardID {
 						s.shardPeerState[shardPeerState.SenderID] = ShardPeerState{
@@ -161,7 +164,7 @@ func (s *ShardSyncProcess) insertShardBlockFromPool() {
 			insertShardTimeCache.Add(viewHash.String(), time.Now())
 			insertCnt++
 			//must validate this block when insert
-			if err := s.Chain.InsertBlk(blk.(common.BlockInterface), true); err != nil {
+			if err := s.Chain.InsertBlk(blk.(types.BlockInterface), true); err != nil {
 				Logger.Error("Insert shard block from pool fail", blk.GetHeight(), blk.Hash(), err)
 				continue
 			}
@@ -201,7 +204,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		return
 	}
 
-	blockBuffer := []common.BlockInterface{}
+	blockBuffer := []types.BlockInterface{}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer func() {
 		if requestCnt == 0 {
@@ -240,7 +243,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 			if !isNil(blk) {
 				blockBuffer = append(blockBuffer, blk)
 
-				if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
+				if blk.(*types.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
 					time.Sleep(30 * time.Second)
 				}
 				// if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
@@ -266,7 +269,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 				}
 
 				insertTime = time.Now()
-				blockBuffer = []common.BlockInterface{}
+				blockBuffer = []types.BlockInterface{}
 			}
 
 			if isNil(blk) && len(blockBuffer) == 0 {

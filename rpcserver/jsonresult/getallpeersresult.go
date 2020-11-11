@@ -36,7 +36,7 @@ func NewGetAllConnectedPeersResult(connMgr connmanager.ConnManager, bc *blockcha
 	peersMap := []map[string]string{}
 	listeningPeer := connMgr.GetListeningPeer()
 	bestState := bc.GetBeaconBestState()
-	beaconCommitteeList, _ := incognitokey.ExtractPublickeysFromCommitteeKeyList(bestState.BeaconCommittee, bestState.ConsensusAlgorithm)
+	beaconCommitteeList, _ := incognitokey.ExtractPublickeysFromCommitteeKeyList(bestState.GetBeaconCommittee(), bestState.ConsensusAlgorithm)
 	shardCommitteeList := make(map[byte][]string)
 	for shardID, committee := range bestState.GetShardCommittee() {
 		shardCommitteeList[shardID], _ = incognitokey.ExtractPublickeysFromCommitteeKeyList(committee, bestState.ShardConsensusAlgorithm[shardID])

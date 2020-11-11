@@ -1,10 +1,11 @@
-package blockchain
+package types
 
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"strconv"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 type BeaconBlock struct {
@@ -88,13 +89,14 @@ func (beaconBlock BeaconBlock) GetCurrentEpoch() uint64 {
 func (beaconBlock BeaconBlock) GetHeight() uint64 {
 	return beaconBlock.Header.Height
 }
+
 func (beaconBlock BeaconBlock) GetShardID() int {
 	return -1
 }
 
-// func (beaconBlock *BeaconBlock) GetProducerPubKey() string {
-// 	return string(beaconBlock.Header.ProducerAddress.Pk)
-// }
+func (beaconBlock BeaconBlock) CommitteeFromBlock() common.Hash {
+	return common.Hash{}
+}
 
 func (beaconBlock *BeaconBlock) UnmarshalJSON(data []byte) error {
 	tempBeaconBlock := &struct {
@@ -104,21 +106,17 @@ func (beaconBlock *BeaconBlock) UnmarshalJSON(data []byte) error {
 	}{}
 	err := json.Unmarshal(data, &tempBeaconBlock)
 	if err != nil {
-		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		return err
 	}
-	// beaconBlock.AggregatedSig = tempBlk.AggregatedSig
-	// beaconBlock.R = tempBlk.R
-	// beaconBlock.ValidatorsIdx = tempBlk.ValidatorsIdx
-	// beaconBlock.ProducerSig = tempBlk.ProducerSig
 	beaconBlock.ValidationData = tempBeaconBlock.ValidationData
 	beaconBlock.Header = tempBeaconBlock.Header
 	beaconBlock.Body = tempBeaconBlock.Body
 	return nil
 }
 
-func (beaconBlock *BeaconBlock) AddValidationField(validationData string) error {
+func (beaconBlock *BeaconBlock) AddValidationField(validationData string) {
 	beaconBlock.ValidationData = validationData
-	return nil
+	return
 }
 func (beaconBlock BeaconBlock) GetValidationField() string {
 	return beaconBlock.ValidationData

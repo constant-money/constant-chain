@@ -212,3 +212,14 @@ func (committeePublicKey *CommitteePublicKey) IsEqual(target CommitteePublicKey)
 	}
 	return true
 }
+
+func DeepCopy(committeePublicKeys []CommitteePublicKey) []CommitteePublicKey {
+	newCommitteePublicKeys := []CommitteePublicKey{}
+	for _, committeePublicKey := range committeePublicKeys {
+		res, _ := committeePublicKey.Bytes()
+		newCommitteePublicKey := new(CommitteePublicKey)
+		_ = newCommitteePublicKey.FromBytes(res)
+		newCommitteePublicKeys = append(newCommitteePublicKeys, *newCommitteePublicKey)
+	}
+	return newCommitteePublicKeys
+}

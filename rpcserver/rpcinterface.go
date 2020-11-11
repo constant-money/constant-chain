@@ -245,6 +245,9 @@ var HttpHandler = map[string]httpHandler{
 
 	// get committeeByHeight
 
+	// unstake
+	unstake: (*HttpServer).handleCreateUnstakeTransaction,
+
 	getTotalStaker: (*HttpServer).handleGetTotalStaker,
 }
 

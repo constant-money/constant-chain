@@ -2,10 +2,10 @@ package rpcserver
 
 import (
 	"errors"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 
 	"reflect"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/pubsub"
@@ -49,7 +49,7 @@ func (wsServer *WsServer) handleSubcribeShardCandidateByPublickey(params interfa
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -117,7 +117,7 @@ func (wsServer *WsServer) handleSubcribeShardPendingValidatorByPublickey(params 
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -189,7 +189,7 @@ func (wsServer *WsServer) handleSubcribeShardCommitteeByPublickey(params interfa
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -255,7 +255,7 @@ func (wsServer *WsServer) handleSubcribeBeaconCandidateByPublickey(params interf
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -315,7 +315,7 @@ func (wsServer *WsServer) handleSubcribeBeaconPendingValidatorByPublickey(params
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue
@@ -375,7 +375,7 @@ func (wsServer *WsServer) handleSubcribeBeaconCommitteeByPublickey(params interf
 		select {
 		case msg := <-subChan:
 			{
-				_, ok := msg.Value.(*blockchain.BeaconBlock)
+				_, ok := msg.Value.(*types.BeaconBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue

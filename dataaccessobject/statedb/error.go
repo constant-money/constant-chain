@@ -208,8 +208,16 @@ const (
 
 	// PDEX v2
 	StorePDETradingFeeError
-	
+
 	InvalidStakerInfoTypeError
+	StoreMemberCommonShardPoolError
+	StoreMemberShardPoolError
+	StoreMemberCommonBeaconPoolError
+	StoreMemberBeaconPoolError
+	DeleteMemberCommonShardPoolError
+	DeleteMemberShardPoolError
+	DeleteMemberCommonBeaconPoolError
+	DeleteMemberBeaconPoolError
 )
 
 var ErrCodeMessage = map[int]struct {

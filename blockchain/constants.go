@@ -2,11 +2,12 @@ package blockchain
 
 import (
 	"encoding/json"
-	"github.com/incognitochain/incognito-chain/metrics"
 	"io/ioutil"
 	"os"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/metrics"
 )
 
 //Network fixed params
@@ -50,6 +51,7 @@ const (
 	MainnetOffset           = 4
 	MainnetSwapOffset       = 4
 	MainnetAssignOffset     = 8
+	MainnetMaxSwapOrAssign  = 10
 
 	MainNetShardCommitteeSize     = 32
 	MainNetMinShardCommitteeSize  = 22
@@ -82,8 +84,7 @@ const (
 	MainnetBNBFullNodeHost     = "dataseed1.ninicoin.io"
 	MainnetBNBFullNodeProtocol = "https"
 	MainnetBNBFullNodePort     = "443"
-
-	MainnetPortalFeeder = "12RwJVcDx4SM4PvjwwPrCRPZMMRT9g6QrnQUHD54EbtDb6AQbe26ciV6JXKyt4WRuFQVqLKqUUbb7VbWxR5V6KaG9HyFbKf6CrRxhSm"
+	MainnetPortalFeeder        = "12RwJVcDx4SM4PvjwwPrCRPZMMRT9g6QrnQUHD54EbtDb6AQbe26ciV6JXKyt4WRuFQVqLKqUUbb7VbWxR5V6KaG9HyFbKf6CrRxhSm"
 	// ------------- end Mainnet --------------------------------------
 )
 
@@ -307,17 +308,6 @@ func init() {
 // public key
 
 // END CONSTANT for network TESTNET
-
-// -------------- FOR INSTRUCTION --------------
-// Action for instruction
-const (
-	SetAction     = "set"
-	SwapAction    = "swap"
-	RandomAction  = "random"
-	StakeAction   = "stake"
-	AssignAction  = "assign"
-	StopAutoStake = "stopautostake"
-)
 
 var (
 	shardInsertBlockTimer                  = metrics.NewRegisteredTimer("shard/insert", nil)

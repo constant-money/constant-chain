@@ -4,7 +4,9 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject"
 	"github.com/incognitochain/incognito-chain/incdb"
+	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/trie"
+	"github.com/incognitochain/incognito-chain/wallet"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -25,15 +27,23 @@ var _ = func() (_ struct{}) {
 	wrarperDB = NewDatabaseAccessWarper(diskDB)
 	trie.Logger.Init(common.NewBackend(nil).Logger("test", true))
 	dataaccessobject.Logger.Init(common.NewBackend(nil).Logger("test", true))
+
+	for _, v := range receiverPaymentAddresses {
+		wl, _ := wallet.Base58CheckDeserialize(v)
+		receiverPaymentAddressStructs = append(receiverPaymentAddressStructs, wl.KeySet.PaymentAddress)
+	}
+	hash1, _ := common.Hash{}.NewHashFromStr("123545")
+	txHashes = append(txHashes, *hash1)
 	return
 }()
 
 var (
-	shardIDs               = []byte{0, 1, 2, 3, 4, 5, 6, 7}
-	defaultMaxEpoch uint64 = 10
-	maxTokenID             = 10
-
-	committeePublicKeys = []string{
+	shardIDs                             = []byte{0, 1, 2, 3, 4, 5, 6, 7}
+	defaultMaxEpoch               uint64 = 10
+	maxTokenID                           = 10
+	receiverPaymentAddressStructs        = []privacy.PaymentAddress{}
+	txHashes                             = []common.Hash{}
+	committeePublicKeys                  = []string{
 		"121VhftSAygpEJZ6i9jGk4KtMcHSGEy6q7Ad5NPjGKakZoNowXd5xokQ3GYNSqLkmkicDFMRzHYk2qvUKfs6PbHFrLjnQNwQwX9inAzeBZdDeyRDNrPymyAwYkb5UDvvsqhx9fWF7Bm3TBYsZ5fKGLe9c5sok2HgKfZ8MUHyxXvYsmoAa4gPwECUULHXDFkh85XtMxEavYda1PMZCXr9fg9e6jV68RaRrNmodnJ77L7zcE9Dev6YAwPpSe3RpfmQ8Dj4tzhuiRuZiD4h1VEkDmhbuExWruL6VTaNpxRBkAhXgiktUS91WcXNq9CQPe793mvxedpJbyLsU5YsCoqw3bch5TUEoR1p9xD7fbzF6PmG868Cx9CJD73R2XFqFvijsLUnpoTVrZPfG9D6jVpCd1AxDGJv74FCWPQhm6xD7sUaRmpD",
 		"121VhftSAygpEJZ6i9jGk4vSqVyeGkELuK9Zz94N2CjypNGdtskQKMFsseWJv377rYY5NGtTqnPq1PaNkGygmPeXdrjLjmCMcRJCWDRe7ie28Y6nm69a96d9JnDDYCvLsUbMMjmfgaPrZMaG1YmruauaeVqAhW8ahrubCtdAGJM9Bbb4yE4Lh4NBmWmQmsFSDJVQDmBTNE6M7ZuvcgQB3o3cMXGPuFpb7CpWBHvvjG15scXDLckgkjmzCgP8DGr72Y82uxeL2YULpToyjQuijYmY1sdHaAT5jdq8wuADYsMg5AthVpZRwNkdECtpVFey55VsG9mG283RwpQMyebqWASJvJPjpwQjTLQJrMcPdYjbyj6UFZFLoHBbj16A2a8awfEeqegR7TzUxMfnPNsBBfBTjEXZG56GFYLpzM1b885D4kkw",
 		"121VhftSAygpEJZ6i9jGkQYyq7HFXd2y35K4p35YyNgoXZENZrgnhVKxLAzznRbDkLFvB6JAHPGg5vNfvesxU8xdKbDvi6ptt2UhU6BbvMEyuDg7ntDsH23pzs6cLbZALgfSFayfF6KvounPNRMkJ2piWYd8k7oXgC5sMhC4PcB6QxxKCW1een7KZKVHNpQQooCVUkTNiSuy25boa2Q3qrnEL6R9MWBykcm6ET14C7JyrrKXEz7oVaub2H3M8ByKCaib4ccGT9PungUPD8hvywNcKYYLXgM1SSt9kZKdhDBttUKa4X4PkmM2Ew9bzZLHQyESciGtgVv3yWsyQeGHMa7zcSrbFNYXdh5GRdqNJ4JwwpZyJvErYT5hy6HCDdBtjzVWLqFWQspGK72nhoJvfGjPMXYLYcvxvhMWA1uc36M4DbDD",
@@ -554,7 +564,7 @@ var (
 		"121VhftSAygpEJZ6i9jGk4csz6SUoebHc7kvbcz7QPQdn9Z81SanykGAMmvznZKdMhZMZSqjSUTLujN756veoRA86aAHSEUysqsqbxh55pXFNXC4PHqYr53Po3z4WF6CpAHtZ7wS7FLciTqHxNecSJ3hWvbvvaXSDH7NorFxDyhoynjLXTpQQefTLXBC7SFhj5DGPiUExnhLoyef1Evn1k4U7EiHhRmNknLN6g11BHnWqYWS9StV6bNjax6McsATzhqfgTZXKm2BUEUfn7Wjk6DFRsLfPUNZ3UZmrwZyvpZmyjYc51XZRW5ChbmgvTU9GRdFLyDYvTaG6SVnW13ujmz4ATMBzhKSc6iPjQp8RmMG1WwtGpaAvSyoxjj984EoG1Do4wXj4vXYc5VtGGTCuyvJZybJ1LQcwZ3GCDdXjf5HAiNk",
 		"121VhftSAygpEJZ6i9jGk6zdHAa1vW76JL4XuJBrRa3Amxn1PDVGYBMs28frS4JeKiWEoUoYA5VJiE4Veka6LREA1k7oTKtAFc18cFEPD3CtsdopQBSBC8ghvXCRCEwsLCyqmRfYBnZ7meJugrVyWhftiZ4hCXrXpBLZV4YADcYYN1zpMmcdmDcHSRaPczBpBPe1hvWfsDRLykBwT9fmZNTdvNJm5LiY2UQ2ZWF851RJCeJDd3Rmez33LXjEmMKBehDKi83jSQHNvU8nkwRef6RLb7eXy7CG4ixnxHx74u3Sg4PUtq1KXC91aBmFSj1cT2M8rfG9WJ4mAFTd6Tx4LS4EwAw3VVaQv3Mk2YceRaF8b4r6WP5FvnTM7vBeqnwVmqC2CxZ21pzhYXyLQGiJfbZC5KrrL57HcfvQciVsR2D8c3Ty",
 	}
-	receiverPaymentAddress = []string{
+	receiverPaymentAddresses = []string{
 		"12RpJUTcZx9sM5y8FwfYSzfotoDpBnpkZaYrkZsHcnsbrhpAvrCy2iTanFvwNiAWwtPZV3ipS4dxNvvyWcyKUkeCJmj5hax96t3HbrR",
 		"12RpKZRLq24JSzdZjVoPm7R7g1yoWTmGrksGckzbv5ztnaRxDQVvZc3c5GZ2xxMdCgJyEH3QyiLTqKcw2zmrt1o8B5EP7Jks5MbdfiE",
 		"12RpL484jktHW15z3cu6SSpqNYqVh5jMYB2NZBZh5xBFFLy86nfvoqd28QyYcpdwrvN9C9EmLcrA3ak4SdXAr8URpWogiMPNpEdhEmc",

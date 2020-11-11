@@ -90,7 +90,7 @@ func (httpServer *HttpServer) handleGetCommitteeState(params interface{}, closeC
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err2)
 	}
 
-	currentValidator, substituteValidator, nextEpochShardCandidate, currentEpochShardCandidate, _, _ := statedb.GetAllCandidateSubstituteCommittee(stateDB, shardIDs)
+	currentValidator, substituteValidator, nextEpochShardCandidate, currentEpochShardCandidate, _, _, _, _, _ := statedb.GetAllCandidateSubstituteCommittee(stateDB, shardIDs)
 	currentValidatorStr := make(map[int][]string)
 	for shardID, v := range currentValidator {
 		tempV, _ := incognitokey.CommitteeKeyListToString(v)

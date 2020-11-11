@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"errors"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"sort"
 	"strconv"
 
@@ -30,7 +31,7 @@ type TxViewPoint struct {
 	// data of PRIVACY custom token
 	privacyCustomTokenViewPoint map[int32]*TxViewPoint // sub tx viewpoint for token
 	privacyCustomTokenTxs       map[int32]*transaction.TxCustomTokenPrivacy
-	privacyCustomTokenMetadata  *CrossShardTokenPrivacyMetaData
+	privacyCustomTokenMetadata  *types.CrossShardTokenPrivacyMetaData
 
 	// use to fetch tx - pubkey
 	txByPubKey map[string]interface{} // map[base58check.encode{pubkey}+"_"+base58check.encode{txid})
@@ -47,7 +48,7 @@ func NewTxViewPoint(shardID byte) *TxViewPoint {
 		tokenID:                     &common.Hash{},
 		privacyCustomTokenViewPoint: make(map[int32]*TxViewPoint),
 		privacyCustomTokenTxs:       make(map[int32]*transaction.TxCustomTokenPrivacy),
-		privacyCustomTokenMetadata:  &CrossShardTokenPrivacyMetaData{},
+		privacyCustomTokenMetadata:  &types.CrossShardTokenPrivacyMetaData{},
 		txByPubKey:                  make(map[string]interface{}),
 	}
 	result.tokenID.SetBytes(common.PRVCoinID[:])
@@ -144,7 +145,7 @@ func (view *TxViewPoint) processFetchTxViewPoint(stateDB *statedb.StateDB, shard
 	return acceptedSerialNumbers, acceptedCommitments, acceptedOutputcoins, acceptedSnD, nil
 }
 
-func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, block *ShardBlock) error {
+func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, block *types.ShardBlock) error {
 	transactions := block.Body.Transactions
 	// Loop through all of the transaction descs (except for the salary tx)
 	acceptedSerialNumbers := make([][]byte, 0)
@@ -327,7 +328,7 @@ func (view *TxViewPoint) processFetchCrossOutputViewPoint(stateDB *statedb.State
 	return acceptedCommitments, acceptedOutputcoins, acceptedSnD, nil
 }
 
-func (view *TxViewPoint) fetchCrossTransactionViewPointFromBlock(stateDB *statedb.StateDB, block *ShardBlock) error {
+func (view *TxViewPoint) fetchCrossTransactionViewPointFromBlock(stateDB *statedb.StateDB, block *types.ShardBlock) error {
 	allShardCrossTransactions := block.Body.CrossTransactions
 	// Loop through all of the transaction descs (except for the salary tx)
 	acceptedOutputcoins := make(map[string][]privacy.OutputCoin)

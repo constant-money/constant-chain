@@ -2,6 +2,7 @@ package blsbftv2
 
 import (
 	"fmt"
+	"github.com/incognitochain/incognito-chain/consensus/consensustypes"
 	"strconv"
 	"strings"
 
@@ -71,8 +72,8 @@ func TestMiningKey_GetKeyTuble(t *testing.T) {
 	}
 }
 
-func newMiningKey(privateSeed string) (*MiningKey, error) {
-	var miningKey MiningKey
+func newMiningKey(privateSeed string) (*consensustypes.MiningKey, error) {
+	var miningKey consensustypes.MiningKey
 	privateSeedBytes, _, err := base58.Base58Check{}.Decode(privateSeed)
 	if err != nil {
 		return nil, consensus.NewConsensusError(consensus.LoadKeyError, err)

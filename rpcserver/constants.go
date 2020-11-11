@@ -262,6 +262,9 @@ const (
 	getRewardFeature = "getrewardfeature"
 
 	getTotalStaker = "gettotalstaker"
+
+	// stake
+	unstake = "createunstaketransaction"
 )
 
 const (

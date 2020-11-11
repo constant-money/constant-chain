@@ -1,11 +1,14 @@
 package blockchain
 
 import (
-	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/transaction"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/instruction"
+	"github.com/incognitochain/incognito-chain/transaction"
 )
 
 func CreateGenesisBeaconBlock(
@@ -13,29 +16,32 @@ func CreateGenesisBeaconBlock(
 	net uint16,
 	genesisBlockTime string,
 	genesisParams *GenesisParams,
-) *BeaconBlock {
+) *types.BeaconBlock {
 	inst := [][]string{}
 	shardAutoStaking := []string{}
 	beaconAutoStaking := []string{}
+	txStakes := []string{}
 	for i := 0; i < len(genesisParams.PreSelectShardNodeSerializedPubkey); i++ {
 		shardAutoStaking = append(shardAutoStaking, "false")
+		txStakes = append(txStakes, "d0e731f55fa6c49f602807a6686a7ac769de4e04882bb5eaf8f4fe209f46535d")
 	}
 	for i := 0; i < len(genesisParams.PreSelectBeaconNodeSerializedPubkey); i++ {
 		beaconAutoStaking = append(beaconAutoStaking, "false")
+		txStakes = append(txStakes, "d0e731f55fa6c49f602807a6686a7ac769de4e04882bb5eaf8f4fe209f46535d")
 	}
 	// build validator beacon
 	// test generate public key in utility/generateKeys
-	beaconAssignInstruction := []string{StakeAction}
+	beaconAssignInstruction := []string{instruction.STAKE_ACTION}
 	beaconAssignInstruction = append(beaconAssignInstruction, strings.Join(genesisParams.PreSelectBeaconNodeSerializedPubkey[:], ","))
 	beaconAssignInstruction = append(beaconAssignInstruction, "beacon")
-	beaconAssignInstruction = append(beaconAssignInstruction, []string{""}...)
+	beaconAssignInstruction = append(beaconAssignInstruction, strings.Join(txStakes[:], ","))
 	beaconAssignInstruction = append(beaconAssignInstruction, strings.Join(genesisParams.PreSelectBeaconNodeSerializedPaymentAddress[:], ","))
 	beaconAssignInstruction = append(beaconAssignInstruction, strings.Join(beaconAutoStaking[:], ","))
 
-	shardAssignInstruction := []string{StakeAction}
+	shardAssignInstruction := []string{instruction.STAKE_ACTION}
 	shardAssignInstruction = append(shardAssignInstruction, strings.Join(genesisParams.PreSelectShardNodeSerializedPubkey[:], ","))
 	shardAssignInstruction = append(shardAssignInstruction, "shard")
-	shardAssignInstruction = append(shardAssignInstruction, []string{""}...)
+	shardAssignInstruction = append(shardAssignInstruction, strings.Join(txStakes[:], ","))
 	shardAssignInstruction = append(shardAssignInstruction, strings.Join(genesisParams.PreSelectShardNodeSerializedPaymentAddress[:], ","))
 	shardAssignInstruction = append(shardAssignInstruction, strings.Join(shardAutoStaking[:], ","))
 
@@ -43,7 +49,7 @@ func CreateGenesisBeaconBlock(
 	inst = append(inst, shardAssignInstruction)
 
 	// init network param
-	inst = append(inst, []string{SetAction, "randomnumber", strconv.Itoa(int(0))})
+	inst = append(inst, []string{instruction.SET_ACTION, "randomnumber", strconv.Itoa(int(0))})
 
 	layout := "2006-01-02T15:04:05.000Z"
 	str := genesisBlockTime
@@ -52,8 +58,8 @@ func CreateGenesisBeaconBlock(
 	if err != nil {
 		Logger.log.Error(err)
 	}
-	body := BeaconBody{ShardState: nil, Instructions: inst}
-	header := BeaconHeader{
+	body := types.BeaconBody{ShardState: nil, Instructions: inst}
+	header := types.BeaconHeader{
 		Timestamp:                       genesisTime.Unix(),
 		Version:                         version,
 		Epoch:                           1,
@@ -68,7 +74,7 @@ func CreateGenesisBeaconBlock(
 		InstructionHash:                 common.Hash{},
 	}
 
-	block := &BeaconBlock{
+	block := &types.BeaconBlock{
 		Body:   body,
 		Header: header,
 	}
@@ -84,7 +90,7 @@ func GetBeaconSwapInstructionKeyListV2(genesisParams *GenesisParams, epoch uint6
 	oldCommittees := genesisParams.PreSelectBeaconNodeSerializedPubkey
 	// TODO
 
-	beaconSwapInstructionKeyListV2 := []string{SwapAction, strings.Join(newCommittees, ","), strings.Join(oldCommittees, ","), "beacon", "", "", strings.Join(newRewardReceivers, ",")}
+	beaconSwapInstructionKeyListV2 := []string{instruction.SWAP_ACTION, strings.Join(newCommittees, ","), strings.Join(oldCommittees, ","), "beacon", "", "", strings.Join(newRewardReceivers, ",")}
 	return beaconSwapInstructionKeyListV2, newCommittees
 }
 
@@ -93,15 +99,15 @@ func CreateGenesisShardBlock(
 	net uint16,
 	genesisBlockTime string,
 	icoParams *GenesisParams,
-) *ShardBlock {
-	body := ShardBody{}
+) *types.ShardBlock {
+	body := types.ShardBody{}
 	layout := "2006-01-02T15:04:05.000Z"
 	str := genesisBlockTime
 	genesisTime, err := time.Parse(layout, str)
 	if err != nil {
 		Logger.log.Error(err)
 	}
-	header := ShardHeader{
+	header := types.ShardHeader{
 		Timestamp:         genesisTime.Unix(),
 		Version:           version,
 		BeaconHeight:      1,
@@ -117,7 +123,7 @@ func CreateGenesisShardBlock(
 		body.Transactions = append(body.Transactions, &testSalaryTX)
 	}
 
-	block := &ShardBlock{
+	block := &types.ShardBlock{
 		Body:   body,
 		Header: header,
 	}
@@ -141,7 +147,7 @@ func GetShardSwapInstructionKeyListV2(genesisParams *GenesisParams, epoch uint64
 		// TODO
 
 		newRewardReceiver := selectShardNodeSerializedPaymentAddressV2[:shardCommitteeSize]
-		shardSwapInstructionKeyListV2 := []string{SwapAction, strings.Join(newCommittees, ","), strings.Join(oldCommittees, ","), "shard", strconv.Itoa(i), "", strings.Join(newRewardReceiver, ",")}
+		shardSwapInstructionKeyListV2 := []string{instruction.SWAP_ACTION, strings.Join(newCommittees, ","), strings.Join(oldCommittees, ","), "shard", strconv.Itoa(i), "", strings.Join(newRewardReceiver, ",")}
 		allShardNewKeyListV2[shardID] = newCommittees
 		selectShardNodeSerializedPubkeyV2 = selectShardNodeSerializedPubkeyV2[shardCommitteeSize:]
 		preSelectShardNodeSerializedPubkey = preSelectShardNodeSerializedPubkey[shardCommitteeSize:]

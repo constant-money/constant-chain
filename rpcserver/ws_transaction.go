@@ -2,9 +2,9 @@ package rpcserver
 
 import (
 	"errors"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"reflect"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/pubsub"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
@@ -56,7 +56,7 @@ func (wsServer *WsServer) handleSubscribePendingTransaction(params interface{}, 
 		select {
 		case msg := <-subChan:
 			{
-				shardBlock, ok := msg.Value.(*blockchain.ShardBlock)
+				shardBlock, ok := msg.Value.(*types.ShardBlock)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.ShardBlock, have %+v", reflect.TypeOf(msg.Value))
 					continue

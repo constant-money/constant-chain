@@ -9,6 +9,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"io"
 	"math"
 	"math/rand"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/transaction"
 )
@@ -208,7 +208,7 @@ func (ef *FeeEstimator) ObserveTransaction(t *TxDesc) {
 }
 
 // RegisterBlock informs the fee estimator of a new block to take into account.
-func (ef *FeeEstimator) RegisterBlock(block *blockchain.ShardBlock) error {
+func (ef *FeeEstimator) RegisterBlock(block *types.ShardBlock) error {
 	ef.mtx.Lock()
 	defer ef.mtx.Unlock()
 

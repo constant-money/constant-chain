@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	rCommon "github.com/ethereum/go-ethereum/common"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -31,7 +32,7 @@ type BurningReqAction struct {
 	RequestedTxID *common.Hash            `json:"RequestedTxID"`
 }
 
-func (blockchain *BlockChain) processBridgeInstructions(bridgeStateDB *statedb.StateDB, block *BeaconBlock) error {
+func (blockchain *BlockChain) processBridgeInstructions(bridgeStateDB *statedb.StateDB, block *types.BeaconBlock) error {
 	updatingInfoByTokenID := map[common.Hash]UpdatingInfo{}
 	for _, inst := range block.Body.Instructions {
 		if len(inst) < 2 {
@@ -271,7 +272,7 @@ func (blockchain *BlockChain) storeBurningConfirm(stateDB *statedb.StateDB, inst
 	return nil
 }
 
-func (blockchain *BlockChain) updateBridgeIssuanceStatus(bridgeStateDB *statedb.StateDB, block *ShardBlock) error {
+func (blockchain *BlockChain) updateBridgeIssuanceStatus(bridgeStateDB *statedb.StateDB, block *types.ShardBlock) error {
 	for _, tx := range block.Body.Transactions {
 		metaType := tx.GetMetadataType()
 		var err error

@@ -86,14 +86,14 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	}
 	to = from + 80
 	tempRootHash = rootHashes[8]
-	tempRootHash, tempM := storeCommitteeObjectOneShardForTestConsensus(NextEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM := storeCommitteeObjectOneShardForTestConsensus(NextEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantNextEpochCandidate = append(wantNextEpochCandidate, v.CommitteePublicKey())
 	}
 
 	from += 80
 	to += 80
-	tempRootHash, tempM = storeCommitteeObjectOneShardForTestConsensus(CurrentEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
+	tempRootHash, tempM = storeCommitteeObjectOneShardForTestConsensus(CurrentEpochShardCandidate, tempRootHash, CandidateChainID, from, to)
 	for _, v := range tempM {
 		wantCurrentEpochCandidate = append(wantCurrentEpochCandidate, v.CommitteePublicKey())
 	}

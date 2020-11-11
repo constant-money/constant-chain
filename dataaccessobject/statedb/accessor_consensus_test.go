@@ -17,7 +17,7 @@ func TestStoreAndGetBeaconCommittee(t *testing.T) {
 	autoStaking := make(map[string]bool)
 	for index, beaconCommittee := range beaconCommitteesStruct {
 		incPublicKey := beaconCommittee.GetIncKeyBase58()
-		paymentAddress := receiverPaymentAddress[index]
+		paymentAddress := receiverPaymentAddresses[index]
 		rewardReceiver[incPublicKey] = paymentAddress
 		autoStaking[beaconCommittees[index]] = true
 	}
@@ -51,7 +51,7 @@ func TestStoreAndGetShardCommittee(t *testing.T) {
 	autoStaking := make(map[string]bool)
 	for index, beaconCommittee := range shardCommitteesStruct {
 		incPublicKey := beaconCommittee.GetIncKeyBase58()
-		paymentAddress := receiverPaymentAddress[index]
+		paymentAddress := receiverPaymentAddresses[index]
 		rewardReceiver[incPublicKey] = paymentAddress
 		autoStaking[shardCommittees[index]] = true
 	}
@@ -86,7 +86,7 @@ func TestDeleteOneShardCommittee(t *testing.T) {
 	autoStaking := make(map[string]bool)
 	for index, beaconCommittee := range shardCommitteesStruct {
 		incPublicKey := beaconCommittee.GetIncKeyBase58()
-		paymentAddress := receiverPaymentAddress[index]
+		paymentAddress := receiverPaymentAddresses[index]
 		rewardReceiver[incPublicKey] = paymentAddress
 		autoStaking[shardCommittees[index]] = true
 	}
@@ -138,7 +138,7 @@ func TestDeleteBeaconCommittee(t *testing.T) {
 	autoStaking := make(map[string]bool)
 	for index, beaconCommittee := range beaconCommitteesStruct {
 		incPublicKey := beaconCommittee.GetIncKeyBase58()
-		paymentAddress := receiverPaymentAddress[index]
+		paymentAddress := receiverPaymentAddresses[index]
 		rewardReceiver[incPublicKey] = paymentAddress
 		autoStaking[beaconCommittees[index]] = true
 	}
@@ -191,7 +191,7 @@ func TestStoreAndGetStakerInfo(t *testing.T) {
 	stakingTx := make(map[string]common.Hash)
 	for index, beaconCommittee := range shardCommitteesStruct {
 		incPublicKey := beaconCommittee.GetIncKeyBase58()
-		paymentAddress := receiverPaymentAddress[index]
+		paymentAddress := receiverPaymentAddresses[index]
 		wl, err := wallet.Base58CheckDeserialize(paymentAddress)
 		if err != nil {
 			t.Fatal(err)
@@ -205,7 +205,7 @@ func TestStoreAndGetStakerInfo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = StoreStakerInfo(sDB, shardCommitteesStruct, rewardReceiver, autoStaking, stakingTx)
+	err = StoreStakerInfoV1(sDB, shardCommitteesStruct, rewardReceiver, autoStaking, stakingTx)
 	if err != nil {
 		t.Fatal(err)
 	}

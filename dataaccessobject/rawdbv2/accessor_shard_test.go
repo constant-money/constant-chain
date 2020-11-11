@@ -1,22 +1,22 @@
 package rawdbv2_test
 
 import (
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"io/ioutil"
 	"os"
 	"testing"
 
-	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/incdb"
 	_ "github.com/incognitochain/incognito-chain/incdb/lvdb"
 )
 
 var (
-	shardBlocks       []*blockchain.ShardBlock
-	forkedShardBlock1 = blockchain.NewShardBlock()
-	forkedShardBlock2 = blockchain.NewShardBlock()
-	randomShardBlock1 = blockchain.NewShardBlock()
-	randomShardBlock2 = blockchain.NewShardBlock()
+	shardBlocks       []*types.ShardBlock
+	forkedShardBlock1 = types.NewShardBlock()
+	forkedShardBlock2 = types.NewShardBlock()
+	randomShardBlock1 = types.NewShardBlock()
+	randomShardBlock2 = types.NewShardBlock()
 	maxS              = 5
 	dbS               incdb.Database
 )
@@ -30,7 +30,7 @@ var _ = func() (_ struct{}) {
 		panic(err)
 	}
 	for i := 0; i < maxS; i++ {
-		shardBlock := blockchain.NewShardBlock()
+		shardBlock := types.NewShardBlock()
 		shardBlock.Header.Height = uint64(i)
 		shardBlock.Header.ShardID = 0
 		shardBlock.Header.Round = 1

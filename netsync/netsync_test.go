@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/mempool"
@@ -29,9 +30,9 @@ var (
 		ChainKey:  "",
 		Timestamp: 0,
 	}
-	crossShardBlock  = blockchain.CrossShardBlock{}
-	shardBlock       = blockchain.ShardBlock{}
-	beaconBlock      = blockchain.BeaconBlock{}
+	crossShardBlock  = types.CrossShardBlock{}
+	shardBlock       = types.ShardBlock{}
+	beaconBlock      = types.BeaconBlock{}
 	msgGetBlockShard = &wire.MessageGetBlockShard{
 		FromPool:         true,
 		ByHash:           false,
@@ -211,9 +212,9 @@ func TestNetSyncStart(t *testing.T) {
 	}
 	netSync.config.roleInCommitteesMtx.Unlock()
 
-	shardBlock := blockchain.ShardBlock{}
+	shardBlock := types.ShardBlock{}
 	shardBlock.Header.Height = 2
-	beaconBlock := blockchain.BeaconBlock{}
+	beaconBlock := types.BeaconBlock{}
 	beaconBlock.Header.Height = 2
 	go netSync.config.PubSubManager.PublishMessage(pubsub.NewMessage(pubsub.NewShardblockTopic, &shardBlock))
 	<-time.Tick(1 * time.Second)
@@ -430,7 +431,7 @@ func TestNetSyncHandleMessageBeaconBlock(t *testing.T) {
 		Consensus:     consensus,
 	})
 
-	block := blockchain.BeaconBlock{}
+	block := types.BeaconBlock{}
 	block.Header.Height = 2
 	netSync.Start()
 	netSync.cMessage <- &wire.MessageBlockBeacon{Block: &block}
@@ -452,7 +453,7 @@ func TestNetSyncHandleMessageShardBlock(t *testing.T) {
 		Consensus:     consensus,
 	})
 
-	block := blockchain.ShardBlock{}
+	block := types.ShardBlock{}
 	block.Header.Height = 2
 	netSync.Start()
 	netSync.cMessage <- &wire.MessageBlockShard{Block: &block}
@@ -474,7 +475,7 @@ func TestNetSyncHandleMessageCrossShard(t *testing.T) {
 		Consensus:     consensus,
 	})
 
-	block := blockchain.CrossShardBlock{}
+	block := types.CrossShardBlock{}
 	block.Header.Height = 2
 	netSync.Start()
 	netSync.cMessage <- &wire.MessageCrossShard{Block: &block}

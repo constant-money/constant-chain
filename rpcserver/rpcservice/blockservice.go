@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"strconv"
 
 	rCommon "github.com/ethereum/go-ethereum/common"
@@ -120,6 +121,7 @@ func (blockService BlockService) RetrieveShardBlock(hashString string, verbosity
 		result.Round = shardBlock.Header.Round
 		result.CrossShardBitMap = []int{}
 		result.Instruction = shardBlock.Body.Instructions
+		result.CommitteeFromBlock = shardBlock.Header.CommitteeFromBlock
 		if len(shardBlock.Header.CrossShardBitMap) > 0 {
 			for _, shardID := range shardBlock.Header.CrossShardBitMap {
 				result.CrossShardBitMap = append(result.CrossShardBitMap, int(shardID))
@@ -174,6 +176,7 @@ func (blockService BlockService) RetrieveShardBlock(hashString string, verbosity
 			}
 		}
 		result.Epoch = shardBlock.Header.Epoch
+		result.CommitteeFromBlock = shardBlock.Header.CommitteeFromBlock
 		result.Txs = make([]jsonresult.GetBlockTxResult, 0)
 		for _, tx := range shardBlock.Body.Transactions {
 			transactionResult := jsonresult.GetBlockTxResult{}
@@ -352,7 +355,7 @@ func (blockService BlockService) RetrieveBeaconBlock(hashString string) (*jsonre
 
 func (blockService BlockService) RetrieveBeaconBlockByHeight(blockHeight uint64) ([]*jsonresult.GetBeaconBlockResult, *RPCError) {
 	var err error
-	nextBeaconBlocks := []*blockchain.BeaconBlock{}
+	nextBeaconBlocks := []*types.BeaconBlock{}
 	beaconBlocks, err := blockService.BlockChain.GetBeaconBlockByHeight(blockHeight)
 	if err != nil {
 		Logger.log.Debugf("handleRetrieveBeaconBlock result: %+v, err: %+v", nil, err)
@@ -742,8 +745,8 @@ func (blockService BlockService) CanPubkeyStake(publicKey string) (bool, error) 
 func (blockService BlockService) GetBlockHashByHeightV2(shardID int, height uint64) ([]common.Hash, error) {
 	var hash *common.Hash
 	var err error
-	var beaconBlocks []*blockchain.BeaconBlock
-	var shardBlocks map[common.Hash]*blockchain.ShardBlock
+	var beaconBlocks []*types.BeaconBlock
+	var shardBlocks map[common.Hash]*types.ShardBlock
 	res := []common.Hash{}
 	isGetBeacon := shardID == -1
 	if isGetBeacon {
@@ -770,7 +773,7 @@ func (blockService BlockService) GetBlockHashByHeightV2(shardID int, height uint
 	return res, nil
 }
 
-func (blockService BlockService) GetShardBlockHeader(getBy string, blockParam string, shardID float64) ([]*blockchain.ShardHeader, int, []string, *RPCError) {
+func (blockService BlockService) GetShardBlockHeader(getBy string, blockParam string, shardID float64) ([]*types.ShardHeader, int, []string, *RPCError) {
 	switch getBy {
 	case "blockhash":
 		hash := common.Hash{}
@@ -786,7 +789,7 @@ func (blockService BlockService) GetShardBlockHeader(getBy string, blockParam st
 			return nil, 0, []string{}, NewRPCError(GetShardBlockByHashError, errors.New("blockParam not exist"))
 		}
 		blockNumber := int(shardBlock.Header.Height) + 1
-		return []*blockchain.ShardHeader{&shardBlock.Header}, blockNumber, []string{hash.String()}, nil
+		return []*types.ShardHeader{&shardBlock.Header}, blockNumber, []string{hash.String()}, nil
 	case "blocknum":
 		blockNumber, err := strconv.Atoi(blockParam)
 		if err != nil {
@@ -802,7 +805,7 @@ func (blockService BlockService) GetShardBlockHeader(getBy string, blockParam st
 			return nil, 0, []string{}, NewRPCError(GetShardBestBlockError, errors.New("Block not exist"))
 		}
 		shardBlocks, _ := blockService.BlockChain.GetShardBlockByHeight(uint64(blockNumber-1), uint8(shardID))
-		shardHeaders := []*blockchain.ShardHeader{}
+		shardHeaders := []*types.ShardHeader{}
 		hashes := []string{}
 		for _, shardBlock := range shardBlocks {
 			shardHeaders = append(shardHeaders, &shardBlock.Header)

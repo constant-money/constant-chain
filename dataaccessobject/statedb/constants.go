@@ -48,6 +48,7 @@ const (
 	// PDEX v2
 	PDETradingFeeObjectType
 
+	BlockHashObjectType
 	StakerObjectType
 )
 
@@ -65,10 +66,16 @@ const (
 	CurrentEpochBeaconCandidate
 	SubstituteValidator
 	CurrentValidator
+	CommonBeaconPool
+	CommonShardPool
+	BeaconPool
+	ShardPool
+	BeaconCommittee
+	ShardCommittee
 )
 const (
-	BeaconShardID    = -1
-	CandidateShardID = -2
+	BeaconChainID    = -1
+	CandidateChainID = -2
 )
 
 // PDE Track Status type

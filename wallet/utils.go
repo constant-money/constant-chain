@@ -3,6 +3,8 @@ package wallet
 import (
 	"crypto/sha256"
 	"math/big"
+
+	"github.com/incognitochain/incognito-chain/privacy"
 )
 
 // padByteSlice returns a byte slice of the given size with contents of the
@@ -63,4 +65,15 @@ func addChecksum(data []byte) []byte {
 	}
 
 	return dataBigInt.Bytes()
+}
+
+func PaymentAddressFromString(payment string) (
+	privacy.PaymentAddress,
+	error,
+) {
+	wl, err := Base58CheckDeserialize(payment)
+	if err != nil {
+		return privacy.PaymentAddress{}, err
+	}
+	return wl.KeySet.PaymentAddress, nil
 }

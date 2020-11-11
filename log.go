@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
 	"github.com/incognitochain/incognito-chain/dataaccessobject"
+	"github.com/incognitochain/incognito-chain/instruction"
 	relaying "github.com/incognitochain/incognito-chain/relaying/bnb"
 	btcRelaying "github.com/incognitochain/incognito-chain/relaying/btc"
 
@@ -66,6 +68,8 @@ var (
 	daov2Logger            = backendLog.Logger("DAO log", false)
 	btcRelayingLogger      = backendLog.Logger("BTC relaying log", false)
 	synckerLogger          = backendLog.Logger("Syncker log ", false)
+	instructionLogger      = backendLog.Logger("Instruction log ", false)
+	committeeStateLogger   = backendLog.Logger("Committee State log ", false)
 )
 
 // logWriter implements an io.Writer that outputs to both standard output and
@@ -109,6 +113,8 @@ func init() {
 	dataaccessobject.Logger.Init(daov2Logger)
 	btcRelaying.Logger.Init(btcRelayingLogger)
 	syncker.Logger.Init(synckerLogger)
+	instruction.Logger.Init(instructionLogger)
+	committeestate.Logger.Init(committeeStateLogger)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
@@ -138,6 +144,8 @@ var subsystemLoggers = map[string]common.Logger{
 	"DAO":               daov2Logger,
 	"BTCRELAYING":       btcRelayingLogger,
 	"SYNCKER":           synckerLogger,
+	"INST":              instructionLogger,
+	"COMS":              committeeStateLogger,
 }
 
 // initLogRotator initializes the logging rotater to write logs to logFile and

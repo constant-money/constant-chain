@@ -2,6 +2,7 @@ package blsbft
 
 import (
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/metrics/monitor"
 	"reflect"
 	"strconv"
@@ -120,7 +121,7 @@ func parseRoundKey(roundKey string) (uint64, int) {
 	return uint64(height), round
 }
 
-func ExtractBridgeValidationData(block common.BlockInterface) ([][]byte, []int, error) {
+func ExtractBridgeValidationData(block types.BlockInterface) ([][]byte, []int, error) {
 	valData, err := DecodeValidationData(block.GetValidationField())
 	if err != nil {
 		return nil, nil, NewConsensusError(UnExpectedError, err)

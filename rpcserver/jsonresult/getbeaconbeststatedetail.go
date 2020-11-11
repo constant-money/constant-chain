@@ -3,6 +3,7 @@ package jsonresult
 import (
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 )
 
@@ -69,50 +70,51 @@ func NewGetBeaconBestStateDetail(data *blockchain.BeaconBestState) *GetBeaconBes
 		result.BestShardHeight[k] = v
 	}
 
-	tempBeaconCommittee := incognitokey.CommitteeKeyListToStringList(data.BeaconCommittee)
+	tempBeaconCommittee := incognitokey.CommitteeKeyListToStringList(data.GetBeaconCommittee())
 
-	result.BeaconCommittee = make([]incognitokey.CommitteeKeyString, len(data.BeaconCommittee))
+	result.BeaconCommittee = make([]incognitokey.CommitteeKeyString, len(data.GetBeaconCommittee()))
 	copy(result.BeaconCommittee, tempBeaconCommittee)
 
-	tempBeaconPendingValidator := incognitokey.CommitteeKeyListToStringList(data.BeaconPendingValidator)
+	tempBeaconPendingValidator := incognitokey.CommitteeKeyListToStringList(data.GetBeaconPendingValidator())
 
-	result.BeaconPendingValidator = make([]incognitokey.CommitteeKeyString, len(data.BeaconPendingValidator))
+	result.BeaconPendingValidator = make([]incognitokey.CommitteeKeyString, len(data.GetBeaconPendingValidator()))
 	copy(result.BeaconPendingValidator, tempBeaconPendingValidator)
 
-	tempCandidateShardWaitingForCurrentRandom := incognitokey.CommitteeKeyListToStringList(data.CandidateShardWaitingForCurrentRandom)
+	tempCandidateShardWaitingForCurrentRandom := incognitokey.CommitteeKeyListToStringList(data.GetCandidateShardWaitingForCurrentRandom())
 
-	result.CandidateShardWaitingForCurrentRandom = make([]incognitokey.CommitteeKeyString, len(data.CandidateShardWaitingForCurrentRandom))
+	result.CandidateShardWaitingForCurrentRandom = make([]incognitokey.CommitteeKeyString, len(data.GetCandidateShardWaitingForCurrentRandom()))
 	copy(result.CandidateShardWaitingForCurrentRandom, tempCandidateShardWaitingForCurrentRandom)
 
-	tempCandidateBeaconWaitingForCurrentRandom := incognitokey.CommitteeKeyListToStringList(data.CandidateBeaconWaitingForCurrentRandom)
+	tempCandidateBeaconWaitingForCurrentRandom := incognitokey.CommitteeKeyListToStringList(data.GetCandidateBeaconWaitingForCurrentRandom())
 
-	result.CandidateBeaconWaitingForCurrentRandom = make([]incognitokey.CommitteeKeyString, len(data.CandidateBeaconWaitingForCurrentRandom))
+	result.CandidateBeaconWaitingForCurrentRandom = make([]incognitokey.CommitteeKeyString, len(data.GetCandidateBeaconWaitingForCurrentRandom()))
 	copy(result.CandidateBeaconWaitingForCurrentRandom, tempCandidateBeaconWaitingForCurrentRandom)
 
-	tempCandidateShardWaitingForNextRandom := incognitokey.CommitteeKeyListToStringList(data.CandidateShardWaitingForNextRandom)
+	tempCandidateShardWaitingForNextRandom := incognitokey.CommitteeKeyListToStringList(data.GetCandidateShardWaitingForNextRandom())
 
-	result.CandidateShardWaitingForNextRandom = make([]incognitokey.CommitteeKeyString, len(data.CandidateShardWaitingForNextRandom))
+	result.CandidateShardWaitingForNextRandom = make([]incognitokey.CommitteeKeyString, len(data.GetCandidateShardWaitingForNextRandom()))
 	copy(result.CandidateShardWaitingForNextRandom, tempCandidateShardWaitingForNextRandom)
 
-	tempCandidateBeaconWaitingForNextRandom := incognitokey.CommitteeKeyListToStringList(data.CandidateBeaconWaitingForNextRandom)
+	tempCandidateBeaconWaitingForNextRandom := incognitokey.CommitteeKeyListToStringList(data.GetCandidateBeaconWaitingForNextRandom())
 
-	result.CandidateBeaconWaitingForNextRandom = make([]incognitokey.CommitteeKeyString, len(data.CandidateBeaconWaitingForNextRandom))
+	result.CandidateBeaconWaitingForNextRandom = make([]incognitokey.CommitteeKeyString, len(data.GetCandidateBeaconWaitingForNextRandom()))
 	copy(result.CandidateBeaconWaitingForNextRandom, tempCandidateBeaconWaitingForNextRandom)
 
 	result.RewardReceiver = make(map[string]string)
-	for k, v := range data.RewardReceiver {
-		result.RewardReceiver[k] = v.String()
+	for k, v := range data.GetRewardReceiver() {
+		tempV := base58.Base58Check{}.Encode(v.Bytes(), common.Base58Version)
+		result.RewardReceiver[k] = tempV
 	}
 
 	result.ShardCommittee = make(map[byte][]incognitokey.CommitteeKeyString)
-	for k, v := range data.ShardCommittee {
+	for k, v := range data.GetShardCommittee() {
 		result.ShardCommittee[k] = make([]incognitokey.CommitteeKeyString, len(v))
 		tempV := incognitokey.CommitteeKeyListToStringList(v)
 		copy(result.ShardCommittee[k], tempV)
 	}
 
 	result.ShardPendingValidator = make(map[byte][]incognitokey.CommitteeKeyString)
-	for k, v := range data.ShardPendingValidator {
+	for k, v := range data.GetShardPendingValidator() {
 		result.ShardPendingValidator[k] = make([]incognitokey.CommitteeKeyString, len(v))
 		tempV := incognitokey.CommitteeKeyListToStringList(v)
 		copy(result.ShardPendingValidator[k], tempV)
@@ -126,7 +128,7 @@ func NewGetBeaconBestStateDetail(data *blockchain.BeaconBestState) *GetBeaconBes
 		}
 	}
 
-	for k, v := range data.AutoStaking.GetMap() {
+	for k, v := range data.GetAutoStaking() {
 		var keySet incognitokey.CommitteePublicKey
 		keySet.FromString(k)
 

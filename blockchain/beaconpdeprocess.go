@@ -3,6 +3,7 @@ package blockchain
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"reflect"
 	"strconv"
@@ -12,7 +13,7 @@ import (
 	"github.com/incognitochain/incognito-chain/metadata"
 )
 
-func (blockchain *BlockChain) processPDEInstructions(pdexStateDB *statedb.StateDB, beaconBlock *BeaconBlock) error {
+func (blockchain *BlockChain) processPDEInstructions(pdexStateDB *statedb.StateDB, beaconBlock *types.BeaconBlock) error {
 	if !hasPDEInstruction(beaconBlock.Body.Instructions) {
 		return nil
 	}

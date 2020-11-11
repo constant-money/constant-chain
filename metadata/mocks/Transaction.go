@@ -582,20 +582,20 @@ func (_m *Transaction) ValidateSanityData(_a0 metadata.ChainRetriever, _a1 metad
 	return r0, r1
 }
 
-// ValidateTransaction provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6
-func (_m *Transaction) ValidateTransaction(_a0 bool, _a1 *statedb.StateDB, _a2 *statedb.StateDB, _a3 byte, _a4 *common.Hash, _a5 bool, _a6 bool) (bool, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+// ValidateTransaction provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4
+func (_m *Transaction) ValidateTransaction(_a0 map[string]bool, _a1 *statedb.StateDB, _a2 *statedb.StateDB, _a3 byte, _a4 *common.Hash) (bool, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) bool); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+	if rf, ok := ret.Get(0).(func(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) bool); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) error); ok {
-		r1 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
+	if rf, ok := ret.Get(1).(func(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -603,20 +603,20 @@ func (_m *Transaction) ValidateTransaction(_a0 bool, _a1 *statedb.StateDB, _a2 *
 	return r0, r1
 }
 
-// ValidateTxByItself provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7
-func (_m *Transaction) ValidateTxByItself(_a0 bool, _a1 *statedb.StateDB, _a2 *statedb.StateDB, _a3 metadata.ChainRetriever, _a4 byte, _a5 bool, _a6 metadata.ShardViewRetriever, _a7 metadata.BeaconViewRetriever) (bool, error) {
-	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
+// ValidateTxByItself provides a mock function with given fields: _a0, _a1, _a2, _a3, _a4, _a5, _a6
+func (_m *Transaction) ValidateTxByItself(_a0 map[string]bool, _a1 *statedb.StateDB, _a2 *statedb.StateDB, _a3 metadata.ChainRetriever, _a4 byte, _a5 metadata.ShardViewRetriever, _a6 metadata.BeaconViewRetriever) (bool, error) {
+	ret := _m.Called(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
 
 	var r0 bool
-	if rf, ok := ret.Get(0).(func(bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, bool, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) bool); ok {
-		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
+	if rf, ok := ret.Get(0).(func(map[string]bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) bool); ok {
+		r0 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
 	} else {
 		r0 = ret.Get(0).(bool)
 	}
 
 	var r1 error
-	if rf, ok := ret.Get(1).(func(bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, bool, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) error); ok {
-		r1 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6, _a7)
+	if rf, ok := ret.Get(1).(func(map[string]bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) error); ok {
+		r1 = rf(_a0, _a1, _a2, _a3, _a4, _a5, _a6)
 	} else {
 		r1 = ret.Error(1)
 	}

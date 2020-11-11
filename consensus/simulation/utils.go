@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/consensus_v2/blsbftv2"
 	"math"
@@ -17,13 +17,13 @@ func failOnError(err error) {
 	}
 }
 
-func NewEmptyBlock() common.BlockInterface {
-	return &blockchain.ShardBlock{}
+func NewEmptyBlock() types.BlockInterface {
+	return &types.ShardBlock{}
 }
 
-func NewBlock(height uint64, time int64, producer string, prev common.Hash) common.BlockInterface {
-	return &blockchain.ShardBlock{
-		Header: blockchain.ShardHeader{
+func NewBlock(height uint64, time int64, producer string, prev common.Hash) types.BlockInterface {
+	return &types.ShardBlock{
+		Header: types.ShardHeader{
 			Version:           1,
 			Height:            height,
 			Round:             1,
@@ -32,7 +32,7 @@ func NewBlock(height uint64, time int64, producer string, prev common.Hash) comm
 			PreviousBlockHash: prev,
 			Producer:          producer,
 		},
-		Body: blockchain.ShardBody{},
+		Body: types.ShardBody{},
 	}
 }
 

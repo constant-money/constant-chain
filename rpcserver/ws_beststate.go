@@ -38,12 +38,21 @@ func (wsServer *WsServer) handleSubscribeShardBestState(params interface{}, subc
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.ShardBestState, have %+v", reflect.TypeOf(msg.Value))
 					continue
 				}
-				allShardBestStateResult := wsServer.blockService.GetShardBestStates()
-				if shardBestStateResult, ok := allShardBestStateResult[shardID]; !ok {
-					continue
-				} else {
-					cResult <- RpcSubResult{Result: shardBestStateResult, Error: nil}
+				shardBestState, err := wsServer.blockService.GetShardBestStateByShardID(shardID)
+				if err != nil {
+					err := rpcservice.NewRPCError(rpcservice.SubcribeError, err)
+					cResult <- RpcSubResult{Error: err}
+					return
 				}
+				block, _, err := wsServer.config.BlockChain.GetShardBlockByHash(shardBestState.BestBlockHash)
+				if err != nil || block == nil {
+					err := rpcservice.NewRPCError(rpcservice.SubcribeError, err)
+					cResult <- RpcSubResult{Error: err}
+					return
+				}
+				shardBestState.BestBlock = block
+				shardBestStateResult := jsonresult.NewGetShardBestState(shardBestState)
+				cResult <- RpcSubResult{Result: shardBestStateResult, Error: nil}
 			}
 		case <-closeChan:
 			{

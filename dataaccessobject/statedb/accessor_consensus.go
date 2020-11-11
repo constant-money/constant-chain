@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"fmt"
 	"sort"
 	"time"
 
@@ -41,7 +40,7 @@ func storeCommittee(stateDB *StateDB, shardID int, role int, committees []incogn
 }
 
 func StoreBeaconCommittee(stateDB *StateDB, beaconCommittees []incognitokey.CommitteePublicKey) error {
-	err := storeCommittee(stateDB, BeaconShardID, CurrentValidator, beaconCommittees, defaultEnterTime)
+	err := storeCommittee(stateDB, BeaconChainID, CurrentValidator, beaconCommittees, defaultEnterTime)
 	if err != nil {
 		return NewStatedbError(StoreBeaconCommitteeError, err)
 	}
@@ -54,11 +53,11 @@ func ReplaceBeaconCommittee(stateDB *StateDB, beaconCommittees [2][]incognitokey
 	}
 	// for beaconCommittees
 	newEnterTime := GetBeaconCommitteeEnterTime(stateDB)
-	err := storeCommittee(stateDB, BeaconShardID, CurrentValidator, beaconCommittees[common.REPLACE_IN], newEnterTime)
+	err := storeCommittee(stateDB, BeaconChainID, CurrentValidator, beaconCommittees[common.REPLACE_IN], newEnterTime)
 	if err != nil {
 		return NewStatedbError(StoreBeaconCommitteeError, err)
 	}
-	err = deleteCommittee(stateDB, BeaconShardID, CurrentValidator, beaconCommittees[common.REPLACE_OUT])
+	err = deleteCommittee(stateDB, BeaconChainID, CurrentValidator, beaconCommittees[common.REPLACE_OUT])
 	if err != nil {
 		return NewStatedbError(DeleteBeaconCommitteeError, err)
 	}
@@ -126,19 +125,60 @@ func StoreNextEpochShardCandidate(
 	stakingTx map[string]common.Hash,
 	// amountStaking map[string]uint64,
 ) error {
-	err := storeStakerInfo(stateDB, candidate, rewardReceiver, autoStaking, stakingTx)
-	if err != nil {
-		return NewStatedbError(StoreNextEpochCandidateError, err)
+	err1 := storeCommittee(stateDB, CandidateChainID, NextEpochShardCandidate, candidate, defaultEnterTime)
+	if err1 != nil {
+		return NewStatedbError(StoreNextEpochCandidateError, err1)
 	}
-	err = storeCommittee(stateDB, CandidateShardID, NextEpochShardCandidate, candidate, defaultEnterTime)
+	return nil
+}
+
+func StoreMembersAtCommonShardPool(
+	stateDB *StateDB,
+	members []incognitokey.CommitteePublicKey,
+) error {
+	err := storeCommittee(stateDB, CandidateChainID, CommonShardPool, members, defaultEnterTime)
 	if err != nil {
-		return NewStatedbError(StoreNextEpochCandidateError, err)
+		return NewStatedbError(StoreMemberCommonShardPoolError, err)
+	}
+	return nil
+}
+
+func StoreMembersAtCommonBeaconPool(
+	stateDB *StateDB,
+	members []incognitokey.CommitteePublicKey,
+) error {
+	err := storeCommittee(stateDB, BeaconChainID, CommonBeaconPool, members, defaultEnterTime)
+	if err != nil {
+		return NewStatedbError(StoreMemberCommonBeaconPoolError, err)
+	}
+	return nil
+}
+
+func StoreMembersAtBeaconPool(
+	stateDB *StateDB,
+	members []incognitokey.CommitteePublicKey,
+) error {
+	err := storeCommittee(stateDB, BeaconChainID, BeaconPool, members, defaultEnterTime)
+	if err != nil {
+		return NewStatedbError(StoreMemberCommonBeaconPoolError, err)
+	}
+	return nil
+}
+
+func StoreMembersAtShardPool(
+	stateDB *StateDB,
+	shardID byte,
+	members []incognitokey.CommitteePublicKey,
+) error {
+	err := storeCommittee(stateDB, int(shardID), ShardPool, members, defaultEnterTime)
+	if err != nil {
+		return NewStatedbError(StoreMemberShardPoolError, err)
 	}
 	return nil
 }
 
 func StoreCurrentEpochShardCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := storeCommittee(stateDB, CandidateShardID, CurrentEpochShardCandidate, candidate, defaultEnterTime)
+	err := storeCommittee(stateDB, CandidateChainID, CurrentEpochShardCandidate, candidate, defaultEnterTime)
 	if err != nil {
 		return NewStatedbError(StoreCurrentEpochCandidateError, err)
 	}
@@ -152,19 +192,15 @@ func StoreNextEpochBeaconCandidate(
 	autoStaking map[string]bool,
 	stakingTx map[string]common.Hash,
 ) error {
-	err := storeStakerInfo(stateDB, candidate, rewardReceiver, autoStaking, stakingTx)
-	if err != nil {
-		return NewStatedbError(StoreNextEpochCandidateError, err)
-	}
-	err = storeCommittee(stateDB, BeaconShardID, NextEpochBeaconCandidate, candidate, defaultEnterTime)
-	if err != nil {
-		return NewStatedbError(StoreNextEpochCandidateError, err)
+	err1 := storeCommittee(stateDB, BeaconChainID, NextEpochBeaconCandidate, candidate, defaultEnterTime)
+	if err1 != nil {
+		return NewStatedbError(StoreNextEpochCandidateError, err1)
 	}
 	return nil
 }
 
 func StoreCurrentEpochBeaconCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := storeCommittee(stateDB, BeaconShardID, CurrentEpochBeaconCandidate, candidate, defaultEnterTime)
+	err := storeCommittee(stateDB, BeaconChainID, CurrentEpochBeaconCandidate, candidate, defaultEnterTime)
 	if err != nil {
 		return NewStatedbError(StoreCurrentEpochCandidateError, err)
 	}
@@ -190,7 +226,7 @@ func StoreOneShardSubstitutesValidator(stateDB *StateDB, shardID byte, shardSubs
 }
 
 func StoreBeaconSubstituteValidator(stateDB *StateDB, beaconSubstitute []incognitokey.CommitteePublicKey) error {
-	err := storeCommittee(stateDB, BeaconShardID, SubstituteValidator, beaconSubstitute, defaultEnterTime)
+	err := storeCommittee(stateDB, BeaconChainID, SubstituteValidator, beaconSubstitute, defaultEnterTime)
 	if err != nil {
 		return NewStatedbError(StoreBeaconSubstitutesValidatorError, err)
 	}
@@ -198,8 +234,8 @@ func StoreBeaconSubstituteValidator(stateDB *StateDB, beaconSubstitute []incogni
 }
 
 func GetBeaconCommittee(stateDB *StateDB) []incognitokey.CommitteePublicKey {
-	m := stateDB.getAllValidatorCommitteePublicKey(CurrentValidator, []int{BeaconShardID})
-	tempBeaconCommitteeStates := m[BeaconShardID]
+	m := stateDB.getAllValidatorCommitteePublicKey(CurrentValidator, []int{BeaconChainID})
+	tempBeaconCommitteeStates := m[BeaconChainID]
 	sort.Slice(tempBeaconCommitteeStates, func(i, j int) bool {
 		return tempBeaconCommitteeStates[i].EnterTime() < tempBeaconCommitteeStates[j].EnterTime()
 	})
@@ -211,8 +247,8 @@ func GetBeaconCommittee(stateDB *StateDB) []incognitokey.CommitteePublicKey {
 }
 
 func GetBeaconSubstituteValidator(stateDB *StateDB) []incognitokey.CommitteePublicKey {
-	m := stateDB.getAllValidatorCommitteePublicKey(SubstituteValidator, []int{BeaconShardID})
-	tempBeaconCommitteeStates := m[BeaconShardID]
+	m := stateDB.getAllValidatorCommitteePublicKey(SubstituteValidator, []int{BeaconChainID})
+	tempBeaconCommitteeStates := m[BeaconChainID]
 	sort.Slice(tempBeaconCommitteeStates, func(i, j int) bool {
 		return tempBeaconCommitteeStates[i].EnterTime() < tempBeaconCommitteeStates[j].EnterTime()
 	})
@@ -302,6 +338,70 @@ func GetCurrentEpochCandidate(stateDB *StateDB) []incognitokey.CommitteePublicKe
 	}
 	return list
 }
+func GetAllCandidateSubstituteCommittee(stateDB *StateDB, shardIDs []int) (
+	map[int][]incognitokey.CommitteePublicKey,
+	map[int][]incognitokey.CommitteePublicKey,
+	[]incognitokey.CommitteePublicKey,
+	[]incognitokey.CommitteePublicKey,
+	[]incognitokey.CommitteePublicKey,
+	[]incognitokey.CommitteePublicKey,
+	map[string]privacy.PaymentAddress,
+	map[string]bool,
+	map[string]common.Hash,
+) {
+	tempCurrentValidator, tempSubstituteValidator, tempNextEpochShardCandidate, tempCurrentEpochShardCandidate, tempNextEpochBeaconCandidate, tempCurrentEpochBeaconCandidate, rewardReceivers, autoStaking, stakingTx := stateDB.getAllCommitteeState(shardIDs)
+	currentValidator := make(map[int][]incognitokey.CommitteePublicKey)
+	substituteValidator := make(map[int][]incognitokey.CommitteePublicKey)
+	nextEpochShardCandidate := []incognitokey.CommitteePublicKey{}
+	currentEpochShardCandidate := []incognitokey.CommitteePublicKey{}
+	nextEpochBeaconCandidate := []incognitokey.CommitteePublicKey{}
+	currentEpochBeaconCandidate := []incognitokey.CommitteePublicKey{}
+	for shardID, tempShardCommitteeStates := range tempCurrentValidator {
+		sort.Slice(tempShardCommitteeStates, func(i, j int) bool {
+			return tempShardCommitteeStates[i].EnterTime() < tempShardCommitteeStates[j].EnterTime()
+		})
+		list := []incognitokey.CommitteePublicKey{}
+		for _, tempShardCommitteeState := range tempShardCommitteeStates {
+			list = append(list, tempShardCommitteeState.CommitteePublicKey())
+		}
+		currentValidator[shardID] = list
+	}
+	for shardID, tempShardSubstituteStates := range tempSubstituteValidator {
+		sort.Slice(tempShardSubstituteStates, func(i, j int) bool {
+			return tempShardSubstituteStates[i].EnterTime() < tempShardSubstituteStates[j].EnterTime()
+		})
+		list := []incognitokey.CommitteePublicKey{}
+		for _, tempShardCommitteeState := range tempShardSubstituteStates {
+			list = append(list, tempShardCommitteeState.CommitteePublicKey())
+		}
+		substituteValidator[shardID] = list
+	}
+	sort.Slice(tempNextEpochShardCandidate, func(i, j int) bool {
+		return tempNextEpochShardCandidate[i].EnterTime() < tempNextEpochShardCandidate[j].EnterTime()
+	})
+	for _, candidate := range tempNextEpochShardCandidate {
+		nextEpochShardCandidate = append(nextEpochShardCandidate, candidate.CommitteePublicKey())
+	}
+	sort.Slice(tempCurrentEpochShardCandidate, func(i, j int) bool {
+		return tempCurrentEpochShardCandidate[i].EnterTime() < tempCurrentEpochShardCandidate[j].EnterTime()
+	})
+	for _, candidate := range tempCurrentEpochShardCandidate {
+		currentEpochShardCandidate = append(currentEpochShardCandidate, candidate.CommitteePublicKey())
+	}
+	sort.Slice(tempNextEpochBeaconCandidate, func(i, j int) bool {
+		return tempNextEpochBeaconCandidate[i].EnterTime() < tempNextEpochBeaconCandidate[j].EnterTime()
+	})
+	for _, candidate := range tempNextEpochBeaconCandidate {
+		nextEpochBeaconCandidate = append(nextEpochBeaconCandidate, candidate.CommitteePublicKey())
+	}
+	sort.Slice(tempCurrentEpochBeaconCandidate, func(i, j int) bool {
+		return tempCurrentEpochBeaconCandidate[i].EnterTime() < tempCurrentEpochBeaconCandidate[j].EnterTime()
+	})
+	for _, candidate := range tempCurrentEpochBeaconCandidate {
+		currentEpochBeaconCandidate = append(currentEpochBeaconCandidate, candidate.CommitteePublicKey())
+	}
+	return currentValidator, substituteValidator, nextEpochShardCandidate, currentEpochShardCandidate, nextEpochBeaconCandidate, currentEpochBeaconCandidate, rewardReceivers, autoStaking, stakingTx
+}
 
 func GetAllCandidateSubstituteCommittee(stateDB *StateDB, shardIDs []int) (
 	map[int][]incognitokey.CommitteePublicKey,
@@ -373,12 +473,12 @@ func GetAllCommitteeStakeInfo(stateDB *StateDB, shardIDs []int) map[int][]*Stake
 	return stateDB.getShardsCommitteeInfo(shardIDs)
 }
 
-func GetMapAutoStaking(bcDB *StateDB, shardIDs []int) map[string]bool {
-	res, err := bcDB.getMapAutoStaking(shardIDs)
+func GetStakingInfo(bcDB *StateDB, shardIDs []int) map[string]bool {
+	mapAutoStaking, err := bcDB.getMapAutoStaking(shardIDs)
 	if err != nil {
 		panic(err)
 	}
-	return res
+	return mapAutoStaking
 }
 
 func GetStakerInfo(stateDB *StateDB, stakerPubkey string) (*StakerInfo, bool, error) {
@@ -404,7 +504,7 @@ func deleteCommittee(stateDB *StateDB, shardID int, role int, committees []incog
 }
 
 func DeleteBeaconCommittee(stateDB *StateDB, beaconCommittees []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, BeaconShardID, CurrentValidator, beaconCommittees)
+	err := deleteCommittee(stateDB, BeaconChainID, CurrentValidator, beaconCommittees)
 	if err != nil {
 		return NewStatedbError(DeleteBeaconCommitteeError, err)
 	}
@@ -429,7 +529,7 @@ func DeleteAllShardCommittee(stateDB *StateDB, allShardCommittees map[byte][]inc
 }
 
 func DeleteNextEpochShardCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, CandidateShardID, NextEpochShardCandidate, candidate)
+	err := deleteCommittee(stateDB, CandidateChainID, NextEpochShardCandidate, candidate)
 	if err != nil {
 		return NewStatedbError(DeleteNextEpochShardCandidateError, err)
 	}
@@ -437,7 +537,7 @@ func DeleteNextEpochShardCandidate(stateDB *StateDB, candidate []incognitokey.Co
 }
 
 func DeleteCurrentEpochShardCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, CandidateShardID, CurrentEpochShardCandidate, candidate)
+	err := deleteCommittee(stateDB, CandidateChainID, CurrentEpochShardCandidate, candidate)
 	if err != nil {
 		return NewStatedbError(DeleteCurrentEpochShardCandidateError, err)
 	}
@@ -445,7 +545,7 @@ func DeleteCurrentEpochShardCandidate(stateDB *StateDB, candidate []incognitokey
 }
 
 func DeleteNextEpochBeaconCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, BeaconShardID, NextEpochBeaconCandidate, candidate)
+	err := deleteCommittee(stateDB, BeaconChainID, NextEpochBeaconCandidate, candidate)
 	if err != nil {
 		return NewStatedbError(DeleteNextEpochBeaconCandidateError, err)
 	}
@@ -453,7 +553,7 @@ func DeleteNextEpochBeaconCandidate(stateDB *StateDB, candidate []incognitokey.C
 }
 
 func DeleteCurrentEpochBeaconCandidate(stateDB *StateDB, candidate []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, BeaconShardID, CurrentEpochBeaconCandidate, candidate)
+	err := deleteCommittee(stateDB, BeaconChainID, CurrentEpochBeaconCandidate, candidate)
 	if err != nil {
 		return NewStatedbError(DeleteCurrentEpochBeaconCandidateError, err)
 	}
@@ -479,46 +579,12 @@ func DeleteOneShardSubstitutesValidator(stateDB *StateDB, shardID byte, shardSub
 }
 
 func DeleteBeaconSubstituteValidator(stateDB *StateDB, beaconSubstitute []incognitokey.CommitteePublicKey) error {
-	err := deleteCommittee(stateDB, BeaconShardID, SubstituteValidator, beaconSubstitute)
+	err := deleteCommittee(stateDB, BeaconChainID, SubstituteValidator, beaconSubstitute)
 	if err != nil {
 		return NewStatedbError(DeleteBeaconSubstituteValidatorError, err)
 	}
 	return nil
 }
-
-//at shard, the stakingTx is all staker tx from the beginning (with replacement if stake more than once)
-//staker A stake for committee pk B with stakingTx C (B could be not staking any more)
-//staker A stake for committee pk A with staking Tx D
-//we have {B: C,A: D}
-//staker E stake for committee pk B with staking Tx F
-//finally, we have {B: F,A: D};
-//Note1: A and E in same shard,means if A and E in different shard, then there is no replacement
-//Note2: only staking tx is used in this staker info
-//func StoreStakerInfoAtShardDB(stateDB *StateDB, committeeStr string, stakingTX string) error {
-//	var committee = new(incognitokey.CommitteePublicKey)
-//	if err := committee.FromString(committeeStr); err != nil {
-//		return err
-//	}
-//	keyBytes, err := committee.RawBytes()
-//	if err != nil {
-//		fmt.Println("get raw byte fail", err)
-//		return err
-//	}
-//	key := GetStakerInfoKey(keyBytes)
-//	value := NewStakerInfo()
-//	stakingTXHash, err := common.Hash{}.NewHashFromStr(stakingTX)
-//	if err != nil {
-//		fmt.Println("import hash fail!", err)
-//		return err
-//	}
-//	value.SetTxStakingID(*stakingTXHash)
-//	value.SetRewardReceiver(privacy.PaymentAddress{Pk: privacy.PublicKey{0}, Tk: privacy.TransmissionKey{0}})
-//	err = stateDB.SetStateObject(StakerObjectType, key, value)
-//	if err != nil {
-//		fmt.Println("set state fail!", err)
-//	}
-//	return err
-//}
 
 func storeStakerInfo(
 	stateDB *StateDB,
@@ -534,62 +600,20 @@ func storeStakerInfo(
 		}
 		key := GetStakerInfoKey(keyBytes)
 		committeeString, err := committee.ToBase58()
-		if err != nil {
-			return err
-		}
-		value := NewStakerInfo()
-		has := false
-		value, has, err = stateDB.getStakerInfo(key)
-		if err != nil {
-			return err
-		}
-		autoStakingValue, ok := autoStaking[committeeString]
-		if !has {
-			if !ok {
-				return fmt.Errorf("auto staking of %+v not found", committeeString)
-			}
-			rewardReceiverPaymentAddress, ok := rewardReceiver[committee.GetIncKeyBase58()]
-			if !ok {
-				return fmt.Errorf("reward receiver of %+v not found", committeeString)
-			}
-			txStakingID, ok := stakingTx[committeeString]
-			if !ok {
-				return fmt.Errorf("txStakingID of %+v not found", committeeString)
-			}
-			value = NewStakerInfoWithValue(rewardReceiverPaymentAddress, autoStakingValue, txStakingID)
-		} else {
-			if !ok {
-				// In this case, this committee is already storage in db, it just swap out of committee and rejoin waiting candidate without change autostaking param
-				continue
-			}
-			value.autoStaking = autoStakingValue
-			//Just for temporary fix
-			rewardReceiverPaymentAddress, ok := rewardReceiver[committee.GetIncKeyBase58()]
-			if ok {
-				//If ok, it mean old data will be rewrite
-				value.rewardReceiver = rewardReceiverPaymentAddress
-			}
-			txStakingID, ok := stakingTx[committeeString]
-			if ok {
-				value.txStakingID = txStakingID
-			}
-		}
+		value := NewStakerInfoWithValue(
+			rewardReceiver[committee.GetIncKeyBase58()],
+			autoStaking[committeeString],
+			stakingTx[committeeString],
+		)
 		err = stateDB.SetStateObject(StakerObjectType, key, value)
 		if err != nil {
 			return err
-		}
-		// delete(autoStaking, committeeString)
-		if _, ok := stakingTx[committeeString]; ok {
-			delete(stakingTx, committeeString)
-		}
-		if _, ok := rewardReceiver[committee.GetIncKeyBase58()]; ok {
-			delete(stakingTx, committee.GetIncKeyBase58())
 		}
 	}
 	return nil
 }
 
-func StoreStakerInfo(
+func StoreStakerInfoV1(
 	stateDB *StateDB,
 	committees []incognitokey.CommitteePublicKey,
 	rewardReceiver map[string]privacy.PaymentAddress,
@@ -602,8 +626,8 @@ func StoreStakerInfo(
 func GetBeaconCommitteeEnterTime(
 	stateDB *StateDB,
 ) []int64 {
-	m := stateDB.getAllValidatorCommitteePublicKey(CurrentValidator, []int{BeaconShardID})
-	tempBeaconCommitteeStates := m[BeaconShardID]
+	m := stateDB.getAllValidatorCommitteePublicKey(CurrentValidator, []int{BeaconChainID})
+	tempBeaconCommitteeStates := m[BeaconChainID]
 	sort.Slice(tempBeaconCommitteeStates, func(i, j int) bool {
 		return tempBeaconCommitteeStates[i].EnterTime() < tempBeaconCommitteeStates[j].EnterTime()
 	})
@@ -631,4 +655,21 @@ func GetOneShardCommitteeEnterTime(
 
 func GetAllStaker(stateDB *StateDB, shardIDs []int) int {
 	return stateDB.getAllStaker(shardIDs)
+}
+
+//DeleteStakerInfo :
+func DeleteStakerInfo(stateDB *StateDB, stakers []incognitokey.CommitteePublicKey) error {
+	return deleteStakerInfo(stateDB, stakers)
+}
+
+func deleteStakerInfo(stateDB *StateDB, stakers []incognitokey.CommitteePublicKey) error {
+	for _, staker := range stakers {
+		keyBytes, err := staker.RawBytes()
+		if err != nil {
+			return err
+		}
+		key := GetStakerInfoKey(keyBytes)
+		stateDB.MarkDeleteStateObject(StakerObjectType, key)
+	}
+	return nil
 }

@@ -4,8 +4,9 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"reflect"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -60,7 +61,10 @@ func (stopAutoStakingMetadata StopAutoStakingMetadata) ValidateTxWithBlockChain(
 	if !(common.IndexOfStr(requestedPublicKey, committees) > -1) {
 		return false, NewMetadataTxError(StopAutoStakingRequestNotInCommitteeListError, fmt.Errorf("Committee Publickey %+v not found in any committee list of current beacon beststate", requestedPublicKey))
 	}
-	stakingTx := shardViewRetriever.GetStakingTx()
+	stakingTx, err := chainRetriever.GetShardStakingTx(shardViewRetriever.GetShardID(), shardViewRetriever.GetBeaconHeight())
+	if err != nil {
+		return false, NewMetadataTxError(StopAutoStakingRequestNotInCommitteeListError, err)
+	}
 	if tempStakingTxHash, ok := stakingTx[requestedPublicKey]; !ok {
 		return false, NewMetadataTxError(StopAutoStakingRequestStakingTransactionNotFoundError, fmt.Errorf("No Committe Publickey %+v found in StakingTx of Shard %+v", requestedPublicKey, shardID))
 	} else {

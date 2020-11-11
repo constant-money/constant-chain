@@ -5,11 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 )
@@ -31,31 +29,11 @@ func (httpServer *HttpServer) handleGetBeaconBestState(params interface{}, close
 		return nil, rpcservice.NewRPCError(rpcservice.GetAllBeaconViews, err)
 	}
 
-	sID := []int{}
-	for i := 0; i < httpServer.config.ChainParams.ActiveShards; i++ {
-		sID = append(sID, i)
-	}
-
 	for _, v := range allViews {
 		err := v.RestoreBeaconViewStateFromHash(httpServer.GetBlockchain())
 		if err != nil {
 			continue
 		}
-		beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(v.ConsensusStateDBRootHash, statedb.NewDatabaseAccessWarper(beaconDB))
-		if err != nil {
-			continue
-		}
-		v.AutoStaking = blockchain.NewMapStringBool()
-
-		mapAutoStaking := statedb.GetMapAutoStaking(beaconConsensusStateDB, sID)
-
-		for hash, value := range mapAutoStaking {
-			v.AutoStaking.Set(hash, value)
-		}
-		// finish reproduce
-		// if !blockchain.BeaconChain.multiView.AddView(v) {
-		// 	continue
-		// }
 		beaconBestState = v
 	}
 
@@ -94,25 +72,15 @@ func (httpServer *HttpServer) handleGetShardBestState(params interface{}, closeC
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
 	}
 
-	err = shardBestState.RestoreCommittee(shardID, httpServer.config.BlockChain)
+	mapStakingTx, err := httpServer.config.BlockChain.GetShardStakingTx(shardBestState.ShardID, shardBestState.BeaconHeight)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
 	}
 
-	mapStakingTx, err := httpServer.config.BlockChain.GetShardStakingTx(shardBestState)
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInternalError, err)
-	}
-
-	shardBestState.StakingTx = blockchain.NewMapStringString()
+	shardBestState.StakingTx = common.NewMapStringString()
 
 	for i, v := range mapStakingTx {
 		shardBestState.StakingTx.Set(i, v)
-	}
-
-	err = shardBestState.RestorePendingValidators(shardID, httpServer.config.BlockChain)
-	if err != nil {
-		panic(err)
 	}
 
 	result := jsonresult.NewGetShardBestState(shardBestState)
@@ -127,10 +95,10 @@ func (httpServer *HttpServer) handleGetCandidateList(params interface{}, closeCh
 		return nil, rpcservice.NewRPCError(rpcservice.GetClonedBeaconBestStateError, err)
 	}
 
-	CSWFCR := beacon.CandidateShardWaitingForCurrentRandom
-	CSWFNR := beacon.CandidateShardWaitingForNextRandom
-	CBWFCR := beacon.CandidateBeaconWaitingForCurrentRandom
-	CBWFNR := beacon.CandidateBeaconWaitingForNextRandom
+	CSWFCR := beacon.GetCandidateShardWaitingForCurrentRandom()
+	CSWFNR := beacon.GetCandidateShardWaitingForNextRandom()
+	CBWFCR := beacon.GetCandidateBeaconWaitingForCurrentRandom()
+	CBWFNR := beacon.GetCandidateBeaconWaitingForNextRandom()
 	epoch := beacon.Epoch
 	result := jsonresult.CandidateListsResult{
 		Epoch:                                  epoch,
@@ -149,10 +117,10 @@ func (httpServer *HttpServer) handleGetCommitteeList(params interface{}, closeCh
 		return nil, rpcservice.NewRPCError(rpcservice.GetClonedBeaconBestStateError, err)
 	}
 
-	beaconCommittee := clonedBeaconBestState.BeaconCommittee
-	beaconPendingValidator := clonedBeaconBestState.BeaconPendingValidator
-	shardCommittee := clonedBeaconBestState.ShardCommittee
-	shardPendingValidator := clonedBeaconBestState.ShardPendingValidator
+	beaconCommittee := clonedBeaconBestState.GetBeaconCommittee()
+	beaconPendingValidator := clonedBeaconBestState.GetBeaconPendingValidator()
+	shardCommittee := clonedBeaconBestState.GetShardCommittee()
+	shardPendingValidator := clonedBeaconBestState.GetShardPendingValidator()
 	epoch := clonedBeaconBestState.Epoch
 	result := jsonresult.NewCommitteeListsResult(epoch, shardCommittee, shardPendingValidator, beaconCommittee, beaconPendingValidator)
 	return result, nil

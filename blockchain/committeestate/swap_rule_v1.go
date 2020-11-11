@@ -1,35 +1,37 @@
-package blockchain
+package committeestate
 
 import (
 	"errors"
-	"fmt"
-	"reflect"
+	"github.com/incognitochain/incognito-chain/instruction"
 	"sort"
 	"strconv"
 	"strings"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
-	"github.com/incognitochain/incognito-chain/privacy"
 )
 
-func GetStakingCandidate(beaconBlock BeaconBlock) ([]string, []string) {
-	beacon := []string{}
-	shard := []string{}
-	beaconBlockBody := beaconBlock.Body
-	for _, v := range beaconBlockBody.Instructions {
-		if len(v) < 1 {
-			continue
-		}
-		if v[0] == StakeAction && v[2] == "beacon" {
-			beacon = strings.Split(v[1], ",")
-		}
-		if v[0] == StakeAction && v[2] == "shard" {
-			shard = strings.Split(v[1], ",")
-		}
+// createSwapInstruction creates swap inst and return new validator list
+// Return param:
+// #1: swap inst
+// #2: new pending validator list after swapped
+// #3: new committees after swapped
+// #4: error
+func createSwapInstruction(
+	pendingValidator []string,
+	commitees []string,
+	maxCommitteeSize int,
+	minCommitteeSize int,
+	shardID byte,
+	offset int,
+	swapOffset int,
+) (*instruction.SwapInstruction, []string, []string, error) {
+	newPendingValidator, newShardCommittees, shardSwapedCommittees, shardNewCommittees, err := SwapValidator(pendingValidator, commitees, maxCommitteeSize, minCommitteeSize, offset, swapOffset)
+	if err != nil {
+		return nil, nil, nil, err
 	}
-
-	return beacon, shard
+	swapInstruction := instruction.NewSwapInstructionWithValue(shardNewCommittees, shardSwapedCommittees, int(shardID))
+	return swapInstruction, newPendingValidator, newShardCommittees, nil
 }
 
 // assignShardCandidate Assign Candidates Into Shard Pending Validator List
@@ -67,7 +69,6 @@ func shuffleShardCandidate(candidates []string, rand int64) []string {
 		temp = append(temp, hash)
 	}
 	if len(m) != len(temp) {
-		fmt.Println(candidates)
 		panic("Failed To Shuffle Shard Candidate Before Assign to Shard")
 	}
 	sort.Strings(temp)
@@ -114,27 +115,6 @@ func isBadProducer(badProducers []string, producer string) bool {
 	return false
 }
 
-func CreateBeaconSwapActionForKeyListV2(
-	genesisParam *GenesisParams,
-	pendingValidator []string,
-	beaconCommittees []string,
-	minCommitteeSize int,
-	epoch uint64,
-) ([]string, []string, []string) {
-	newPendingValidator := pendingValidator
-	swapInstruction, newBeaconCommittees := GetBeaconSwapInstructionKeyListV2(genesisParam, epoch)
-	remainBeaconCommittees := beaconCommittees[minCommitteeSize:]
-	return swapInstruction, newPendingValidator, append(newBeaconCommittees, remainBeaconCommittees...)
-}
-
-// swap return argument
-// #1 remaining pendingValidators
-// #2 new currentValidators
-// #3 swapped out validator
-// #4 incoming validator
-// #5 error
-// REVIEW: @hung
-// - should check offset <= goodPendingValidators
 func swap(
 	badPendingValidators []string,
 	goodPendingValidators []string,
@@ -188,26 +168,20 @@ func SwapValidator(
 	maxCommittee int,
 	minCommittee int,
 	offset int,
-	producersBlackList map[string]uint8,
 	swapOffset int,
 ) ([]string, []string, []string, []string, error) {
+	producersBlackList := make(map[string]uint8)
 	goodPendingValidators := filterValidators(pendingValidators, producersBlackList, false)
 	badPendingValidators := filterValidators(pendingValidators, producersBlackList, true)
 	currentBadProducers := filterValidators(currentValidators, producersBlackList, true)
 	currentGoodProducers := filterValidators(currentValidators, producersBlackList, false)
 	goodPendingValidatorsLen := len(goodPendingValidators)
 	currentGoodProducersLen := len(currentGoodProducers)
-	// number of good producer more than minimum needed producer to continue
+
 	if currentGoodProducersLen >= minCommittee {
-		// current number of good producer reach maximum committee size => swap
 		if currentGoodProducersLen == maxCommittee {
 			offset = swapOffset
 		}
-		// if not then number of good producer are less than maximum committee size
-		// push more pending validator into committee list
-
-		// if number of current good pending validators are less than maximum push offset
-		// then push all good pending validator into committee
 		if offset > goodPendingValidatorsLen {
 			offset = goodPendingValidatorsLen
 		}
@@ -238,12 +212,12 @@ func SwapValidator(
 	return badPendingValidators, newProducers, swappedProducers, goodPendingValidators, nil
 }
 
-// RemoveValidator remove validator and return removed list
+// removeValidatorV1 remove validator and return removed list
 // return: #param1: validator list after remove
 // in parameter: #param1: list of full validator
 // in parameter: #param2: list of removed validator
 // removed validators list must be a subset of full validator list and it must be first in the list
-func RemoveValidator(validators []string, removedValidators []string) ([]string, error) {
+func removeValidatorV1(validators []string, removedValidators []string) ([]string, error) {
 	// if number of pending validator is less or equal than offset, set offset equal to number of pending validator
 	if len(removedValidators) > len(validators) {
 		return validators, errors.New("trying to remove too many validators")
@@ -263,7 +237,7 @@ func RemoveValidator(validators []string, removedValidators []string) ([]string,
 	return remainingValidators, nil
 }
 
-// Shuffle Candidate: suffer candidates with random number and return suffered list
+// Shuffle Candidate: suffer unassignedCommonPool with random number and return suffered list
 // Candidate Value Concatenate with Random Number
 // then Hash and Obtain Hash Value
 // Sort Hash Value Then Re-arrange Candidate corresponding to Hash Value
@@ -285,53 +259,4 @@ func ShuffleCandidate(candidates []incognitokey.CommitteePublicKey, rand int64) 
 	}
 	Logger.log.Debug("Beacon Process/Shuffle Candidate: Candidate After Sort ", sortedCandidate)
 	return sortedCandidate, nil
-}
-
-func getStakeValidatorArrayString(v []string) ([]string, []string) {
-	beacon := []string{}
-	shard := []string{}
-	if len(v) > 0 {
-		if v[0] == StakeAction && v[2] == "beacon" {
-			beacon = strings.Split(v[1], ",")
-		}
-		if v[0] == StakeAction && v[2] == "shard" {
-			shard = strings.Split(v[1], ",")
-		}
-	}
-	return beacon, shard
-}
-
-func snapshotCommittee(beaconCommittee []incognitokey.CommitteePublicKey, allShardCommittee map[byte][]incognitokey.CommitteePublicKey) ([]incognitokey.CommitteePublicKey, map[byte][]incognitokey.CommitteePublicKey, error) {
-	snapshotBeaconCommittee := []incognitokey.CommitteePublicKey{}
-	snapshotAllShardCommittee := make(map[byte][]incognitokey.CommitteePublicKey)
-	for _, committee := range beaconCommittee {
-		snapshotBeaconCommittee = append(snapshotBeaconCommittee, committee)
-	}
-	for shardID, shardCommittee := range allShardCommittee {
-		clonedShardCommittee := []incognitokey.CommitteePublicKey{}
-		snapshotAllShardCommittee[shardID] = []incognitokey.CommitteePublicKey{}
-		for _, committee := range shardCommittee {
-			clonedShardCommittee = append(clonedShardCommittee, committee)
-		}
-		snapshotAllShardCommittee[shardID] = clonedShardCommittee
-	}
-
-	if !reflect.DeepEqual(beaconCommittee, snapshotBeaconCommittee) {
-		return []incognitokey.CommitteePublicKey{}, nil, fmt.Errorf("Failed To Clone Beacon Committee, expect %+v but get %+v", beaconCommittee, snapshotBeaconCommittee)
-	}
-	if !reflect.DeepEqual(allShardCommittee, snapshotAllShardCommittee) {
-		return []incognitokey.CommitteePublicKey{}, nil, fmt.Errorf("Failed To Clone Beacon Committee, expect %+v but get %+v", allShardCommittee, snapshotAllShardCommittee)
-	}
-
-	return snapshotBeaconCommittee, snapshotAllShardCommittee, nil
-}
-func snapshotRewardReceiver(rewardReceiver map[string]privacy.PaymentAddress) (map[string]privacy.PaymentAddress, error) {
-	snapshotRewardReceiver := make(map[string]privacy.PaymentAddress)
-	for k, v := range rewardReceiver {
-		snapshotRewardReceiver[k] = v
-	}
-	if !reflect.DeepEqual(snapshotRewardReceiver, rewardReceiver) {
-		return snapshotRewardReceiver, fmt.Errorf("Failed to Clone Reward Rewards, expect %+v but get %+v", rewardReceiver, snapshotRewardReceiver)
-	}
-	return snapshotRewardReceiver, nil
 }

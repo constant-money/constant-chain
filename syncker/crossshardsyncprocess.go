@@ -3,9 +3,8 @@ package syncker
 import (
 	"context"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"time"
-
-	"github.com/incognitochain/incognito-chain/blockchain"
 
 	"github.com/incognitochain/incognito-chain/common"
 )
@@ -28,7 +27,7 @@ type CrossXReq struct {
 func NewCrossShardSyncProcess(server Server, shardSyncProcess *ShardSyncProcess, beaconChain BeaconChainInterface) *CrossShardSyncProcess {
 
 	var isOutdatedBlock = func(blk interface{}) bool {
-		if blk.(*blockchain.CrossShardBlock).GetHeight() < shardSyncProcess.Chain.GetCrossShardState()[byte(blk.(*blockchain.CrossShardBlock).GetHeight())] {
+		if blk.(*types.CrossShardBlock).GetHeight() < shardSyncProcess.Chain.GetCrossShardState()[byte(blk.(*types.CrossShardBlock).GetHeight())] {
 			return true
 		}
 		return false
@@ -131,7 +130,7 @@ func (s *CrossShardSyncProcess) streamMissingCrossShardBlock(fromSID int, hashes
 	for blk := range ch {
 		if !isNil(blk) {
 			fmt.Println("syncker: Insert crossShard block", blk.GetHeight(), blk.Hash().String())
-			s.crossShardPool.AddBlock(blk.(common.BlockPoolInterface))
+			s.crossShardPool.AddBlock(blk.(types.BlockPoolInterface))
 		} else {
 			return
 		}

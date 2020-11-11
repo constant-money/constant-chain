@@ -16,7 +16,7 @@ type StakingMetadata struct {
 	StakingAmountShard           uint64
 	AutoReStaking                bool
 	CommitteePublicKey           string
-	// CommitteePublicKey PublicKeys of a candidate who join consensus, base58CheckEncode
+	// CommitteePublicKey CommitteePublicKeys of a candidate who join consensus, base58CheckEncode
 	// CommitteePublicKey string <= encode byte <= mashal struct
 }
 

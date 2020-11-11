@@ -68,11 +68,12 @@ cmd/incognito
 blockchain/testparams/*
 tmp/*
 bin/data
-
 # vim
 *.swp   
 *.swo
 *~
 tags
+keylist.json
+run_new_local.sh
 *.txt
 *.log

@@ -3,6 +3,8 @@ package blockchain
 import (
 	"time"
 
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+
 	"github.com/incognitochain/incognito-chain/common"
 )
 
@@ -45,8 +47,8 @@ type Params struct {
 	MaxBeaconBlockCreation           time.Duration
 	StakingAmountShard               uint64
 	ActiveShards                     int
-	GenesisBeaconBlock               *BeaconBlock // GenesisBlock defines the first block of the chain.
-	GenesisShardBlock                *ShardBlock  // GenesisBlock defines the first block of the chain.
+	GenesisBeaconBlock               *types.BeaconBlock // GenesisBlock defines the first block of the chain.
+	GenesisShardBlock                *types.ShardBlock  // GenesisBlock defines the first block of the chain.
 	BasicReward                      uint64
 	Epoch                            uint64
 	RandomTime                       uint64
@@ -60,21 +62,23 @@ type Params struct {
 	ChainVersion                     string
 	AssignOffset                     int
 	ConsensusV2Epoch                 uint64
+	ConsensusV3Epoch                 uint64
 	BeaconHeightBreakPointBurnAddr   uint64
 	BNBRelayingHeaderChainID         string
 	BTCRelayingHeaderChainID         string
 	BTCDataFolderName                string
-	BNBFullNodeProtocol       string
-	BNBFullNodeHost           string
-	BNBFullNodePort           string
-	PortalParams              map[uint64]PortalParams
-	PortalFeederAddress       string
-	EpochBreakPointSwapNewKey []uint64
-	IsBackup                  bool
-	PreloadAddress            string
-	ReplaceStakingTxHeight    uint64
-	ETHRemoveBridgeSigEpoch   uint64
-	BCHeightBreakPointNewZKP  uint64
+	BNBFullNodeProtocol              string
+	BNBFullNodeHost                  string
+	BNBFullNodePort                  string
+	PortalParams                     map[uint64]PortalParams
+	PortalFeederAddress              string
+	EpochBreakPointSwapNewKey        []uint64
+	IsBackup                         bool
+	PreloadAddress                   string
+	ReplaceStakingTxHeight           uint64
+	ETHRemoveBridgeSigEpoch          uint64
+	BCHeightBreakPointNewZKP         uint64
+	UpgradeCommitteeEngineV2Height   uint64
 }
 
 type GenesisParams struct {
@@ -154,6 +158,7 @@ func init() {
 		ChainVersion:                   "version-chain-test.json",
 		ConsensusV2Epoch:               16930,
 		BeaconHeightBreakPointBurnAddr: 250000,
+		ConsensusV3Epoch:               1e10,
 		BNBRelayingHeaderChainID:       TestnetBNBChainID,
 		BTCRelayingHeaderChainID:       TestnetBTCChainID,
 		BTCDataFolderName:              TestnetBTCDataFolderName,
@@ -177,12 +182,13 @@ func init() {
 				MinPercentRedeemFee:                  0.01,
 			},
 		},
-		EpochBreakPointSwapNewKey: TestnetReplaceCommitteeEpoch,
-		ReplaceStakingTxHeight:    1,
-		IsBackup:                  false,
-		PreloadAddress:            "",
-		BCHeightBreakPointNewZKP:  2300000, //TODO: change this value when deployed testnet
-		ETHRemoveBridgeSigEpoch:   21920,
+		EpochBreakPointSwapNewKey:      TestnetReplaceCommitteeEpoch,
+		ReplaceStakingTxHeight:         1,
+		IsBackup:                       false,
+		PreloadAddress:                 "",
+		BCHeightBreakPointNewZKP:       2300000, //TODO: change this value when deployed testnet
+		ETHRemoveBridgeSigEpoch:        21920,
+		UpgradeCommitteeEngineV2Height: 1e10,
 	}
 	// END TESTNET
 
@@ -236,6 +242,7 @@ func init() {
 		CheckForce:                     false,
 		ChainVersion:                   "version-chain-test-2.json",
 		ConsensusV2Epoch:               1e9,
+		ConsensusV3Epoch:               1e10,
 		BeaconHeightBreakPointBurnAddr: 1,
 		BNBRelayingHeaderChainID:       Testnet2BNBChainID,
 		BTCRelayingHeaderChainID:       Testnet2BTCChainID,
@@ -260,12 +267,13 @@ func init() {
 				MinPercentRedeemFee:                  0.01,
 			},
 		},
-		EpochBreakPointSwapNewKey: TestnetReplaceCommitteeEpoch,
-		ReplaceStakingTxHeight:    1,
-		IsBackup:                  false,
-		PreloadAddress:            "",
-		BCHeightBreakPointNewZKP:  260000, //TODO: change this value when deployed testnet2
-		ETHRemoveBridgeSigEpoch:   2085,
+		EpochBreakPointSwapNewKey:      TestnetReplaceCommitteeEpoch,
+		ReplaceStakingTxHeight:         1,
+		IsBackup:                       false,
+		PreloadAddress:                 "",
+		BCHeightBreakPointNewZKP:       784000, //TODO: change this value when deployed testnet2
+		ETHRemoveBridgeSigEpoch:        2085,
+		UpgradeCommitteeEngineV2Height: 1e10,
 	}
 	// END TESTNET-2
 
@@ -317,6 +325,7 @@ func init() {
 		CheckForce:                     false,
 		ChainVersion:                   "version-chain-main.json",
 		ConsensusV2Epoch:               1e9,
+		ConsensusV3Epoch:               1,
 		BeaconHeightBreakPointBurnAddr: 150500,
 		BNBRelayingHeaderChainID:       MainnetBNBChainID,
 		BTCRelayingHeaderChainID:       MainnetBTCChainID,
@@ -342,12 +351,13 @@ func init() {
 			},
 		},
 
-		EpochBreakPointSwapNewKey: MainnetReplaceCommitteeEpoch,
-		ReplaceStakingTxHeight:    559380,
-		IsBackup:                  false,
-		PreloadAddress:            "",
-		BCHeightBreakPointNewZKP:  737450,
-		ETHRemoveBridgeSigEpoch:   1973,
+		EpochBreakPointSwapNewKey:      MainnetReplaceCommitteeEpoch,
+		ReplaceStakingTxHeight:         559380,
+		IsBackup:                       false,
+		PreloadAddress:                 "",
+		BCHeightBreakPointNewZKP:       737450,
+		ETHRemoveBridgeSigEpoch:        1973,
+		UpgradeCommitteeEngineV2Height: 1e10,
 	}
 	if IsTestNet {
 		if !IsTestNet2 {

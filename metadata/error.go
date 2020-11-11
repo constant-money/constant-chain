@@ -29,6 +29,7 @@ const (
 	BeaconBlockRewardBuildInstructionForBeaconBlockRewardError
 
 	StopAutoStakingRequestNotInCommitteeListError
+	StopAutoStakingRequestGetStakingTransactionError
 	StopAutoStakingRequestStakingTransactionNotFoundError
 	StopAutoStakingRequestInvalidTransactionSenderError
 	StopAutoStakingRequestNoAutoStakingAvaiableError
@@ -47,6 +48,17 @@ const (
 	PortalRequestPTokenParamError
 	PortalRedeemRequestParamError
 	PortalRedeemLiquidateExchangeRatesParamError
+
+	// Unstake
+	UnStakingRequestNotInCommitteeListError
+	UnStakingRequestGetStakerInfoError
+	UnStakingRequestNotFoundStakerInfoError
+	UnStakingRequestStakingTransactionNotFoundError
+	UnStakingRequestInvalidTransactionSenderError
+	UnStakingRequestNoAutoStakingAvaiableError
+	UnStakingRequestTypeAssertionError
+	UnStakingRequestAlreadyStopError
+	UnStakingRequestInvalidFormatRequestKey
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -84,7 +96,16 @@ var ErrCodeMessage = map[int]struct {
 	StopAutoStakingRequestNoAutoStakingAvaiableError:      {-4003, "Stop Auto-Staking Request No Auto Staking Avaliable Error"},
 	StopAutoStakingRequestTypeAssertionError:              {-4004, "Stop Auto-Staking Request Type Assertion Error"},
 	StopAutoStakingRequestAlreadyStopError:                {-4005, "Stop Auto Staking Request Already Stop Error"},
-
+	StopAutoStakingRequestGetStakingTransactionError:      {-4006, "Stop Auto Staking Request Get Staking Transaction Error"},
+	UnStakingRequestNotInCommitteeListError:               {-4100, "Unstaking Request Not In Committee List Error"},
+	UnStakingRequestGetStakerInfoError:                    {-4101, "Unstaking Request Get Staker Info Error"},
+	UnStakingRequestNotFoundStakerInfoError:               {-4102, "Unstaking Request Not Found Staker Info Error"},
+	UnStakingRequestStakingTransactionNotFoundError:       {-4103, "Unstaking Request Staking Transaction Not Found Error"},
+	UnStakingRequestInvalidTransactionSenderError:         {-4104, "Unstaking Request Invalid Transaction Sender Error"},
+	UnStakingRequestNoAutoStakingAvaiableError:            {-4105, "UnStaking Request No Auto Staking Available Error"},
+	UnStakingRequestTypeAssertionError:                    {-4106, "UnStaking Request Type Assertion Error"},
+	UnStakingRequestAlreadyStopError:                      {-4107, "UnStaking Request Already Stop Error"},
+	UnStakingRequestInvalidFormatRequestKey:               {-4108, "Unstaking Request Key Is Invalid Format"},
 	// -5xxx dev reward error
 	WrongIncognitoDAOPaymentAddressError: {-5001, "Invalid dev account"},
 

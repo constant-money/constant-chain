@@ -1,17 +1,24 @@
 package blockchain
 
 import (
-	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/dataaccessobject"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"github.com/incognitochain/incognito-chain/incdb"
-	"github.com/incognitochain/incognito-chain/incognitokey"
-	"github.com/incognitochain/incognito-chain/metadata"
-	"github.com/incognitochain/incognito-chain/trie"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"testing"
+	"time"
+
+	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
+	"github.com/incognitochain/incognito-chain/blockchain/committeestate/mocks"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/dataaccessobject"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	"github.com/incognitochain/incognito-chain/incdb"
+	_ "github.com/incognitochain/incognito-chain/incdb/lvdb"
+	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/metadata"
+	"github.com/incognitochain/incognito-chain/trie"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -19,6 +26,7 @@ var (
 	diskDB         incdb.Database
 	committeesKeys []incognitokey.CommitteePublicKey
 	rewardReceiver map[string]string
+	emptyRoot      = common.HexToHash(common.HexEmptyRoot)
 )
 
 var _ = func() (_ struct{}) {
@@ -42,6 +50,18 @@ var _ = func() (_ struct{}) {
 	committeesKeys, _ = incognitokey.CommitteeBase58KeyListToStruct(committeesKeysStr)
 	return
 }()
+
+func initStateDB() {
+	dbPath, err := ioutil.TempDir(os.TempDir(), "data")
+	if err != nil {
+		panic(err)
+	}
+	diskDB, _ = incdb.Open("leveldb", dbPath)
+	wrarperDB = statedb.NewDatabaseAccessWarper(diskDB)
+	trie.Logger.Init(common.NewBackend(nil).Logger("test", true))
+	dataaccessobject.Logger.Init(common.NewBackend(nil).Logger("test", true))
+	return
+}
 
 func Test_getNoBlkPerYear(t *testing.T) {
 	type args struct {
@@ -339,94 +359,6 @@ func TestBlockChain_getRewardAmount(t *testing.T) {
 	}
 }
 
-func Test_splitReward(t *testing.T) {
-	type args struct {
-		totalReward               *map[common.Hash]uint64
-		numberOfActiveShards      int
-		devPercent                int
-		isSplitRewardForCustodian bool
-		percentCustodianRewards   uint64
-	}
-	totalRewardYear1 := make(map[common.Hash]uint64)
-	totalRewardYear1[common.PRVCoinID] = 8751970
-	beaconRewardYear1 := make(map[common.Hash]uint64)
-	beaconRewardYear1[common.PRVCoinID] = 1575354
-	daoRewardYear1 := make(map[common.Hash]uint64)
-	daoRewardYear1[common.PRVCoinID] = 875197
-	custodianRewardYear1 := make(map[common.Hash]uint64)
-	shardRewardYear1 := make(map[common.Hash]uint64)
-	shardRewardYear1[common.PRVCoinID] = 6301419
-
-	totalRewardYear2 := make(map[common.Hash]uint64)
-	totalRewardYear2[common.PRVCoinID] = 7964293
-	beaconRewardYear2 := make(map[common.Hash]uint64)
-	beaconRewardYear2[common.PRVCoinID] = 1449501
-	daoRewardYear2 := make(map[common.Hash]uint64)
-	daoRewardYear2[common.PRVCoinID] = 716786
-	custodianRewardYear2 := make(map[common.Hash]uint64)
-	shardRewardYear2 := make(map[common.Hash]uint64)
-	shardRewardYear2[common.PRVCoinID] = 5798006
-	tests := []struct {
-		name    string
-		args    args
-		want    *map[common.Hash]uint64
-		want1   *map[common.Hash]uint64
-		want2   *map[common.Hash]uint64
-		want3   *map[common.Hash]uint64
-		wantErr bool
-	}{
-		{
-			name: "year 1",
-			args: args{
-				totalReward:               &totalRewardYear1,
-				numberOfActiveShards:      8,
-				devPercent:                10,
-				isSplitRewardForCustodian: false,
-				percentCustodianRewards:   0,
-			},
-			want:  &beaconRewardYear1,
-			want1: &daoRewardYear1,
-			want2: &custodianRewardYear1,
-			want3: &shardRewardYear1,
-		},
-		{
-			name: "year 2",
-			args: args{
-				totalReward:               &totalRewardYear2,
-				numberOfActiveShards:      8,
-				devPercent:                9,
-				isSplitRewardForCustodian: false,
-				percentCustodianRewards:   0,
-			},
-			want:  &beaconRewardYear2,
-			want1: &daoRewardYear2,
-			want2: &custodianRewardYear2,
-			want3: &shardRewardYear2,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, got1, got2, err := splitReward(tt.args.totalReward, tt.args.numberOfActiveShards, tt.args.devPercent, tt.args.isSplitRewardForCustodian, tt.args.percentCustodianRewards)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("splitReward() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("splitReward() got = %v, want %v", got, tt.want)
-			}
-			if !reflect.DeepEqual(got1, tt.want1) {
-				t.Errorf("splitReward() got1 = %v, want %v", got1, tt.want1)
-			}
-			if !reflect.DeepEqual(got2, tt.want2) {
-				t.Errorf("splitReward() got2 = %v, want %v", got2, tt.want2)
-			}
-			if !reflect.DeepEqual(tt.args.totalReward, tt.want3) {
-				t.Errorf("splitReward() totalReward = %v, want %v", tt.args.totalReward, tt.want3)
-			}
-		})
-	}
-}
-
 func Test_getPercentForIncognitoDAO(t *testing.T) {
 	type args struct {
 		blockHeight uint64
@@ -581,7 +513,7 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 		config Config
 	}
 	type args struct {
-		beaconBlock   *BeaconBlock
+		beaconBlock   *types.BeaconBlock
 		rewardStateDB *statedb.StateDB
 	}
 	tests := []struct {
@@ -596,11 +528,11 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 				config: config,
 			},
 			args: args{
-				beaconBlock: &BeaconBlock{
-					Body: BeaconBody{
+				beaconBlock: &types.BeaconBlock{
+					Body: types.BeaconBody{
 						Instructions: [][]string{acceptedBlockRewardInfoBaseInst},
 					},
-					Header: BeaconHeader{
+					Header: types.BeaconHeader{
 						Epoch: 1,
 					},
 				},
@@ -613,11 +545,11 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 				config: config,
 			},
 			args: args{
-				beaconBlock: &BeaconBlock{
-					Body: BeaconBody{
+				beaconBlock: &types.BeaconBlock{
+					Body: types.BeaconBody{
 						Instructions: [][]string{acceptedBlockRewardInfo1Inst},
 					},
-					Header: BeaconHeader{
+					Header: types.BeaconHeader{
 						Epoch: 1,
 					},
 				},
@@ -647,58 +579,58 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 	}
 }
 
-func TestBlockChain_buildInstRewardForBeacons(t *testing.T) {
-	type fields struct {
-		BestState *BestState
-	}
-	fields1 := fields{
-		BestState: &BestState{Beacon: &BeaconBestState{BeaconCommittee: committeesKeys}},
-	}
-	totalReward1 := make(map[common.Hash]uint64)
-	totalReward1_1 := make(map[common.Hash]uint64)
-	totalReward1[common.PRVCoinID] = 900
-	totalReward1_1[common.PRVCoinID] = 300
-	rewardInst1_1, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[0].GetNormalKey())
-	rewardInst1_2, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[1].GetNormalKey())
-	rewardInst1_3, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[2].GetNormalKey())
-	type args struct {
-		epoch       uint64
-		totalReward map[common.Hash]uint64
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    [][]string
-		wantErr bool
-	}{
-		{
-			name:   "committee len 3",
-			fields: fields1,
-			args: args{
-				epoch:       1,
-				totalReward: totalReward1,
-			},
-			want:    [][]string{rewardInst1_1, rewardInst1_2, rewardInst1_3},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			blockchain := &BlockChain{
-				BestState: tt.fields.BestState,
-			}
-			got, err := blockchain.buildInstRewardForBeacons(tt.args.epoch, tt.args.totalReward)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildInstRewardForBeacons() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("buildInstRewardForBeacons() got = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
+// func TestBlockChain_buildInstRewardForBeacons(t *testing.T) {
+// 	type fields struct {
+// 		BestState *BestState
+// 	}
+// 	fields1 := fields{
+// 		BestState: &BestState{Beacon: &BeaconBestState{BeaconCommittee: committeesKeys}},
+// 	}
+// 	totalReward1 := make(map[common.Hash]uint64)
+// 	totalReward1_1 := make(map[common.Hash]uint64)
+// 	totalReward1[common.PRVCoinID] = 900
+// 	totalReward1_1[common.PRVCoinID] = 300
+// 	rewardInst1_1, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[0].GetNormalKey())
+// 	rewardInst1_2, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[1].GetNormalKey())
+// 	rewardInst1_3, _ := metadata.BuildInstForBeaconReward(totalReward1_1, committeesKeys[2].GetNormalKey())
+// 	type args struct {
+// 		epoch       uint64
+// 		totalReward map[common.Hash]uint64
+// 	}
+// 	tests := []struct {
+// 		name    string
+// 		fields  fields
+// 		args    args
+// 		want    [][]string
+// 		wantErr bool
+// 	}{
+// 		{
+// 			name:   "committee len 3",
+// 			fields: fields1,
+// 			args: args{
+// 				epoch:       1,
+// 				totalReward: totalReward1,
+// 			},
+// 			want:    [][]string{rewardInst1_1, rewardInst1_2, rewardInst1_3},
+// 			wantErr: false,
+// 		},
+// 	}
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			blockchain := &BlockChain{
+// 				BestState: tt.fields.BestState,
+// 			}
+// 			got, err := blockchain.buildInstRewardForBeacons(tt.args.epoch, tt.args.totalReward)
+// 			if (err != nil) != tt.wantErr {
+// 				t.Errorf("buildInstRewardForBeacons() error = %v, wantErr %v", err, tt.wantErr)
+// 				return
+// 			}
+// 			if !reflect.DeepEqual(got, tt.want) {
+// 				t.Errorf("buildInstRewardForBeacons() got = %v, want %v", got, tt.want)
+// 			}
+// 		})
+// 	}
+// }
 
 func TestBlockChain_buildInstRewardForIncDAO(t *testing.T) {
 	type fields struct {
@@ -794,54 +726,339 @@ func TestBlockChain_buildInstRewardForShards(t *testing.T) {
 	}
 }
 
-func TestBlockChain_addShardCommitteeReward(t *testing.T) {
-	sDB, _ := statedb.NewWithPrefixTrie(common.EmptyRoot, wrarperDB)
-	totalRewardShard1_1 := make(map[common.Hash]uint64)
-	wantReward := uint64(1000)
-	totalRewardShard1_1[common.PRVCoinID] = wantReward
-	rewardInstShard1_1 := &metadata.ShardBlockRewardInfo{
-		Epoch:       1,
-		ShardReward: totalRewardShard1_1,
-	}
-	type args struct {
-		rewardStateDB             *statedb.StateDB
-		shardID                   byte
-		rewardInfoShardToProcess  *metadata.ShardBlockRewardInfo
-		committeeOfShardToProcess []incognitokey.CommitteePublicKey
-		rewardReceiver            map[string]string
+func TestBeaconBestState_calculateReward(t *testing.T) {
+
+	initStateDB()
+	initPublicKey()
+
+	hash, _ := common.Hash{}.NewHashFromStr("123")
+
+	rewards := []uint64{1093995, 1093995}
+	beaconReward := []uint64{51054, 196919}
+	shardReward := []uint64{933543, 787677}
+	daoReward := []uint64{109399, 109399}
+	sDBs := []*statedb.StateDB{}
+	committeeEngines := []*mocks.BeaconCommitteeEngine{}
+	for i := 0; i < 2; i++ {
+		sDB, err := statedb.NewWithPrefixTrie(emptyRoot, wrarperDB)
+		assert.Nil(t, err)
+		for j := 0; j < 8; j++ {
+			statedb.AddShardRewardRequest(
+				sDB, 1, byte(j), *hash, rewards[i],
+			)
+		}
+		sDBs = append(sDBs, sDB)
+		committeeEngine := &mocks.BeaconCommitteeEngine{}
+		committeeEngine.On("ActiveShards").Return(8)
+		committeeEngine.On("GetBeaconCommittee").Return(
+			[]incognitokey.CommitteePublicKey{
+				*incKey0, *incKey, *incKey2, *incKey3, *incKey, *incKey2, *incKey3,
+			},
+		)
+		committeeEngine.On("GetShardCommittee").Return(
+			map[byte][]incognitokey.CommitteePublicKey{
+				0: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				1: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				2: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				3: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				4: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				5: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				6: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+				7: []incognitokey.CommitteePublicKey{
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey0, *incKey, *incKey2, *incKey3, *incKey4, *incKey5,
+					*incKey4, *incKey5,
+				},
+			},
+		)
+		for j := 0; j < 8; j++ {
+			committeeEngine.On("SplitReward", &committeestate.BeaconCommitteeStateEnvironment{
+				ActiveShards:           8,
+				DAOPercent:             10,
+				PercentCustodianReward: 0,
+				ShardID:                byte(j),
+				TotalReward:            make(map[common.Hash]uint64),
+			}).Return(
+				map[common.Hash]uint64{
+					*hash: beaconReward[i],
+				},
+				map[common.Hash]uint64{
+					*hash: shardReward[i],
+				},
+				map[common.Hash]uint64{
+					*hash: daoReward[i],
+				},
+				map[common.Hash]uint64{},
+				nil,
+			)
+		}
+		committeeEngines = append(committeeEngines, committeeEngine)
 	}
 
+	type fields struct {
+		BestBlockHash            common.Hash
+		PreviousBestBlockHash    common.Hash
+		BestBlock                types.BeaconBlock
+		BestShardHash            map[byte]common.Hash
+		BestShardHeight          map[byte]uint64
+		Epoch                    uint64
+		BeaconHeight             uint64
+		BeaconProposerIndex      int
+		CurrentRandomNumber      int64
+		CurrentRandomTimeStamp   int64
+		IsGetRandomNumber        bool
+		Params                   map[string]string
+		MaxBeaconCommitteeSize   int
+		MinBeaconCommitteeSize   int
+		MaxShardCommitteeSize    int
+		MinShardCommitteeSize    int
+		ActiveShards             int
+		ConsensusAlgorithm       string
+		ShardConsensusAlgorithm  map[byte]string
+		beaconCommitteeEngine    committeestate.BeaconCommitteeEngine
+		LastCrossShardState      map[byte]map[byte]uint64
+		ShardHandle              map[byte]bool
+		NumOfBlocksByProducers   map[string]uint64
+		BlockInterval            time.Duration
+		BlockMaxCreateTime       time.Duration
+		consensusStateDB         *statedb.StateDB
+		ConsensusStateDBRootHash common.Hash
+		rewardStateDB            *statedb.StateDB
+		RewardStateDBRootHash    common.Hash
+		featureStateDB           *statedb.StateDB
+		FeatureStateDBRootHash   common.Hash
+		slashStateDB             *statedb.StateDB
+		SlashStateDBRootHash     common.Hash
+	}
+	type args struct {
+		blockchain                *BlockChain
+		blkHeight                 uint64
+		epoch                     uint64
+		rewardStateDB             *statedb.StateDB
+		isSplitRewardForCustodian bool
+		percentCustodianRewards   uint64
+	}
 	tests := []struct {
 		name    string
+		fields  fields
 		args    args
+		want    map[common.Hash]uint64
+		want1   []map[common.Hash]uint64
+		want2   map[common.Hash]uint64
+		want3   map[common.Hash]uint64
 		wantErr bool
 	}{
 		{
-			name: "candidate shard 1",
-			args: args{
-				rewardStateDB:             sDB,
-				shardID:                   1,
-				rewardInfoShardToProcess:  rewardInstShard1_1,
-				committeeOfShardToProcess: committeesKeys,
-				rewardReceiver:            rewardReceiver,
+			name: "Year 1 - V2",
+			fields: fields{
+				beaconCommitteeEngine: committeeEngines[0],
 			},
+			args: args{
+				blockchain: &BlockChain{
+					config: Config{
+						ChainParams: &Params{
+							MaxBeaconBlockCreation: TestNetMaxBeaconBlkCreation,
+						},
+					},
+				},
+				blkHeight:     20,
+				epoch:         1,
+				rewardStateDB: sDBs[0],
+			},
+			want: map[common.Hash]uint64{
+				*hash: 51054 * 8,
+			},
+			want1: []map[common.Hash]uint64{
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+				map[common.Hash]uint64{
+					*hash: 933543,
+				},
+			},
+			want2: map[common.Hash]uint64{
+				*hash: 109399 * 8,
+			},
+			want3:   map[common.Hash]uint64{},
+			wantErr: false,
+		},
+		{
+			name: "Year 1 - V1",
+			fields: fields{
+				beaconCommitteeEngine: committeeEngines[1],
+			},
+			args: args{
+				blockchain: &BlockChain{
+					config: Config{
+						ChainParams: &Params{
+							MaxBeaconBlockCreation: TestNetMaxBeaconBlkCreation,
+						},
+					},
+				},
+				blkHeight:     20,
+				epoch:         1,
+				rewardStateDB: sDBs[1],
+			},
+			want: map[common.Hash]uint64{
+				*hash: 1575352,
+			},
+			want1: []map[common.Hash]uint64{
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+				map[common.Hash]uint64{
+					*hash: 787677,
+				},
+			},
+			want2: map[common.Hash]uint64{
+				*hash: 109399 * 8,
+			},
+			want3:   map[common.Hash]uint64{},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			blockchain := &BlockChain{}
-			if err := blockchain.addShardCommitteeReward(tt.args.rewardStateDB, tt.args.shardID, tt.args.rewardInfoShardToProcess, tt.args.committeeOfShardToProcess, tt.args.rewardReceiver); (err != nil) != tt.wantErr {
-				t.Errorf("addShardCommitteeReward() error = %v, wantErr %v", err, tt.wantErr)
+			beaconBestState := &BeaconBestState{
+				BestBlockHash:            tt.fields.BestBlockHash,
+				PreviousBestBlockHash:    tt.fields.PreviousBestBlockHash,
+				BestBlock:                tt.fields.BestBlock,
+				BestShardHash:            tt.fields.BestShardHash,
+				BestShardHeight:          tt.fields.BestShardHeight,
+				Epoch:                    tt.fields.Epoch,
+				BeaconHeight:             tt.fields.BeaconHeight,
+				BeaconProposerIndex:      tt.fields.BeaconProposerIndex,
+				CurrentRandomNumber:      tt.fields.CurrentRandomNumber,
+				CurrentRandomTimeStamp:   tt.fields.CurrentRandomTimeStamp,
+				IsGetRandomNumber:        tt.fields.IsGetRandomNumber,
+				Params:                   tt.fields.Params,
+				MaxBeaconCommitteeSize:   tt.fields.MaxBeaconCommitteeSize,
+				MinBeaconCommitteeSize:   tt.fields.MinBeaconCommitteeSize,
+				MaxShardCommitteeSize:    tt.fields.MaxShardCommitteeSize,
+				MinShardCommitteeSize:    tt.fields.MinShardCommitteeSize,
+				ActiveShards:             tt.fields.ActiveShards,
+				ConsensusAlgorithm:       tt.fields.ConsensusAlgorithm,
+				ShardConsensusAlgorithm:  tt.fields.ShardConsensusAlgorithm,
+				beaconCommitteeEngine:    tt.fields.beaconCommitteeEngine,
+				LastCrossShardState:      tt.fields.LastCrossShardState,
+				ShardHandle:              tt.fields.ShardHandle,
+				NumOfBlocksByProducers:   tt.fields.NumOfBlocksByProducers,
+				BlockInterval:            tt.fields.BlockInterval,
+				BlockMaxCreateTime:       tt.fields.BlockMaxCreateTime,
+				consensusStateDB:         tt.fields.consensusStateDB,
+				ConsensusStateDBRootHash: tt.fields.ConsensusStateDBRootHash,
+				rewardStateDB:            tt.fields.rewardStateDB,
+				RewardStateDBRootHash:    tt.fields.RewardStateDBRootHash,
+				featureStateDB:           tt.fields.featureStateDB,
+				FeatureStateDBRootHash:   tt.fields.FeatureStateDBRootHash,
+				slashStateDB:             tt.fields.slashStateDB,
+				SlashStateDBRootHash:     tt.fields.SlashStateDBRootHash,
 			}
-			rootHash, _ := sDB.Commit(true)
-			_ = sDB.Database().TrieDB().Commit(rootHash, false)
+			got, got1, got2, got3, err := beaconBestState.calculateReward(tt.args.blockchain, tt.args.blkHeight, tt.args.epoch, tt.args.rewardStateDB, tt.args.isSplitRewardForCustodian, tt.args.percentCustodianRewards)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("BeaconBestState.calculateReward() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BeaconBestState.calculateReward() got = %v, want %v", got, tt.want)
+			}
+			if !reflect.DeepEqual(got1, tt.want1) {
+				t.Errorf("BeaconBestState.calculateReward() got1 = %v, want %v", got1, tt.want1)
+			}
+			if !reflect.DeepEqual(got2, tt.want2) {
+				t.Errorf("BeaconBestState.calculateReward() got2 = %v, want %v", got2, tt.want2)
+			}
+			if !reflect.DeepEqual(got3, tt.want3) {
+				t.Errorf("BeaconBestState.calculateReward() got3 = %v, want %v", got3, tt.want3)
+			}
 		})
-	}
-	reward, err := statedb.GetCommitteeReward(sDB, committeesKeys[2].GetIncKeyBase58(), common.PRVCoinID)
-	if err != nil {
-		t.Errorf("addShardCommitteeReward() error = %v, wantErr %v", err, nil)
-	}
-	if reward != wantReward/3 {
-		t.Errorf("addShardCommitteeReward() reward = %v, wantReward %v", reward, wantReward/3)
 	}
 }

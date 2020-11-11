@@ -152,7 +152,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeRefundTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	crossPoolTradeRefundContent, err := parseCrossPoolTradeRefundContent(contentStr)
 	if err != nil {
@@ -173,7 +173,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeRefundTx(
 		producerPrivateKey,
 		shardID,
 		shardView.GetCopiedTransactionStateDB(),
-		beaconView.GetBeaconFeatureStateDB(),
+		featureStateDB,
 		meta,
 	)
 	if err != nil {
@@ -190,7 +190,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeRefundTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	pdeTradeRequestAction, err := parseTradeRefundContent(contentStr)
 	if err != nil {
@@ -211,7 +211,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeRefundTx(
 		producerPrivateKey,
 		shardID,
 		shardView.GetCopiedTransactionStateDB(),
-		beaconView.GetBeaconFeatureStateDB(),
+		featureStateDB,
 		meta,
 	)
 	if err != nil {
@@ -228,7 +228,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeAcceptedTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	crossPoolTradeAcceptedContents, err := parseCrossPoolTradeAcceptedContent(contentStr)
 	if err != nil {
@@ -239,7 +239,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeAcceptedTx(
 		Logger.log.Warn("WARNING: cross pool trade contents is empty.")
 		return nil, nil
 	}
-	finalCrossPoolTradeAcceptedContent := crossPoolTradeAcceptedContents[len - 1]
+	finalCrossPoolTradeAcceptedContent := crossPoolTradeAcceptedContents[len-1]
 	if shardID != finalCrossPoolTradeAcceptedContent.ShardID {
 		return nil, nil
 	}
@@ -255,7 +255,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeAcceptedTx(
 		producerPrivateKey,
 		shardID,
 		shardView.GetCopiedTransactionStateDB(),
-		beaconView.GetBeaconFeatureStateDB(),
+		featureStateDB,
 		meta,
 	)
 	if err != nil {
@@ -272,7 +272,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeAcceptedTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	pdeTradeAcceptedContent, err := parseTradeAcceptedContent(contentStr)
 	if err != nil {
@@ -293,7 +293,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeAcceptedTx(
 		producerPrivateKey,
 		shardID,
 		shardView.GetCopiedTransactionStateDB(),
-		beaconView.GetBeaconFeatureStateDB(),
+		featureStateDB,
 		meta,
 	)
 	if err != nil {
@@ -310,7 +310,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeIssuanceTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Trade] Starting...")
 	if instStatus == common.PDETradeRefundChainStatus {
@@ -320,7 +320,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeIssuanceTx(
 			producerPrivateKey,
 			shardID,
 			shardView,
-			beaconView,
+			featureStateDB,
 		)
 	}
 	return blockGenerator.buildPDETradeAcceptedTx(
@@ -329,7 +329,7 @@ func (blockGenerator *BlockGenerator) buildPDETradeIssuanceTx(
 		producerPrivateKey,
 		shardID,
 		shardView,
-		beaconView,
+		featureStateDB,
 	)
 }
 
@@ -339,7 +339,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeIssuanceTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Cross Pool Trade] Starting...")
 	if instStatus == common.PDECrossPoolTradeFeeRefundChainStatus || instStatus == common.PDECrossPoolTradeSellingTokenRefundChainStatus {
@@ -349,7 +349,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeIssuanceTx(
 			producerPrivateKey,
 			shardID,
 			shardView,
-			beaconView,
+			featureStateDB,
 		)
 	}
 	return blockGenerator.buildPDECrossPoolTradeAcceptedTx(
@@ -358,7 +358,7 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeIssuanceTx(
 		producerPrivateKey,
 		shardID,
 		shardView,
-		beaconView,
+		featureStateDB,
 	)
 }
 
@@ -367,7 +367,7 @@ func (blockGenerator *BlockGenerator) buildPDEWithdrawalTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Withdrawal] Starting...")
 	contentBytes := []byte(contentStr)
@@ -448,7 +448,7 @@ func (blockGenerator *BlockGenerator) buildPDEWithdrawalTx(
 			false,
 			shardID,
 			nil,
-			beaconView.GetBeaconFeatureStateDB(),
+			featureStateDB,
 		),
 	)
 	if initErr != nil {
@@ -463,7 +463,7 @@ func (blockGenerator *BlockGenerator) buildPDERefundContributionTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Refund contribution] Starting...")
 	contentBytes := []byte(contentStr)
@@ -546,7 +546,7 @@ func (blockGenerator *BlockGenerator) buildPDERefundContributionTx(
 			false,
 			shardID,
 			nil,
-			beaconView.GetBeaconFeatureStateDB(),
+			featureStateDB,
 		),
 	)
 	if initErr != nil {
@@ -561,7 +561,7 @@ func (blockGenerator *BlockGenerator) buildPDEMatchedNReturnedContributionTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Matched and Returned contribution] Starting...")
 	contentBytes := []byte(contentStr)
@@ -645,7 +645,7 @@ func (blockGenerator *BlockGenerator) buildPDEMatchedNReturnedContributionTx(
 			false,
 			shardID,
 			nil,
-			beaconView.GetBeaconFeatureStateDB(),
+			featureStateDB,
 		),
 	)
 	if initErr != nil {
@@ -660,7 +660,7 @@ func (blockGenerator *BlockGenerator) buildPDEFeeWithdrawalTx(
 	producerPrivateKey *privacy.PrivateKey,
 	shardID byte,
 	shardView *ShardBestState,
-	beaconView *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 ) (metadata.Transaction, error) {
 	Logger.log.Info("[PDE Fee Withdrawal] Starting...")
 	contentBytes, err := base64.StdEncoding.DecodeString(contentStr)

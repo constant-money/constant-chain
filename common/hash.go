@@ -1,13 +1,15 @@
 package common
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/sha3"
+	"sort"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/sha3"
 )
 
 var InvalidMaxHashSizeErr = errors.New("invalid max hash size")
@@ -216,4 +218,92 @@ func Keccak256Hash(data ...[]byte) (h Hash) {
 	}
 	d.Sum(h[:0])
 	return h
+}
+
+func GenerateHashFromStringArray(strs []string) (Hash, error) {
+	// if input is empty list
+	// return hash value of bytes zero
+	if len(strs) == 0 {
+		return GenerateZeroValueHash()
+	}
+	var (
+		hash Hash
+		buf  bytes.Buffer
+	)
+	for _, value := range strs {
+		buf.WriteString(value)
+	}
+	temp := HashB(buf.Bytes())
+	if err := hash.SetBytes(temp[:]); err != nil {
+		return Hash{}, err
+	}
+	return hash, nil
+}
+
+func GenerateZeroValueHash() (Hash, error) {
+	hash := Hash{}
+	hash.SetBytes(make([]byte, 32))
+	return hash, nil
+}
+
+func GenerateHashFromMapByteString(maps1 map[byte][]string, maps2 map[byte][]string) (Hash, error) {
+	var keys1 []int
+	for k := range maps1 {
+		keys1 = append(keys1, int(k))
+	}
+	sort.Ints(keys1)
+	temp1 := []string{}
+	// To perform the opertion you want
+	for _, k := range keys1 {
+		temp1 = append(temp1, maps1[byte(k)]...)
+	}
+
+	var keys2 []int
+	for k := range maps2 {
+		keys2 = append(keys2, int(k))
+	}
+	sort.Ints(keys2)
+	temp2 := []string{}
+	// To perform the opertion you want
+	for _, k := range keys2 {
+		temp2 = append(temp2, maps2[byte(k)]...)
+	}
+	return GenerateHashFromStringArray(append(temp1, temp2...))
+}
+
+func GenerateHashFromMapStringString(maps1 map[string]string) (Hash, error) {
+	var keys []string
+	var res []string
+	for k := range maps1 {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		res = append(res, key)
+		res = append(res, maps1[key])
+	}
+	return GenerateHashFromStringArray(res)
+}
+
+func GenerateHashFromMapStringBool(maps1 map[string]bool) (Hash, error) {
+	var keys []string
+	var res []string
+	for k := range maps1 {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		res = append(res, key)
+		if maps1[key] {
+			res = append(res, "true")
+		} else {
+			res = append(res, "false")
+		}
+	}
+	return GenerateHashFromStringArray(res)
+}
+
+func (h Hash) IsZeroValue() bool {
+	emptyHash := Hash{}
+	return h.IsEqual(&emptyHash)
 }

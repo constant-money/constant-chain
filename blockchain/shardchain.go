@@ -5,6 +5,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
+
+	"github.com/incognitochain/incognito-chain/blockchain/types"
+
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -51,7 +55,7 @@ func (s *ShardChain) GetEpoch() uint64 {
 	return s.GetBestState().Epoch
 }
 
-func (s *ShardChain) InsertBatchBlock([]common.BlockInterface) (int, error) {
+func (s *ShardChain) InsertBatchBlock([]types.BlockInterface) (int, error) {
 	panic("implement me")
 }
 
@@ -112,7 +116,7 @@ func (chain *ShardChain) CurrentHeight() uint64 {
 
 func (chain *ShardChain) GetCommittee() []incognitokey.CommitteePublicKey {
 	result := []incognitokey.CommitteePublicKey{}
-	return append(result, chain.GetBestState().ShardCommittee...)
+	return append(result, chain.GetBestState().shardCommitteeEngine.GetShardCommittee()...)
 }
 
 func (chain *ShardChain) GetCommitteeByHeight(h uint64) ([]incognitokey.CommitteePublicKey, error) {
@@ -127,15 +131,15 @@ func (chain *ShardChain) GetCommitteeByHeight(h uint64) ([]incognitokey.Committe
 
 func (chain *ShardChain) GetPendingCommittee() []incognitokey.CommitteePublicKey {
 	result := []incognitokey.CommitteePublicKey{}
-	return append(result, chain.GetBestState().ShardPendingValidator...)
+	return append(result, chain.GetBestState().shardCommitteeEngine.GetShardSubstitute()...)
 }
 
 func (chain *ShardChain) GetCommitteeSize() int {
-	return len(chain.GetBestState().ShardCommittee)
+	return len(chain.GetBestState().shardCommitteeEngine.GetShardCommittee())
 }
 
 func (chain *ShardChain) GetPubKeyCommitteeIndex(pubkey string) int {
-	for index, key := range chain.GetBestState().ShardCommittee {
+	for index, key := range chain.GetBestState().shardCommitteeEngine.GetShardCommittee() {
 		if key.GetMiningKeyBase58(chain.GetBestState().ConsensusAlgorithm) == pubkey {
 			return index
 		}
@@ -147,9 +151,16 @@ func (chain *ShardChain) GetLastProposerIndex() int {
 	return chain.GetBestState().ShardProposerIdx
 }
 
-func (chain *ShardChain) CreateNewBlock(version int, proposer string, round int, startTime int64) (common.BlockInterface, error) {
+func (chain *ShardChain) CreateNewBlock(
+	version int, proposer string,
+	round int, startTime int64,
+	committees []incognitokey.CommitteePublicKey,
+	committeeViewHash common.Hash) (types.BlockInterface, error) {
 	Logger.log.Infof("Begin Start New Block Shard %+v", time.Now())
-	newBlock, err := chain.Blockchain.NewBlockShard(chain.GetBestState(), version, proposer, round, time.Unix(startTime, 0))
+	newBlock, err := chain.Blockchain.NewBlockShard(
+		chain.GetBestState(),
+		version, proposer, round,
+		time.Unix(startTime, 0), committees, committeeViewHash)
 	Logger.log.Infof("Finish New Block Shard %+v", time.Now())
 	if err != nil {
 		Logger.log.Error(err)
@@ -164,12 +175,17 @@ func (chain *ShardChain) CreateNewBlock(version int, proposer string, round int,
 	return newBlock, nil
 }
 
-func (chain *ShardChain) CreateNewBlockFromOldBlock(oldBlock common.BlockInterface, proposer string, startTime int64) (common.BlockInterface, error) {
+func (chain *ShardChain) CreateNewBlockFromOldBlock(
+	oldBlock types.BlockInterface,
+	proposer string, startTime int64,
+	committees []incognitokey.CommitteePublicKey,
+	committeeViewHash common.Hash) (types.BlockInterface, error) {
 	b, _ := json.Marshal(oldBlock)
-	newBlock := new(ShardBlock)
+	newBlock := new(types.ShardBlock)
 	json.Unmarshal(b, &newBlock)
 	newBlock.Header.Proposer = proposer
 	newBlock.Header.ProposeTime = startTime
+
 	return newBlock, nil
 }
 
@@ -192,34 +208,39 @@ func (chain *ShardChain) CreateNewBlockFromOldBlock(oldBlock common.BlockInterfa
 // 	return chain.Blockchain.InsertShardBlock(shardBlock, false)
 // }
 
-func (chain *ShardChain) ValidateBlockSignatures(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
+func (chain *ShardChain) ValidateBlockSignatures(block types.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
 	if err := chain.Blockchain.config.ConsensusEngine.ValidateProducerSig(block, chain.GetConsensusType()); err != nil {
 		return err
 	}
 
 	if err := chain.Blockchain.config.ConsensusEngine.ValidateBlockCommitteSig(block, committee); err != nil {
+		Logger.log.Info("[staking-v2] chain.GetBestState().GetHeight():", chain.GetBestState().GetHeight())
+		bestViewCommittees, _ := incognitokey.CommitteeKeyListToString(chain.GetBestState().GetCommittee())
+		Logger.log.Info("[staking-v2] bestViewCommitteess:", bestViewCommittees)
+		Logger.log.Info("[staking-v2] err:", err)
+		Logger.log.Info("[staking-v2] block.CommitteeFromBlock():", block.CommitteeFromBlock())
 		return err
 	}
 	return nil
 }
 
-func (chain *ShardChain) InsertBlk(block common.BlockInterface, shouldValidate bool) error {
-	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), shouldValidate)
+func (chain *ShardChain) InsertBlk(block types.BlockInterface, shouldValidate bool) error {
+	err := chain.Blockchain.InsertShardBlock(block.(*types.ShardBlock), shouldValidate)
 	if err != nil {
 		Logger.log.Error(err)
 	}
 	return err
 }
 
-func (chain *ShardChain) CheckExistedBlk(block common.BlockInterface) bool {
+func (chain *ShardChain) CheckExistedBlk(block types.BlockInterface) bool {
 	blkHash := block.Hash()
 	_, err := rawdbv2.GetBeaconBlockByHash(chain.Blockchain.GetShardChainDatabase(byte(chain.shardID)), *blkHash)
 	return err == nil
 }
 
-func (chain *ShardChain) InsertAndBroadcastBlock(block common.BlockInterface) error {
+func (chain *ShardChain) InsertAndBroadcastBlock(block types.BlockInterface) error {
 	go chain.Blockchain.config.Server.PushBlockToAll(block, false)
-	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), false)
+	err := chain.Blockchain.InsertShardBlock(block.(*types.ShardBlock), false)
 	if err != nil {
 		Logger.log.Error(err)
 		return err
@@ -243,8 +264,12 @@ func (chain *ShardChain) GetShardID() int {
 	return chain.shardID
 }
 
-func (chain *ShardChain) UnmarshalBlock(blockString []byte) (common.BlockInterface, error) {
-	var shardBlk ShardBlock
+func (chain *ShardChain) IsBeaconChain() bool {
+	return false
+}
+
+func (chain *ShardChain) UnmarshalBlock(blockString []byte) (types.BlockInterface, error) {
+	var shardBlk types.ShardBlock
 	err := json.Unmarshal(blockString, &shardBlk)
 	if err != nil {
 		return nil, err
@@ -252,10 +277,38 @@ func (chain *ShardChain) UnmarshalBlock(blockString []byte) (common.BlockInterfa
 	return &shardBlk, nil
 }
 
-func (chain *ShardChain) ValidatePreSignBlock(block common.BlockInterface) error {
-	return chain.Blockchain.VerifyPreSignShardBlock(block.(*ShardBlock), byte(block.(*ShardBlock).GetShardID()))
+func (chain *ShardChain) ValidatePreSignBlock(block types.BlockInterface, committees []incognitokey.CommitteePublicKey) error {
+	return chain.Blockchain.VerifyPreSignShardBlock(block.(*types.ShardBlock), committees, byte(block.(*types.ShardBlock).GetShardID()))
 }
 
 func (chain *ShardChain) GetAllView() []multiview.View {
 	return chain.multiView.GetAllViewsWithBFS()
+}
+
+//CommitteesV2 get committees by block for shardChain
+// Input block must be ShardBlock
+func (chain *ShardChain) GetCommitteeV2(block types.BlockInterface) ([]incognitokey.CommitteePublicKey, error) {
+	var err error
+	shardView := chain.GetBestState()
+	result := []incognitokey.CommitteePublicKey{}
+
+	if shardView.shardCommitteeEngine.Version() == committeestate.SELF_SWAP_SHARD_VERSION {
+		result = append(result, chain.GetBestState().shardCommitteeEngine.GetShardCommittee()...)
+	} else {
+		result, err = chain.Blockchain.GetShardCommitteeFromBeaconHash(block.CommitteeFromBlock(), byte(chain.shardID))
+		if err != nil {
+			return result, err
+		}
+	}
+
+	return result, nil
+}
+
+func (chain *ShardChain) CommitteeStateVersion() uint {
+	return chain.GetBestState().shardCommitteeEngine.Version()
+}
+
+//BestViewCommitteeFromBlock ...
+func (chain *ShardChain) BestViewCommitteeFromBlock() common.Hash {
+	return chain.GetBestState().CommitteeFromBlock()
 }

@@ -11,6 +11,7 @@ import (
 
 func storeCommitteeObjectOneShard(role int, initRoot common.Hash, shardID, from, to int) (common.Hash, map[common.Hash]*CommitteeState) {
 	m := make(map[common.Hash]*CommitteeState)
+	m1 := make(map[common.Hash]*StakerInfo)
 	tempCommitteePublicKey, err := incognitokey.CommitteeBase58KeyListToStruct(committeePublicKeys)
 	if err != nil {
 		panic(err)
@@ -20,6 +21,17 @@ func storeCommitteeObjectOneShard(role int, initRoot common.Hash, shardID, from,
 		key, _ := GenerateCommitteeObjectKeyWithRole(role, shardID, value)
 		committeeState := NewCommitteeStateWithValue(shardID, role, value)
 		m[key] = committeeState
+		keyBytes, err := value.RawBytes()
+		if err != nil {
+			panic(err)
+		}
+		key1 := GetStakerInfoKey(keyBytes)
+		stakerInfo := NewStakerInfoWithValue(
+			receiverPaymentAddressStructs[0],
+			true,
+			txHashes[0],
+		)
+		m1[key1] = stakerInfo
 	}
 	sDB, err := NewWithPrefixTrie(initRoot, wrarperDB)
 	if err != nil {
@@ -27,6 +39,9 @@ func storeCommitteeObjectOneShard(role int, initRoot common.Hash, shardID, from,
 	}
 	for key, value := range m {
 		sDB.SetStateObject(CommitteeObjectType, key, value)
+	}
+	for key, value := range m1 {
+		sDB.SetStateObject(StakerObjectType, key, value)
 	}
 	rootHash, err := sDB.Commit(true)
 	if err != nil {
