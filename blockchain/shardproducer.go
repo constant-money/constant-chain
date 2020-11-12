@@ -944,7 +944,6 @@ func CreateShardInstructionsFromTransactionAndInstruction(transactions []metadat
 			if len(stopAutoStakingMetadata.CommitteePublicKey) != 0 {
 				stopAutoStaking = append(stopAutoStaking, stopAutoStakingMetadata.CommitteePublicKey)
 			}
-			stopAutoStaking = append(stopAutoStaking, stopAutoStakingMetadata.CommitteePublicKey)
 		case metadata.UnStakingMeta:
 			unstakingMetadata, ok := tx.GetMetadata().(*metadata.UnStakingMetadata)
 			if !ok {
@@ -953,7 +952,6 @@ func CreateShardInstructionsFromTransactionAndInstruction(transactions []metadat
 			if len(unstakingMetadata.CommitteePublicKey) != 0 {
 				unstaking = append(unstaking, unstakingMetadata.CommitteePublicKey)
 			}
-			unstaking = append(unstaking, unstakingMetadata.CommitteePublicKey)
 		}
 	}
 	if !reflect.DeepEqual(stakeShardPublicKey, []string{}) {
