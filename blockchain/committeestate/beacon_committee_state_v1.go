@@ -347,6 +347,7 @@ func (engine *BeaconCommitteeEngineV1) UpdateCommitteeState(env *BeaconCommittee
 		tempNewBeaconCandidates, tempNewShardCandidates := []incognitokey.CommitteePublicKey{}, []incognitokey.CommitteePublicKey{}
 		switch inst[0] {
 		case instruction.STAKE_ACTION:
+			Logger.log.Info(">>>>>>>>>>>>", inst)
 			stakeInstruction, err := instruction.ValidateAndImportStakeInstructionFromString(inst)
 			if err != nil {
 				Logger.log.Errorf("SKIP stake instruction %+v, error %+v", inst, err)
@@ -436,11 +437,6 @@ func (engine *BeaconCommitteeEngineV1) UpdateCommitteeState(env *BeaconCommittee
 		newB.currentEpochBeaconCandidate = []incognitokey.CommitteePublicKey{}
 		committeeChange.BeaconSubstituteAdded = newBeaconSubstitute
 		newB.beaconSubstitute = append(newB.beaconSubstitute, newBeaconSubstitute...)
-	}
-
-	committeeChange, err = newB.processUnstakeChange(committeeChange, env)
-	if err != nil {
-		return nil, nil, nil, NewCommitteeStateError(ErrUpdateCommitteeState, err)
 	}
 
 	err = newB.processAutoStakingChange(committeeChange, env)
@@ -718,6 +714,7 @@ func (b *BeaconCommitteeStateV1) processReplaceInstruction(
 	}
 	for index := 0; index < removedCommittee; index++ {
 		delete(b.autoStake, swapInstruction.OutPublicKeys[index])
+		delete(b.stakingTx, swapInstruction.OutPublicKeys[index])
 		delete(b.rewardReceiver, swapInstruction.OutPublicKeyStructs[index].GetIncKeyBase58())
 		b.autoStake[swapInstruction.InPublicKeys[index]] = false
 		b.rewardReceiver[swapInstruction.InPublicKeyStructs[index].GetIncKeyBase58()] = swapInstruction.NewRewardReceiverStructs[index]
@@ -875,25 +872,6 @@ func (b *BeaconCommitteeStateV1) processAutoStakingChange(committeeChange *Commi
 		b.stakingTx,
 	)
 	return nil
-}
-
-func (b *BeaconCommitteeStateV1) processUnstakeChange(committeeChange *CommitteeChange, env *BeaconCommitteeStateEnvironment) (*CommitteeChange, error) {
-
-	newCommitteeChange := committeeChange
-
-	unstakingIncognitoKey, err := incognitokey.CommitteeBase58KeyListToStruct(newCommitteeChange.Unstake)
-	if err != nil {
-		return newCommitteeChange, err
-	}
-	err = statedb.StoreStakerInfoV1(
-		env.ConsensusStateDB,
-		unstakingIncognitoKey,
-		b.rewardReceiver,
-		b.autoStake,
-		b.stakingTx,
-	)
-
-	return newCommitteeChange, err
 }
 
 //HasSwappedCommittees ...

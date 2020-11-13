@@ -1030,6 +1030,9 @@ func getStakingCandidate(beaconBlock types.BeaconBlock) ([]string, []string) {
 
 func (beaconBestState *BeaconBestState) storeCommitteeStateWithCurrentState(
 	committeeChange *committeestate.CommitteeChange) error {
+	if beaconBestState.CommitteeEngineVersion() == committeestate.SELF_SWAP_SHARD_VERSION {
+		return nil
+	}
 	stakerKeys := committeeChange.StakerKeys()
 	if len(stakerKeys) != 0 {
 		err := statedb.StoreStakerInfoV1(
