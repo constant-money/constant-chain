@@ -71,6 +71,7 @@ func (s *StakeInstruction) SetTxStakes(txStakes []string) *StakeInstruction {
 	for _, txStake := range txStakes {
 		res, _ := common.Hash{}.NewHashFromStr(txStake)
 		s.TxStakeHashes = append(s.TxStakeHashes, *res)
+		s.TxStakes = append(s.TxStakes, txStake)
 	}
 	return s
 }

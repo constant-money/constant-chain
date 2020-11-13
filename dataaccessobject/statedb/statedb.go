@@ -605,6 +605,7 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 			}
 			incPublicKeyStr := v.committeePublicKey.GetIncKeyBase58()
 			autoStake[committeePublicKeyStr] = s.autoStaking
+			stakingTx[committeePublicKeyStr] = s.txStakingID
 			rewardReceiver[incPublicKeyStr] = s.rewardReceiver
 		}
 		currentValidator[shardID] = tempCurrentValidator
@@ -628,6 +629,7 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 			}
 			incPublicKeyStr := v.committeePublicKey.GetIncKeyBase58()
 			autoStake[committeePublicKeyStr] = s.autoStaking
+			stakingTx[committeePublicKeyStr] = s.txStakingID
 			rewardReceiver[incPublicKeyStr] = s.rewardReceiver
 		}
 		substituteValidator[shardID] = tempSubstituteValidator
@@ -651,6 +653,7 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 		}
 		incPublicKeyStr := v.committeePublicKey.GetIncKeyBase58()
 		autoStake[committeePublicKeyStr] = s.autoStaking
+		stakingTx[committeePublicKeyStr] = s.txStakingID
 		rewardReceiver[incPublicKeyStr] = s.rewardReceiver
 	}
 	// current epoch candidate
@@ -672,6 +675,7 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 		}
 		incPublicKeyStr := v.committeePublicKey.GetIncKeyBase58()
 		autoStake[committeePublicKeyStr] = s.autoStaking
+		stakingTx[committeePublicKeyStr] = s.txStakingID
 		rewardReceiver[incPublicKeyStr] = s.rewardReceiver
 	}
 
@@ -694,6 +698,7 @@ func (stateDB *StateDB) getAllCommitteeState(ids []int) (
 		}
 		incPublicKeyStr := v.committeePublicKey.GetIncKeyBase58()
 		autoStake[committeePublicKeyStr] = s.autoStaking
+		stakingTx[committeePublicKeyStr] = s.txStakingID
 		rewardReceiver[incPublicKeyStr] = s.rewardReceiver
 	}
 	// current epoch candidate

@@ -56,7 +56,6 @@ func (c *StakerInfo) UnmarshalJSON(data []byte) error {
 		RewardReceiver privacy.PaymentAddress
 		AutoStaking    bool
 		TxStakingID    common.Hash
-		FunderAddress  privacy.PaymentAddress
 		ShardID        byte
 		NumberOfRound  int
 	}{}

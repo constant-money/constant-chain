@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/wallet"
 	"io/ioutil"
 	"time"
 
@@ -103,15 +104,26 @@ func (httpServer *HttpServer) handleGetCommitteeState(params interface{}, closeC
 	}
 	nextEpochShardCandidateStr, _ := incognitokey.CommitteeKeyListToString(nextEpochShardCandidate)
 	currentEpochShardCandidateStr, _ := incognitokey.CommitteeKeyListToString(currentEpochShardCandidate)
+	tempStakingTx := make(map[string]string)
+	for k, v := range stakingTx {
+		tempStakingTx[k] = v.String()
+	}
+	tempRewardReceiver := make(map[string]string)
+	for k, v := range rewardReceivers {
+		wl := wallet.KeyWallet{}
+		wl.KeySet.PaymentAddress = v
+		paymentAddress := wl.Base58CheckSerialize(wallet.PaymentAddressType)
+		tempRewardReceiver[k] = paymentAddress
+	}
 	return map[string]interface{}{
 		"root":             beaconConsensusStateRootHash.ConsensusStateDBRootHash,
 		"committee":        currentValidatorStr,
 		"substitute":       substituteValidatorStr,
 		"nextCandidate":    nextEpochShardCandidateStr,
 		"currentCandidate": currentEpochShardCandidateStr,
-		"rewardReceivers":  rewardReceivers,
+		"rewardReceivers":  tempRewardReceiver,
 		"autoStaking":      autoStaking,
-		"stakingTx":        stakingTx,
+		"stakingTx":        tempStakingTx,
 	}, nil
 }
 
