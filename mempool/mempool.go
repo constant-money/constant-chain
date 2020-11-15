@@ -383,12 +383,19 @@ func (tp *TxPool) checkFees(
 	txType := tx.GetType()
 	if txType == common.TxCustomTokenPrivacyType {
 		limitFee := tp.config.FeeEstimator[shardID].GetLimitFeeForNativeToken()
+		beaconStateDB, err := tp.config.BlockChain.GetBestStateBeaconFeatureStateDBByHeight(uint64(beaconHeight), tp.config.DataBase[common.BeaconChainDataBaseID])
+		if err != nil {
+			Logger.log.Errorf("ERROR: %+v", NewMempoolTxError(RejectInvalidFee,
+					fmt.Errorf("transaction %+v - cannot get beacon state db at height: %d",
+						tx.Hash().String(), beaconHeight)))
+				return false
+		}
 
 		// check transaction fee for meta data
 		meta := tx.GetMetadata()
 		// verify at metadata level
 		if meta != nil {
-			ok := meta.CheckTransactionFee(tx, limitFee, beaconHeight, beaconView.GetBeaconFeatureStateDB())
+			ok := meta.CheckTransactionFee(tx, limitFee, beaconHeight, beaconStateDB)
 			if !ok {
 				Logger.log.Errorf("Error: %+v", NewMempoolTxError(RejectInvalidFee,
 					fmt.Errorf("transaction %+v: Invalid fee metadata",
@@ -402,7 +409,7 @@ func (tp *TxPool) checkFees(
 		feePToken := tx.GetTxFeeToken()
 		//convert fee in Ptoken to fee in native token (if feePToken > 0)
 		if feePToken > 0 {
-			feePTokenToNativeTokenTmp, err := metadata.ConvertPrivacyTokenToNativeToken(feePToken, tokenID, beaconHeight, beaconView.GetBeaconFeatureStateDB())
+			feePTokenToNativeTokenTmp, err := metadata.ConvertPrivacyTokenToNativeToken(feePToken, tokenID, beaconHeight, beaconStateDB)
 			if err != nil {
 				Logger.log.Errorf("ERROR: %+v", NewMempoolTxError(RejectInvalidFee,
 					fmt.Errorf("transaction %+v: %+v %v can not convert to native token %+v",

@@ -118,7 +118,11 @@ func (pc PDECrossPoolTradeRequest) ValidateSanityData(chainRetriever ChainRetrie
 		if !tx.IsCoinsBurning(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight) {
 			return false, false, errors.New("Must send coin to burning address")
 		}
-		if (pc.SellAmount + pc.TradingFee) != tx.CalculateTxValue() {
+		txValue := tx.CalculateTxValue()
+		if pc.SellAmount > txValue || pc.TradingFee > txValue {
+			return false, false, errors.New("Neither selling amount nor trading fee allows to be larger than the tx value")
+		}
+		if (pc.SellAmount + pc.TradingFee) != txValue {
 			return false, false, errors.New("Total of selling amount and trading fee should be equal to the tx value")
 		}
 	}
