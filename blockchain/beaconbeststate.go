@@ -762,11 +762,6 @@ func InitBeaconCommitteeEngineV2(beaconBestState *BeaconBestState, params *Param
 	return beaconCommitteeEngine
 }
 
-//GetStakerInfo : Return staker info from statedb
-func (beaconBestState *BeaconBestState) GetStakerInfo(stakerPubkey string) (*statedb.StakerInfo, bool, error) {
-	return statedb.GetStakerInfo(beaconBestState.consensusStateDB, stakerPubkey)
-}
-
 func (beaconBestState *BeaconBestState) CandidateWaitingForNextRandom() []incognitokey.CommitteePublicKey {
 	return beaconBestState.beaconCommitteeEngine.GetCandidateShardWaitingForNextRandom()
 }
