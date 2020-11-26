@@ -234,9 +234,9 @@ func (beaconBestState *BeaconBestState) calculateReward(
 func (blockchain *BlockChain) buildRewardInstructionByEpoch(
 	curView *BeaconBestState,
 	blkHeight, epoch uint64,
-	rewardStateDB *statedb.StateDB,
 	isSplitRewardForCustodian bool,
-	percentCustodianRewards uint64) ([][]string, map[common.Hash]uint64, error) {
+	percentCustodianRewards uint64,
+) ([][]string, map[common.Hash]uint64, error) {
 
 	//Decalre variables
 	var resInst [][]string
@@ -249,7 +249,7 @@ func (blockchain *BlockChain) buildRewardInstructionByEpoch(
 		totalRewardForShard,
 		totalRewardForIncDAO,
 		totalRewardForCustodian,
-		err := curView.calculateReward(blockchain, blkHeight, epoch, rewardStateDB, isSplitRewardForCustodian, percentCustodianRewards)
+		err := curView.calculateReward(blockchain, blkHeight, epoch, curView.GetBeaconRewardStateDB(), isSplitRewardForCustodian, percentCustodianRewards)
 	if err != nil {
 		return nil, nil, err
 	}

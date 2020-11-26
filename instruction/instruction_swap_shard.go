@@ -50,8 +50,8 @@ func (s *SwapShardInstruction) ToString() []string {
 
 func (s *SwapShardInstruction) IsEmpty() bool {
 	return reflect.DeepEqual(s, NewSwapInstruction()) ||
-		len(s.OutPublicKeyStructs) == 0 && len(s.OutPublicKeys) == 0 &&
-			len(s.InPublicKeyStructs) == 0 && len(s.InPublicKeys) == 0
+		(len(s.OutPublicKeyStructs) == 0 && len(s.OutPublicKeys) == 0 &&
+			len(s.InPublicKeyStructs) == 0 && len(s.InPublicKeys) == 0)
 }
 
 func (s *SwapShardInstruction) SetInPublicKeys(inPublicKeys []string) (*SwapShardInstruction, error) {

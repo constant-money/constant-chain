@@ -3,7 +3,6 @@ package jsonresult
 import (
 	"sort"
 
-	"github.com/incognitochain/incognito-chain/mempool"
 	"github.com/incognitochain/incognito-chain/metadata"
 )
 
@@ -17,7 +16,12 @@ type GetMempoolInfo struct {
 	ListTxs       []GetMempoolInfoTx `json:"ListTxs"`
 }
 
-func NewGetMempoolInfo(txMempool *mempool.TxPool) *GetMempoolInfo {
+func NewGetMempoolInfo(txMempool interface {
+	MaxFee() uint64
+	ListTxsDetail() []metadata.Transaction
+	Count() int
+	Size() uint64
+}) *GetMempoolInfo {
 	result := &GetMempoolInfo{
 		Size:          txMempool.Count(),
 		Bytes:         txMempool.Size(),
@@ -58,7 +62,7 @@ type GetRawMempoolResult struct {
 	TxHashes []string
 }
 
-func NewGetRawMempoolResult(txMemPool mempool.TxPool) *GetRawMempoolResult {
+func NewGetRawMempoolResult(txMemPool interface{ ListTxs() []string }) *GetRawMempoolResult {
 	result := &GetRawMempoolResult{
 		TxHashes: txMemPool.ListTxs(),
 	}

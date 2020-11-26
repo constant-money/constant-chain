@@ -499,6 +499,7 @@ func Test_getPercentForIncognitoDAO(t *testing.T) {
 }
 
 func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
+	SetupParam()
 	config := Config{}
 	config.ChainParams = &ChainMainParam
 	sDB, _ := statedb.NewWithPrefixTrie(common.EmptyRoot, wrarperDB)
@@ -573,7 +574,7 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	wantReward := 1386666000*2 + txFee1
+	wantReward := MainnetBasicReward*2 + txFee1
 	if reward != wantReward {
 		t.Errorf("addShardRewardRequestToBeacon() got base reward = %v, want %v", reward, wantReward)
 	}
@@ -633,6 +634,7 @@ func TestBlockChain_addShardRewardRequestToBeacon(t *testing.T) {
 // }
 
 func TestBlockChain_buildInstRewardForIncDAO(t *testing.T) {
+	SetupParam()
 	type fields struct {
 		config Config
 	}

@@ -1331,8 +1331,7 @@ func (s *PortalTestSuite) SetupTestAutoLiquidation() {
 
 	custodian4 := statedb.NewCustodianStateWithValue(
 		"custodianIncAddress4", 5000*1e9, 4960000000000,
-		map[string]uint64{
-		},
+		map[string]uint64{},
 		map[string]uint64{
 			common.PortalBNBIDStr: 40000000000,
 		},
@@ -1584,8 +1583,7 @@ func (s *PortalTestSuite) TestAutoLiquidationByExchangeRate() {
 
 	custodian4 := statedb.NewCustodianStateWithValue(
 		"custodianIncAddress4", 5000*1e9, 4960000000000,
-		map[string]uint64{
-		},
+		map[string]uint64{},
 		map[string]uint64{
 			common.PortalBNBIDStr: 40000000000,
 		},
@@ -1783,8 +1781,7 @@ func (s *PortalTestSuite) TestTopupCustodian() {
 
 	custodian4 := statedb.NewCustodianStateWithValue(
 		"custodianIncAddress4", 5020*1e9, 4910000000000,
-		map[string]uint64{
-		},
+		map[string]uint64{},
 		map[string]uint64{
 			common.PortalBNBIDStr: 110000000000,
 		},

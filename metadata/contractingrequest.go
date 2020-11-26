@@ -78,6 +78,9 @@ func (cReq ContractingRequest) ValidateSanityData(chainRetriever ChainRetriever,
 	if cReq.BurnedAmount != tx.CalculateTxValue() {
 		return false, false, errors.New("BurnedAmount incorrect")
 	}
+	if !bytes.Equal(tx.GetTokenID()[:], cReq.TokenID[:]) {
+		return false, false, errors.New("Wrong request info's token id, it should be equal to tx's token id.")
+	}
 	if !bytes.Equal(tx.GetSigPubKey()[:], cReq.BurnerAddress.Pk[:]) {
 		return false, false, errors.New("BurnerAddress incorrect")
 	}

@@ -1,17 +1,17 @@
 package blockchain
 
 import (
-	"io/ioutil"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/stretchr/testify/suite"
 	"strconv"
@@ -25,7 +25,7 @@ type PDETestSuiteV2 struct {
 	suite.Suite
 	currentPDEStateForProducer CurrentPDEState
 	currentPDEStateForProcess  CurrentPDEState
-	sdb *statedb.StateDB
+	sdb                        *statedb.StateDB
 }
 
 func (s *PDETestSuiteV2) SetupTest() {
@@ -40,18 +40,18 @@ func (s *PDETestSuiteV2) SetupTest() {
 
 	s.sdb = stateDB
 	s.currentPDEStateForProducer = CurrentPDEState{
-		WaitingPDEContributions: make(map[string]*rawdbv2.PDEContribution),
+		WaitingPDEContributions:        make(map[string]*rawdbv2.PDEContribution),
 		DeletedWaitingPDEContributions: make(map[string]*rawdbv2.PDEContribution),
-		PDEPoolPairs:            make(map[string]*rawdbv2.PDEPoolForPair),
-		PDEShares:               make(map[string]uint64),
-		PDETradingFees:          make(map[string]uint64),
+		PDEPoolPairs:                   make(map[string]*rawdbv2.PDEPoolForPair),
+		PDEShares:                      make(map[string]uint64),
+		PDETradingFees:                 make(map[string]uint64),
 	}
 	s.currentPDEStateForProcess = CurrentPDEState{
-		WaitingPDEContributions: make(map[string]*rawdbv2.PDEContribution),
+		WaitingPDEContributions:        make(map[string]*rawdbv2.PDEContribution),
 		DeletedWaitingPDEContributions: make(map[string]*rawdbv2.PDEContribution),
-		PDEPoolPairs:            make(map[string]*rawdbv2.PDEPoolForPair),
-		PDEShares:               make(map[string]uint64),
-		PDETradingFees:          make(map[string]uint64),
+		PDEPoolPairs:                   make(map[string]*rawdbv2.PDEPoolForPair),
+		PDEShares:                      make(map[string]uint64),
+		PDETradingFees:                 make(map[string]uint64),
 	}
 }
 
@@ -346,7 +346,7 @@ func (s *PDETestSuiteV2) TestSimulatedBeaconBlock1001() {
 		bc,
 		newInsts,
 		s.sdb,
-		beaconHeight - 1,
+		beaconHeight-1,
 		&s.currentPDEStateForProcess,
 	)
 
@@ -615,7 +615,7 @@ func (s *PDETestSuiteV2) TestSimulatedBeaconBlock1002() {
 		bc,
 		append(newSetupInsts, newTradeInsts...),
 		s.sdb,
-		beaconHeight - 1,
+		beaconHeight-1,
 		&s.currentPDEStateForProcess,
 	)
 
@@ -1041,7 +1041,7 @@ func (s *PDETestSuiteV2) TestSimulatedBeaconBlock1003() {
 		bc,
 		newWithdrawInsts,
 		s.sdb,
-		beaconHeight - 1,
+		beaconHeight-1,
 		&s.currentPDEStateForProcess,
 	)
 	s.Equal(true, reflect.DeepEqual(&s.currentPDEStateForProcess, &s.currentPDEStateForProducer))

@@ -15,7 +15,7 @@ type Simulation struct {
 }
 
 type Scenario struct {
-	proposeComm map[uint64]map[string][]int // timeSlot -> sender -> receiver
+	proposeComm map[uint64][]int // timeSlot -> sender -> receiver
 	voteComm    map[uint64]map[string][]int
 	sync        map[string][]string
 }
@@ -33,7 +33,7 @@ func GetSimulation() *Simulation {
 	if simulation == nil {
 		simulation = new(Simulation)
 		simulation.scenario = Scenario{
-			proposeComm: make(map[uint64]map[string][]int),
+			proposeComm: make(map[uint64][]int),
 			voteComm:    make(map[uint64]map[string][]int),
 			sync:        make(map[string][]string),
 		}

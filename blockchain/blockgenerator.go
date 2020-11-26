@@ -68,11 +68,15 @@ func (blockGenerator *BlockGenerator) RemoveTransactionV2Worker(cRemoveTx <-chan
 		time.Sleep(time.Nanosecond)
 	}
 }
-func (blockGenerator *BlockGenerator) GetPendingTxsV2() []metadata.Transaction {
+func (blockGenerator *BlockGenerator) GetPendingTxsV2(shardID byte) []metadata.Transaction {
 	blockGenerator.mtx.Lock()
 	defer blockGenerator.mtx.Unlock()
 	pendingTxs := []metadata.Transaction{}
 	for _, tx := range blockGenerator.PendingTxs {
+		txShardID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
+		if shardID != 255 && txShardID != shardID {
+			continue
+		}
 		pendingTxs = append(pendingTxs, tx)
 	}
 	return pendingTxs

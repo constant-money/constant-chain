@@ -67,6 +67,10 @@ type CrossShardBlock struct {
 	CrossTxTokenPrivacyData []ContentCrossShardTokenPrivacyData
 }
 
+func NewCrossShardBlock() *CrossShardBlock {
+	return &CrossShardBlock{}
+}
+
 func NewShardBlock() *ShardBlock {
 	return &ShardBlock{
 		Header: ShardHeader{},

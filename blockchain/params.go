@@ -45,6 +45,7 @@ type Params struct {
 	MaxShardBlockCreation            time.Duration
 	MinBeaconBlockInterval           time.Duration
 	MaxBeaconBlockCreation           time.Duration
+	NumberOfFixedBlockValidators     int
 	StakingAmountShard               uint64
 	ActiveShards                     int
 	GenesisBeaconBlock               *types.BeaconBlock // GenesisBlock defines the first block of the chain.
@@ -106,7 +107,7 @@ var genesisParamsTestnet2New *GenesisParams
 var genesisParamsMainnetNew *GenesisParams
 var GenesisParam *GenesisParams
 
-func init() {
+func SetupParam() {
 	// FOR TESTNET
 	genesisParamsTestnetNew = &GenesisParams{
 		PreSelectBeaconNodeSerializedPubkey:         PreSelectBeaconNodeTestnetSerializedPubkey,
@@ -134,12 +135,13 @@ func init() {
 		StakingAmountShard:     TestNetStakingAmountShard,
 		ActiveShards:           TestNetActiveShards,
 		// blockChain parameters
-		GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Testnet, TestnetGenesisBlockTime, genesisParamsTestnetNew),
-		GenesisShardBlock:                CreateGenesisShardBlock(1, Testnet, TestnetGenesisBlockTime, genesisParamsTestnetNew),
+		// GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Testnet, TestnetGenesisBlockTime, genesisParamsTestnetNew),
+		// GenesisShardBlock:                CreateGenesisShardBlock(1, Testnet, TestnetGenesisBlockTime, genesisParamsTestnetNew),
 		MinShardBlockInterval:            TestNetMinShardBlkInterval,
 		MaxShardBlockCreation:            TestNetMaxShardBlkCreation,
 		MinBeaconBlockInterval:           TestNetMinBeaconBlkInterval,
 		MaxBeaconBlockCreation:           TestNetMaxBeaconBlkCreation,
+		NumberOfFixedBlockValidators:     4,
 		BasicReward:                      TestnetBasicReward,
 		Epoch:                            TestnetEpoch,
 		RandomTime:                       TestnetRandomTime,
@@ -219,12 +221,13 @@ func init() {
 		StakingAmountShard:     TestNet2StakingAmountShard,
 		ActiveShards:           TestNet2ActiveShards,
 		// blockChain parameters
-		GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Testnet2, Testnet2GenesisBlockTime, genesisParamsTestnet2New),
-		GenesisShardBlock:                CreateGenesisShardBlock(1, Testnet2, Testnet2GenesisBlockTime, genesisParamsTestnet2New),
+		// GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Testnet2, Testnet2GenesisBlockTime, genesisParamsTestnet2New),
+		// GenesisShardBlock:                CreateGenesisShardBlock(1, Testnet2, Testnet2GenesisBlockTime, genesisParamsTestnet2New),
 		MinShardBlockInterval:            TestNet2MinShardBlkInterval,
 		MaxShardBlockCreation:            TestNet2MaxShardBlkCreation,
 		MinBeaconBlockInterval:           TestNet2MinBeaconBlkInterval,
 		MaxBeaconBlockCreation:           TestNet2MaxBeaconBlkCreation,
+		NumberOfFixedBlockValidators:     4,
 		BasicReward:                      Testnet2BasicReward,
 		Epoch:                            Testnet2Epoch,
 		RandomTime:                       Testnet2RandomTime,
@@ -302,12 +305,13 @@ func init() {
 		StakingAmountShard:     MainNetStakingAmountShard,
 		ActiveShards:           MainNetActiveShards,
 		// blockChain parameters
-		GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Mainnet, MainnetGenesisBlockTime, genesisParamsMainnetNew),
-		GenesisShardBlock:                CreateGenesisShardBlock(1, Mainnet, MainnetGenesisBlockTime, genesisParamsMainnetNew),
+		// GenesisBeaconBlock:               CreateGenesisBeaconBlock(1, Mainnet, MainnetGenesisBlockTime, genesisParamsMainnetNew),
+		// GenesisShardBlock:                CreateGenesisShardBlock(1, Mainnet, MainnetGenesisBlockTime, genesisParamsMainnetNew),
 		MinShardBlockInterval:            MainnetMinShardBlkInterval,
 		MaxShardBlockCreation:            MainnetMaxShardBlkCreation,
 		MinBeaconBlockInterval:           MainnetMinBeaconBlkInterval,
 		MaxBeaconBlockCreation:           MainnetMaxBeaconBlkCreation,
+		NumberOfFixedBlockValidators:     22,
 		BasicReward:                      MainnetBasicReward,
 		Epoch:                            MainnetEpoch,
 		RandomTime:                       MainnetRandomTime,
@@ -368,4 +372,19 @@ func init() {
 	} else {
 		GenesisParam = genesisParamsMainnetNew
 	}
+}
+
+func (p *Params) CreateGenesisBlocks() {
+	blockTime := ""
+	switch p.Net {
+	case Mainnet:
+		blockTime = MainnetGenesisBlockTime
+	case Testnet:
+		blockTime = TestnetGenesisBlockTime
+	case Testnet2:
+		blockTime = Testnet2GenesisBlockTime
+	}
+	p.GenesisBeaconBlock = CreateGenesisBeaconBlock(1, uint16(p.Net), blockTime, p.GenesisParams)
+	p.GenesisShardBlock = CreateGenesisShardBlock(1, uint16(p.Net), blockTime, p.GenesisParams)
+	return
 }

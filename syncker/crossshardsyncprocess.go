@@ -3,15 +3,17 @@ package syncker
 import (
 	"context"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"time"
 
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 )
 
 type CrossShardSyncProcess struct {
 	status           string //stop, running
-	server           Server
+	blockchain       *blockchain.BlockChain
+	network          Network
 	shardID          int
 	shardSyncProcess *ShardSyncProcess
 	beaconChain      BeaconChainInterface
@@ -24,7 +26,7 @@ type CrossXReq struct {
 	time   *time.Time
 }
 
-func NewCrossShardSyncProcess(server Server, shardSyncProcess *ShardSyncProcess, beaconChain BeaconChainInterface) *CrossShardSyncProcess {
+func NewCrossShardSyncProcess(network Network, bc *blockchain.BlockChain, shardSyncProcess *ShardSyncProcess, beaconChain BeaconChainInterface) *CrossShardSyncProcess {
 
 	var isOutdatedBlock = func(blk interface{}) bool {
 		if blk.(*types.CrossShardBlock).GetHeight() < shardSyncProcess.Chain.GetCrossShardState()[byte(blk.(*types.CrossShardBlock).GetHeight())] {
@@ -35,7 +37,8 @@ func NewCrossShardSyncProcess(server Server, shardSyncProcess *ShardSyncProcess,
 
 	s := &CrossShardSyncProcess{
 		status:           STOP_SYNC,
-		server:           server,
+		blockchain:       bc,
+		network:          network,
 		beaconChain:      beaconChain,
 		shardSyncProcess: shardSyncProcess,
 		crossShardPool:   NewBlkPool("crossshard", isOutdatedBlock),
@@ -68,6 +71,10 @@ func (s *CrossShardSyncProcess) stop() {
 	s.status = STOP_SYNC
 }
 
+func (s *CrossShardSyncProcess) InsertCrossShardBlock(blk interface{}) {
+	s.crossShardPool.AddBlock(blk.(types.BlockPoolInterface))
+}
+
 //check beacon state and retrieve needed crossshard block, then add to request pool
 func (s *CrossShardSyncProcess) syncCrossShard() {
 	for {
@@ -81,13 +88,13 @@ func (s *CrossShardSyncProcess) syncCrossShard() {
 		//get chain crossshard state and collect all missing crossshard block
 		lastRequestCrossShard := s.shardSyncProcess.Chain.GetCrossShardState()
 		missingCrossShardBlock := make(map[byte][][]byte)
-		for i := 0; i < s.server.GetChainParam().ActiveShards; i++ {
+		for i := 0; i < s.blockchain.GetChainParams().ActiveShards; i++ {
 			for {
 				if i == s.shardID {
 					break
 				}
 				requestHeight := lastRequestCrossShard[byte(i)]
-				nextCrossShardInfo := s.server.FetchNextCrossShard(i, int(s.shardID), requestHeight)
+				nextCrossShardInfo := s.blockchain.FetchNextCrossShard(i, int(s.shardID), requestHeight)
 				if nextCrossShardInfo == nil {
 					break
 				}
@@ -120,7 +127,7 @@ func (s *CrossShardSyncProcess) streamMissingCrossShardBlock(fromSID int, hashes
 	defer cancel()
 
 	//stream
-	ch, err := s.server.RequestCrossShardBlocksByHashViaStream(ctx, "", fromSID, s.shardID, hashes)
+	ch, err := s.network.RequestCrossShardBlocksByHashViaStream(ctx, "", fromSID, s.shardID, hashes)
 	if err != nil {
 		fmt.Println("Syncker: create channel fail")
 		return

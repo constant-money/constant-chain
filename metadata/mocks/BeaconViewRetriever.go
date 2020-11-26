@@ -16,6 +16,22 @@ type BeaconViewRetriever struct {
 	mock.Mock
 }
 
+// CandidateWaitingForNextRandom provides a mock function with given fields:
+func (_m *BeaconViewRetriever) CandidateWaitingForNextRandom() []incognitokey.CommitteePublicKey {
+	ret := _m.Called()
+
+	var r0 []incognitokey.CommitteePublicKey
+	if rf, ok := ret.Get(0).(func() []incognitokey.CommitteePublicKey); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).([]incognitokey.CommitteePublicKey)
+		}
+	}
+
+	return r0
+}
+
 // GetAllBridgeTokens provides a mock function with given fields:
 func (_m *BeaconViewRetriever) GetAllBridgeTokens() ([]common.Hash, error) {
 	ret := _m.Called()

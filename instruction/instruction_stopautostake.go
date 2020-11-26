@@ -77,3 +77,8 @@ func ValidateStopAutoStakeInstructionSanity(instruction []string) error {
 	}
 	return nil
 }
+
+func (s *StopAutoStakeInstruction) DeleteSingleElement(index int) {
+	s.CommitteePublicKeys = append(s.CommitteePublicKeys[:index], s.CommitteePublicKeys[index+1:]...)
+	s.CommitteePublicKeysStruct = append(s.CommitteePublicKeysStruct[:index], s.CommitteePublicKeysStruct[index+1:]...)
+}

@@ -421,14 +421,21 @@ func InitShardCommitteeEngineV1(
 // + shardHeight, shardID, shardHash: Basic data for shard committee engine
 //Output: [Interface] ShardCommitteeEngine
 func InitShardCommitteeEngineV2(
+	consensusStateDB *statedb.StateDB,
 	shardHeight uint64,
 	shardID byte,
 	shardHash common.Hash,
 	committeeFromBlockHash common.Hash,
 	bc *BlockChain) committeestate.ShardCommitteeEngine {
-	shardCommittees, err := bc.GetShardCommitteeFromBeaconHash(committeeFromBlockHash, shardID)
-	if err != nil {
-		Logger.log.Error(NewBlockChainError(InitShardStateError, err))
+	shardCommittees := []incognitokey.CommitteePublicKey{}
+	var err error
+	if shardHeight == 1 {
+		shardCommittees = statedb.GetOneShardCommittee(consensusStateDB, shardID)
+	} else {
+		shardCommittees, err = bc.GetShardCommitteeFromBeaconHash(committeeFromBlockHash, shardID)
+		if err != nil {
+			Logger.log.Error(NewBlockChainError(InitShardStateError, err))
+		}
 	}
 	shardCommitteeState := committeestate.NewShardCommitteeStateV2WithValue(shardCommittees, committeeFromBlockHash)
 	shardCommitteeEngine := committeestate.NewShardCommitteeEngineV2(shardHeight, shardHash, shardID, shardCommitteeState)

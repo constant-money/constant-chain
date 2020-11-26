@@ -21,6 +21,14 @@ type BeaconBody struct {
 	Instructions [][]string
 }
 
+func NewBeaconBody(shardState map[byte][]ShardState, instructions [][]string) BeaconBody {
+	return BeaconBody{ShardState: shardState, Instructions: instructions}
+}
+
+func (b *BeaconBody) SetInstructions(inst [][]string) {
+	b.Instructions = inst
+}
+
 type BeaconHeader struct {
 	Version           int         `json:"Version"`
 	Height            uint64      `json:"Height"`
@@ -45,6 +53,22 @@ type BeaconHeader struct {
 	//for version 2
 	Proposer    string `json:"Proposer"`
 	ProposeTime int64  `json:"ProposeTime"`
+}
+
+func NewBeaconHeader(version int, height uint64, epoch uint64, round int, timestamp int64, previousBlockHash common.Hash, consensusType string, producer string, producerPubKeyStr string) BeaconHeader {
+	return BeaconHeader{Version: version, Height: height, Epoch: epoch, Round: round, Timestamp: timestamp, PreviousBlockHash: previousBlockHash, ConsensusType: consensusType, Producer: producer, ProducerPubKeyStr: producerPubKeyStr}
+}
+
+func (beaconHeader *BeaconHeader) AddBeaconHeaderHash(instructionHash common.Hash, shardStateHash common.Hash, instructionMerkleRoot []byte, beaconCommitteeAndValidatorRoot common.Hash, beaconCandidateRoot common.Hash, shardCandidateRoot common.Hash, shardCommitteeAndValidatorRoot common.Hash, autoStakingRoot common.Hash) {
+	beaconHeader.InstructionHash = instructionHash
+	beaconHeader.ShardStateHash = shardStateHash
+	copy(beaconHeader.InstructionMerkleRoot[:], instructionMerkleRoot)
+	beaconHeader.BeaconCommitteeAndValidatorRoot = beaconCommitteeAndValidatorRoot
+	beaconHeader.BeaconCandidateRoot = beaconCandidateRoot
+	beaconHeader.ShardCandidateRoot = shardCandidateRoot
+	beaconHeader.ShardCommitteeAndValidatorRoot = shardCommitteeAndValidatorRoot
+	beaconHeader.AutoStakingRoot = autoStakingRoot
+
 }
 
 type ShardState struct {

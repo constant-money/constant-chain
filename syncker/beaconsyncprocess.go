@@ -28,14 +28,15 @@ type BeaconSyncProcess struct {
 	isCatchUp           bool
 	beaconPeerStates    map[string]BeaconPeerState //sender -> state
 	beaconPeerStateCh   chan *wire.MessagePeerState
-	server              Server
+	blockchain          *blockchain.BlockChain
+	network             Network
 	chain               Chain
 	beaconPool          *BlkPool
 	actionCh            chan func()
 	lastCrossShardState map[byte]map[byte]uint64
 }
 
-func NewBeaconSyncProcess(server Server, chain BeaconChainInterface) *BeaconSyncProcess {
+func NewBeaconSyncProcess(network Network, bc *blockchain.BlockChain, chain BeaconChainInterface) *BeaconSyncProcess {
 
 	var isOutdatedBlock = func(blk interface{}) bool {
 		if blk.(*types.BeaconBlock).GetHeight() < chain.GetFinalViewHeight() {
@@ -46,7 +47,8 @@ func NewBeaconSyncProcess(server Server, chain BeaconChainInterface) *BeaconSync
 
 	s := &BeaconSyncProcess{
 		status:              STOP_SYNC,
-		server:              server,
+		blockchain:          bc,
+		network:             network,
 		chain:               chain,
 		beaconPool:          NewBlkPool("BeaconPool", isOutdatedBlock),
 		beaconPeerStates:    make(map[string]BeaconPeerState),
@@ -114,13 +116,6 @@ func (s *BeaconSyncProcess) getBeaconPeerStates() map[string]BeaconPeerState {
 	return <-res
 }
 
-type NextCrossShardInfo struct {
-	NextCrossShardHeight uint64
-	NextCrossShardHash   string
-	ConfirmBeaconHeight  uint64
-	ConfirmBeaconHash    string
-}
-
 type LastCrossShardBeaconProcess struct {
 	BeaconHeight        uint64
 	LastCrossShardState map[byte]map[byte]uint64
@@ -128,7 +123,7 @@ type LastCrossShardBeaconProcess struct {
 
 //watching confirm beacon block and update cross shard info (which beacon confirm crossshard block N of shard X)
 func (s *BeaconSyncProcess) updateConfirmCrossShard() {
-	state := rawdbv2.GetLastBeaconStateConfirmCrossShard(s.server.GetBeaconChainDatabase())
+	state := rawdbv2.GetLastBeaconStateConfirmCrossShard(s.chain.GetDatabase())
 	lastBeaconStateConfirmCrossX := new(LastCrossShardBeaconProcess)
 	_ = json.Unmarshal(state, &lastBeaconStateConfirmCrossX)
 	lastBeaconHeightConfirmCrossX := uint64(1)
@@ -138,23 +133,27 @@ func (s *BeaconSyncProcess) updateConfirmCrossShard() {
 	}
 	fmt.Println("lastBeaconHeightConfirmCrossX", lastBeaconHeightConfirmCrossX)
 	for {
+		if s.status != RUNNING_SYNC {
+			time.Sleep(time.Second)
+			continue
+		}
 		if lastBeaconHeightConfirmCrossX > s.chain.GetFinalViewHeight() {
 			//fmt.Println("DEBUG:larger than final view", s.chain.GetFinalViewHeight())
 			time.Sleep(time.Second * 5)
 			continue
 		}
-		beaconBlock, err := s.server.FetchConfirmBeaconBlockByHeight(lastBeaconHeightConfirmCrossX)
+		beaconBlock, err := s.blockchain.FetchConfirmBeaconBlockByHeight(lastBeaconHeightConfirmCrossX)
 		if err != nil || beaconBlock == nil {
 			//fmt.Println("DEBUG: cannot find beacon block", lastBeaconHeightConfirmCrossX)
 			time.Sleep(time.Second * 5)
 			continue
 		}
-		err = processBeaconForConfirmmingCrossShard(s.server.GetBeaconChainDatabase(), beaconBlock, s.lastCrossShardState)
+		err = processBeaconForConfirmmingCrossShard(s.chain.GetDatabase(), beaconBlock, s.lastCrossShardState)
 		if err == nil {
 			lastBeaconHeightConfirmCrossX++
 			if lastBeaconHeightConfirmCrossX%1000 == 0 {
-				fmt.Println("store lastBeaconHeightConfirmCrossX", lastBeaconHeightConfirmCrossX)
-				rawdbv2.StoreLastBeaconStateConfirmCrossShard(s.server.GetBeaconChainDatabase(), LastCrossShardBeaconProcess{lastBeaconHeightConfirmCrossX, s.lastCrossShardState})
+				Logger.Info("store lastBeaconHeightConfirmCrossX", lastBeaconHeightConfirmCrossX)
+				rawdbv2.StoreLastBeaconStateConfirmCrossShard(s.chain.GetDatabase(), LastCrossShardBeaconProcess{lastBeaconHeightConfirmCrossX, s.lastCrossShardState})
 			}
 		} else {
 			fmt.Println(err)
@@ -179,15 +178,15 @@ func processBeaconForConfirmmingCrossShard(database incdb.Database, beaconBlock 
 					lastHeight := lastCrossShardState[fromShard][toShard] // get last cross shard height from shardID  to crossShardShardID
 					waitHeight := shardBlock.Height
 
-					info := NextCrossShardInfo{
+					info := blockchain.NextCrossShardInfo{
 						waitHeight,
 						shardBlock.Hash.String(),
 						beaconBlock.GetHeight(),
 						beaconBlock.Hash().String(),
 					}
-					fmt.Println("DEBUG: processBeaconForConfirmmingCrossShard ", fromShard, toShard, info)
+					//Logger.Info("DEBUG: processBeaconForConfirmmingCrossShard ", fromShard, toShard, info)
 					b, _ := json.Marshal(info)
-					fmt.Println("debug StoreCrossShardNextHeight", fromShard, toShard, lastHeight, string(b))
+					Logger.Info("debug StoreCrossShardNextHeight", fromShard, toShard, lastHeight, string(b))
 					err := rawdbv2.StoreCrossShardNextHeight(database, fromShard, toShard, lastHeight, b)
 					if err != nil {
 						return err
@@ -305,7 +304,7 @@ func (s *BeaconSyncProcess) streamFromPeer(peerID string, pState BeaconPeerState
 	}
 
 	//stream
-	ch, err := s.server.RequestBeaconBlocksViaStream(ctx, "", s.chain.GetFinalViewHeight()+1, toHeight)
+	ch, err := s.network.RequestBeaconBlocksViaStream(ctx, "", s.chain.GetFinalViewHeight()+1, toHeight)
 	if err != nil {
 		fmt.Println("Syncker: create channel fail")
 		return
@@ -335,7 +334,7 @@ func (s *BeaconSyncProcess) streamFromPeer(peerID string, pState BeaconPeerState
 						insertBlkCnt += successBlk
 						Logger.Infof("Syncker Insert %d beacon block (from %d to %d) elaspse %f \n", successBlk, blockBuffer[0].GetHeight(), blockBuffer[len(blockBuffer)-1].GetHeight(), time.Since(time1).Seconds())
 						if successBlk >= len(blockBuffer) || successBlk == 0 {
-							break
+							return
 						}
 						blockBuffer = blockBuffer[successBlk:]
 					}

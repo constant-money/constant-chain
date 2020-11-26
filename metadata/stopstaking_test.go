@@ -341,13 +341,15 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	shard2 := &mocks.ShardViewRetriever{}
 	beacon2.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").Return([]string{""}, nil)
 	emptyMap := make(map[string]string)
-	shard2.On("GetStakingTx").Return(emptyMap)
+	shard2.On("GetShardStakingTx").Return(emptyMap)
 
 	chain21 := &mocks.ChainRetriever{}
 	beacon21 := &mocks.BeaconViewRetriever{}
 	shard21 := &mocks.ShardViewRetriever{}
 	beacon21.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil)
-	shard21.On("GetStakingTx").Return(emptyMap)
+	chain21.On("GetShardStakingTx", byte(0), uint64(1)).Return(emptyMap, errors.New("get staking tx error"))
+	shard21.On("GetShardID").Return(byte(0))
+	shard21.On("GetBeaconHeight").Return(uint64(1))
 
 	chain3 := &mocks.ChainRetriever{}
 	beacon3 := &mocks.BeaconViewRetriever{}
@@ -355,7 +357,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon3.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil)
 	stakingMap := make(map[string]string)
 	stakingMap["121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"] = "asdasdasdas"
-	shard3.On("GetStakingTx").Return(stakingMap)
+	chain3.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap, nil)
+	shard3.On("GetShardID").Return(byte(0))
+	shard3.On("GetBeaconHeight").Return(uint64(1))
 
 	stakingTxHash, _ := common.Hash{}.NewHashFromStr("9648b1f460d853d878a3b7ab7a926acab5f45c726de0610221f78a95f333c6dc")
 	chain4 := &mocks.ChainRetriever{}
@@ -364,7 +368,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon4.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil)
 	stakingMap1 := make(map[string]string)
 	stakingMap1["121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"] = "9648b1f460d853d878a3b7ab7a926acab5f45c726de0610221f78a95f333c6dc"
-	shard4.On("GetStakingTx").Return(stakingMap1)
+	chain4.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap1, nil)
+	shard4.On("GetShardID").Return(byte(0))
+	shard4.On("GetBeaconHeight").Return(uint64(1))
 	stakingTxHash2, _ := common.Hash{}.NewHashFromStr("9648b1f460d853d878a3b7ab7a926acab5f45c726de0610221f78a95f333c6dc")
 	chain4.On("GetTransactionByHash", *stakingTxHash2).Return(byte(0), nil, uint64(0), int(0), nil, errors.New("error"))
 
@@ -376,7 +382,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon5 := &mocks.BeaconViewRetriever{}
 	shard5 := &mocks.ShardViewRetriever{}
 	beacon5.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil)
-	shard5.On("GetStakingTx").Return(stakingMap1)
+	chain5.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap1, nil)
+	shard5.On("GetShardID").Return(byte(0))
+	shard5.On("GetBeaconHeight").Return(uint64(1))
 	chain5.On("GetTransactionByHash", *stakingTxHash).Return(byte(0), nil, uint64(0), int(0), stopStakeTx3, nil)
 	autoStakingList := make(map[string]bool)
 	beacon5.On("GetAutoStakingList").Return(autoStakingList)
@@ -389,7 +397,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon6.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").
 		Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil).
 		Once()
-	shard6.On("GetStakingTx").Return(stakingMap1)
+	chain6.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap1, nil)
+	shard6.On("GetShardID").Return(byte(0))
+	shard6.On("GetBeaconHeight").Return(uint64(1))
 	chain6.On("GetTransactionByHash", *stakingTxHash).Return(byte(0), nil, uint64(0), int(0), stopStakeTx4, nil)
 	autoStakingList1 := make(map[string]bool)
 	beacon6.On("GetAutoStakingList").Return(autoStakingList1)
@@ -400,7 +410,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon7.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").
 		Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil).
 		Once()
-	shard7.On("GetStakingTx").Return(stakingMap1)
+	chain7.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap1, nil)
+	shard7.On("GetShardID").Return(byte(0))
+	shard7.On("GetBeaconHeight").Return(uint64(1))
 	chain7.On("GetTransactionByHash", *stakingTxHash).Return(byte(0), nil, uint64(0), int(0), stopStakeTx4, nil)
 	autoStakingList2 := make(map[string]bool)
 	autoStakingList2["121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"] = false
@@ -412,7 +424,9 @@ func TestStopAutoStakingMetadata_ValidateTxWithBlockChain(t *testing.T) {
 	beacon8.On("GetAllCommitteeValidatorCandidateFlattenListFromDatabase").
 		Return([]string{"121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"}, nil).
 		Once()
-	shard8.On("GetStakingTx").Return(stakingMap1)
+	chain8.On("GetShardStakingTx", byte(0), uint64(1)).Return(stakingMap1, nil)
+	shard8.On("GetShardID").Return(byte(0))
+	shard8.On("GetBeaconHeight").Return(uint64(1))
 	chain8.On("GetTransactionByHash", *stakingTxHash).Return(byte(0), nil, uint64(0), int(0), stopStakeTx4, nil)
 	autoStakingList3 := make(map[string]bool)
 	autoStakingList3["121VhftSAygpEJZ6i9jGkCFHRkD4yhxxccAqVjQTWR9gy7skM1KcNf3uGLpX1NvojmHqs9bWwsPfvyBmer39YNBPwBHpgXg1Qku4EDhtUBZnGw2PZGMF7DMCrYa27GNS97uA9WC5z55YuCDA4WsnKfoEEuCFDNUN3iSCeUyrQ4SF5smx9CwBYX6AWAMAvNDPKf4tCuc7Wiafv9xkLKuHSFr7jaxBfg4rdaxtwXzR5eMpFDDpiXz6hQmdcee8xSXQRKceiafg9RMiuqLxDzx9tmLKvBD5TJq4G76LB3rrVmsYwMo1fY4RZLpiYn6AstAfca5EVnMeexueSAE5sam3Lsq8mq5poJfsW6KXzAbsmFPSsSjhmQ4wGhSXoKSap331gBMuuy7KtmVwQAPpwuFPo9hi7RBgrrn1ssdCdjYSwE226Ekc"] = true

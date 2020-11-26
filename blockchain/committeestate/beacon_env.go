@@ -28,9 +28,9 @@ type BeaconCommitteeStateEnvironment struct {
 	IsReplace                          bool
 	NumberOfFixedBeaconBlockValidators uint64
 	NumberOfFixedShardBlockValidators  int
-	allCandidateSubstituteCommittee    []string
-	unassignedCommonPool               []string
-	allSubstituteCommittees            []string
+	newAllCandidateSubstituteCommittee []string
+	newUnassignedCommonPool            []string
+	newAllSubstituteCommittees         []string
 	LatestShardsState                  map[byte][]types.ShardState
 	SwapSubType                        uint
 	ShardID                            byte

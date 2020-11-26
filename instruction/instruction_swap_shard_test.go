@@ -627,3 +627,62 @@ func TestValidateAndImportSwapShardInstructionFromString(t *testing.T) {
 		})
 	}
 }
+
+func TestSwapShardInstruction_IsEmpty(t *testing.T) {
+	initPublicKey()
+
+	type fields struct {
+		InPublicKeys        []string
+		InPublicKeyStructs  []incognitokey.CommitteePublicKey
+		OutPublicKeys       []string
+		OutPublicKeyStructs []incognitokey.CommitteePublicKey
+		ChainID             int
+		Type                int
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "not empty",
+			fields: fields{
+				InPublicKeyStructs:  []incognitokey.CommitteePublicKey{*incKey1},
+				InPublicKeys:        []string{key1},
+				OutPublicKeyStructs: []incognitokey.CommitteePublicKey{*incKey2},
+				OutPublicKeys:       []string{key2},
+			},
+			want: false,
+		},
+		{
+			name: "empty 1",
+			fields: fields{
+				InPublicKeyStructs:  []incognitokey.CommitteePublicKey{},
+				InPublicKeys:        []string{},
+				OutPublicKeyStructs: []incognitokey.CommitteePublicKey{},
+				OutPublicKeys:       []string{},
+			},
+			want: true,
+		},
+		{
+			name:   "empty 2",
+			fields: fields{},
+			want:   true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SwapShardInstruction{
+				InPublicKeys:        tt.fields.InPublicKeys,
+				InPublicKeyStructs:  tt.fields.InPublicKeyStructs,
+				OutPublicKeys:       tt.fields.OutPublicKeys,
+				OutPublicKeyStructs: tt.fields.OutPublicKeyStructs,
+				ChainID:             tt.fields.ChainID,
+				Type:                tt.fields.Type,
+			}
+			if got := s.IsEmpty(); got != tt.want {
+				t.Errorf("IsEmpty() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

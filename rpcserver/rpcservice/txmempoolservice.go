@@ -2,13 +2,12 @@ package rpcservice
 
 import (
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/mempool"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
 )
 
 type TxMemPoolService struct {
-	TxMemPool *mempool.TxPool
+	TxMemPool MempoolInterface
 }
 
 func (txMemPoolService TxMemPoolService) GetPoolCandidate() map[common.Hash]string {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha512"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -170,6 +171,10 @@ func deserialize(data []byte) (*KeyWallet, error) {
 		keyLength := int(data[38])
 		key.KeySet.PrivateKey = make([]byte, keyLength)
 		copy(key.KeySet.PrivateKey[:], data[39:39+keyLength])
+		err := key.KeySet.InitFromPrivateKey(&key.KeySet.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
 	} else if keyType == PaymentAddressType {
 		if !bytes.Equal(burnAddress1BytesDecode, data) {
 			if len(data) != paymentAddrSerializedBytesLen {

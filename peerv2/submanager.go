@@ -2,6 +2,10 @@ package peerv2
 
 import (
 	"context"
+	"fmt"
+	"github.com/incognitochain/incognito-chain/common/consensus"
+	"github.com/incognitochain/incognito-chain/incognitokey"
+	"sort"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/peerv2/proto"
@@ -12,8 +16,8 @@ import (
 )
 
 type ConsensusData interface {
-	GetUserRole() (string, string, int)
-	GetCurrentMiningPublicKey() (publickey string, keyType string)
+	GetOneValidator() *consensus.Validator
+	GetOneValidatorForEachConsensusProcess() map[int]*consensus.Validator
 }
 
 // SubManager manages pubsub subscription of highway's topics
@@ -24,9 +28,12 @@ type SubManager struct {
 	registerer Registerer
 	subscriber Subscriber
 
-	role   userRole
+	//role   userRole
 	topics msgToTopics
 	subs   msgToTopics // mapping from message to topic's subscription
+
+	role     map[int]*consensus.Validator
+	rolehash string
 }
 
 type info struct {
@@ -59,9 +66,10 @@ func NewSubManager(
 		subscriber: subscriber,
 		registerer: registerer,
 		messages:   messages,
-		role:       newUserRole("dummyLayer", "dummyRole", -1000),
-		topics:     msgToTopics{},
-		subs:       msgToTopics{},
+		//role:       newUserRole("dummyLayer", "dummyRole", -1000),
+		topics: msgToTopics{},
+		subs:   msgToTopics{},
+		role:   make(map[int]*consensus.Validator),
 	}
 }
 
@@ -71,50 +79,97 @@ func (sub *SubManager) GetMsgToTopics() msgToTopics {
 
 // Subscribe registers to proxy and save the list of new topics if needed
 func (sub *SubManager) Subscribe(forced bool) error {
-	newRole := newUserRole(sub.consensusData.GetUserRole())
-	if newRole == sub.role && !forced { // Not forced => no need to subscribe when role stays the same
+
+	rolehash := ""
+	shardIDs := []byte{}
+	newRole := sub.consensusData.GetOneValidatorForEachConsensusProcess()
+	var newTopics = make(msgToTopics)
+	var err error
+	if len(newRole) > 0 {
+		str := ""
+
+		shardIDs := []int{}
+		for k := range newRole {
+			shardIDs = append(shardIDs, int(k))
+		}
+		sort.Ints(shardIDs)
+		for _, chainID := range shardIDs {
+			str += fmt.Sprintf("%v-%v", chainID, newRole[chainID].State.Role)
+		}
+		rolehash = common.HashH([]byte(str)).String()
+
+	} else {
+		shardIDs = getWantedShardIDs(userRole{}, sub.nodeMode, sub.relayShard)
+	}
+
+	if rolehash == sub.rolehash && !forced { // Not forced => no need to subscribe when role stays the same
 		return nil
 	}
-	pubKey, _ := sub.consensusData.GetCurrentMiningPublicKey()
-	Logger.Infof("role %v %v %v, key %v", newRole.role, newRole.layer, newRole.shardID, pubKey)
-	if (newRole.role != "") && (newRole.role != "dummyRole") {
-		if pubKey == "" {
-			return errors.Errorf("Can not load current mining key, pub key %v role %v", pubKey, sub.role.role)
-		} else {
-			sub.pubkey = pubKey
-		}
-	}
 
-	Logger.Infof("Role changed: %v -> %v", sub.role, newRole)
+	//if (newRole.role != "") && (newRole.role != "dummyRole") {
+	//	if pubKey == "" {
+	//		return errors.Errorf("Can not load current mining key, pub key %v role %v", pubKey, sub.role.role)
+	//	} else {
+	//		sub.pubkey = pubKey
+	//	}
+	//}
+
+	Logger.Infof("Role changed %+v", rolehash)
 
 	// Registering
-	shardIDs := getWantedShardIDs(newRole, sub.nodeMode, sub.relayShard)
-	// Logger.Infof("[bftmsg] Regist", params ...interface{})
-	newTopics, roleOfTopics, err := sub.registerToProxy(
-		sub.pubkey,
-		newRole.layer,
-		newRole.role,
-		shardIDs,
-	)
-	if err != nil {
-		return err // Don't save new role and topics since we need to retry later
+
+	if len(newRole) == 0 {
+		nodePK, _ := new(incognitokey.CommitteePublicKey).ToBase58()
+		validator := sub.consensusData.GetOneValidator()
+		if validator != nil {
+			nodePK = validator.MiningKey.GetPublicKeyBase58()
+		}
+
+		newTopics, _, err = sub.registerToProxy(
+			nodePK,
+			"",
+			"",
+			shardIDs,
+		)
+		if err != nil {
+			return err
+		}
+	} else {
+		for chainID, validator := range newRole {
+			topics, _, err := sub.registerToProxy(
+				validator.MiningKey.GetPublicKeyBase58(),
+				validator.State.Layer,
+				validator.State.Role,
+				[]byte{byte(chainID)},
+			)
+			if err != nil {
+				return err // Don't save new role and topics since we need to retry later
+			}
+			for msg, topic := range topics {
+				newTopics[msg] = append(newTopics[msg], topic...)
+			}
+		}
 	}
+	// Logger.Infof("[bftmsg] Regist", params ...interface{})
 
 	// NOTE: disabled, highway always return the same role
-	_ = roleOfTopics
+	//_ = roleOfTopics
 	// if newRole != roleOfTopics {
 	// 	return role, topics, errors.Errorf("lole not matching with highway, local = %+v, highway = %+v", newRole, roleOfTopics)
 	// }
 
 	Logger.Debugf("Received topics = %+v, oldTopics = %+v", newTopics, sub.topics)
-
+	Logger.Infof("newTopics %v", newTopics)
+	Logger.Infof("sub topics %v", sub.topics)
 	// Subscribing
 	if err := sub.subscribeNewTopics(newTopics, sub.topics, forced); err != nil {
+		Logger.Error(err)
 		return err
 	}
 
 	sub.role = newRole
 	sub.topics = newTopics
+	sub.rolehash = rolehash
 	return nil
 }
 

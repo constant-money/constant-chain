@@ -3,13 +3,13 @@ package syncker
 import (
 	"context"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"os"
 	"sync"
 	"time"
 
 	lru "github.com/hashicorp/golang-lru"
-
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/wire"
 )
 
@@ -28,7 +28,8 @@ type ShardSyncProcess struct {
 	shardPeerState        map[string]ShardPeerState //peerid -> state
 	shardPeerStateCh      chan *wire.MessagePeerState
 	crossShardSyncProcess *CrossShardSyncProcess
-	Server                Server
+	blockchain            *blockchain.BlockChain
+	Network               Network
 	Chain                 ShardChainInterface
 	beaconChain           Chain
 	shardPool             *BlkPool
@@ -36,7 +37,7 @@ type ShardSyncProcess struct {
 	lock                  *sync.RWMutex
 }
 
-func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInterface, chain ShardChainInterface) *ShardSyncProcess {
+func NewShardSyncProcess(shardID int, network Network, bc *blockchain.BlockChain, beaconChain BeaconChainInterface, chain ShardChainInterface) *ShardSyncProcess {
 	var isOutdatedBlock = func(blk interface{}) bool {
 		if blk.(*types.ShardBlock).GetHeight() < chain.GetFinalViewHeight() {
 			return true
@@ -47,7 +48,8 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 	s := &ShardSyncProcess{
 		shardID:          shardID,
 		status:           STOP_SYNC,
-		Server:           server,
+		blockchain:       bc,
+		Network:          network,
 		Chain:            chain,
 		beaconChain:      beaconChain,
 		shardPool:        NewBlkPool("ShardPool-"+string(shardID), isOutdatedBlock),
@@ -56,7 +58,7 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 
 		actionCh: make(chan func()),
 	}
-	s.crossShardSyncProcess = NewCrossShardSyncProcess(server, s, beaconChain)
+	s.crossShardSyncProcess = NewCrossShardSyncProcess(network, bc, s, beaconChain)
 
 	go s.syncShardProcess()
 	go s.insertShardBlockFromPool()
@@ -74,10 +76,6 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 			case f := <-s.actionCh:
 				f()
 			case shardPeerState := <-s.shardPeerStateCh:
-				//TODO: @tin
-				// receive peer state here
-				// process peer state
-
 				for sid, peerShardState := range shardPeerState.Shards {
 					if int(sid) == s.shardID {
 						s.shardPeerState[shardPeerState.SenderID] = ShardPeerState{
@@ -228,7 +226,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 	}
 
 	//fmt.Println("SYNCKER Request Shard Block", peerID, s.ShardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
-	ch, err := s.Server.RequestShardBlocksViaStream(ctx, peerID, s.shardID, s.Chain.GetFinalViewHeight()+1, toHeight)
+	ch, err := s.Network.RequestShardBlocksViaStream(ctx, peerID, s.shardID, s.Chain.GetFinalViewHeight()+1, toHeight)
 	// ch, err := s.Server.RequestShardBlocksViaStream(ctx, "", s.shardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
 	if err != nil {
 		fmt.Println("Syncker: create channel fail")

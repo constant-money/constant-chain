@@ -2,17 +2,15 @@ package blockchain
 
 import (
 	"fmt"
-	"math/rand"
+	"math/big"
 	"sort"
-	"time"
+	"strconv"
+
+	"github.com/incognitochain/incognito-chain/incognitokey"
 
 	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-
-	"github.com/incognitochain/incognito-chain/blockchain/btc"
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/instruction"
 	"github.com/incognitochain/incognito-chain/metadata"
 )
@@ -32,6 +30,12 @@ type shardInstruction struct {
 	stopAutoStakeInstructions []*instruction.StopAutoStakeInstruction
 }
 
+func newShardInstruction() *shardInstruction {
+	return &shardInstruction{
+		swapInstructions: make(map[byte][]*instruction.SwapInstruction),
+	}
+}
+
 func (shardInstruction *shardInstruction) add(newShardInstruction *shardInstruction) {
 	shardInstruction.stakeInstructions = append(shardInstruction.stakeInstructions, newShardInstruction.stakeInstructions...)
 	shardInstruction.unstakeInstructions = append(shardInstruction.unstakeInstructions, newShardInstruction.unstakeInstructions...)
@@ -41,203 +45,142 @@ func (shardInstruction *shardInstruction) add(newShardInstruction *shardInstruct
 	}
 }
 
-// NewBlockBeacon create new beacon block:
-// 1. Clone Current Best State
-// 2. Build Essential Header Data:
-//	- Version: Get Proper version value
-//	- Height: Previous block height + 1
-//	- Epoch: Increase Epoch if next height mod epoch is 1 (begin of new epoch), otherwise use current epoch value
-//	- Round: Get Round Value from consensus
-//	- Previous Block Hash: Get Current Best Block Hash
-//	- Producer: Get producer value from round and current beacon committee
-//	- Consensus type: get from beaacon best state
-// 3. Build Body:
-//	a. Build Reward Instruction:
-//		- These instruction will only be built at the begining of each epoch (for previous committee)
-//	b. Get Shard State and Instruction:
-//		- These information will be extracted from all shard block, which got from shard to beacon pool
-//	c. Create Instruction:
-//		- Instruction created from beacon data
-//		- Instruction created from shard instructions
-// 4. Update Cloned Beacon Best State to Build Root Hash for Header
-//	+ Beacon Root Hash will be calculated from new beacon best state (beacon best state after process by this new block)
-//	+ Some data may changed if beacon best state is updated:
-//		+ Beacon Committee, Pending Validator, Candidate List
-//		+ Shard Committee, Pending Validator, Candidate List
-// 5. Build Root Hash in Header
-//	a. Beacon Committee and Validator Root Hash: Hash from Beacon Committee and Pending Validator
-//	b. Beacon Caiddate Root Hash: Hash from Beacon candidate list
-//	c. Shard Committee and Validator Root Hash: Hash from Shard Committee and Pending Validator
-//	d. Shard Caiddate Root Hash: Hash from Shard candidate list
-//	+ These Root Hash will be used to verify that, either Two arbitray Nodes have the same data
-//		after they update beacon best state by new block.
-//	e. ShardStateHash: shard states from blocks of all shard
-//	f. InstructionHash: from instructions in beacon block body
-//	g. InstructionMerkleRoot
+// NewBlockBeacon create new beacon block
 func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version int, proposer string, round int, startTime int64) (*types.BeaconBlock, error) {
 	Logger.log.Infof("⛏ Creating Beacon Block %+v", curView.BeaconHeight+1)
-	//============Init Variable============
 	var err error
 	var epoch uint64
-	beaconBlock := types.NewBeaconBlock()
-	beaconBestState := NewBeaconBestState()
-	rewardByEpochInstruction := [][]string{}
-	// produce new block with current beststate
-	err = beaconBestState.cloneBeaconBestStateFrom(curView)
+	newBeaconBlock := types.NewBeaconBlock()
+	copiedCurView := NewBeaconBestState()
+
+	err = copiedCurView.cloneBeaconBestStateFrom(curView)
 	if err != nil {
 		return nil, err
 	}
-	//======Build Header Essential Data=======
-	beaconBlock.Header.Version = version
-	beaconBlock.Header.Height = beaconBestState.BeaconHeight + 1
-	if (beaconBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 1 {
-		epoch = beaconBestState.Epoch + 1
-	} else {
-		epoch = beaconBestState.Epoch
-	}
-	beaconBlock.Header.ConsensusType = beaconBestState.ConsensusAlgorithm
-	beaconBlock.Header.Producer = proposer
-	beaconBlock.Header.ProducerPubKeyStr = proposer
-	beaconBlock.Header.Height = beaconBestState.BeaconHeight + 1
-	beaconBlock.Header.Epoch = epoch
-	beaconBlock.Header.Round = round
-	beaconBlock.Header.PreviousBlockHash = beaconBestState.BestBlockHash
-	BLogger.log.Infof("Producing block: %d (epoch %d)", beaconBlock.Header.Height, beaconBlock.Header.Epoch)
-	//=====END Build Header Essential Data=====
-	//============Build body===================
-	portalParams := blockchain.GetPortalParams(beaconBlock.GetHeight())
-	rewardForCustodianByEpoch := map[common.Hash]uint64{}
 
-	if beaconBestState.BeaconHeight%blockchain.config.ChainParams.Epoch == 0 {
-		featureStateDB := beaconBestState.GetBeaconFeatureStateDB()
+	if (copiedCurView.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 1 {
+		epoch = copiedCurView.Epoch + 1
+	} else {
+		epoch = copiedCurView.Epoch
+	}
+
+	newBeaconBlock.Header = types.NewBeaconHeader(
+		version,
+		copiedCurView.BeaconHeight+1,
+		epoch,
+		round,
+		startTime,
+		copiedCurView.BestBlockHash,
+		copiedCurView.ConsensusAlgorithm,
+		proposer,
+		proposer,
+	)
+
+	BLogger.log.Infof("Producing block: %d (epoch %d)", newBeaconBlock.Header.Height, newBeaconBlock.Header.Epoch)
+	//=====END Build Header Essential Data=====
+	portalParams := blockchain.GetPortalParams(newBeaconBlock.GetHeight())
+	allShardBlocks := blockchain.GetShardBlockForBeaconProducer(copiedCurView.BestShardHeight)
+
+	instructions, shardStates, err := blockchain.GenerateBeaconBlockBody(
+		newBeaconBlock,
+		copiedCurView,
+		portalParams,
+		allShardBlocks,
+	)
+	if err != nil {
+		return nil, NewBlockChainError(GenerateInstructionError, err)
+	}
+
+	newBeaconBlock.Body = types.NewBeaconBody(shardStates, instructions)
+
+	// Process new block with new view
+	_, hashes, _, incurredInstructions, err := copiedCurView.updateBeaconBestState(newBeaconBlock, blockchain)
+	if err != nil {
+		return nil, err
+	}
+	copiedCurView.beaconCommitteeEngine.AbortUncommittedBeaconState()
+
+	instructions = append(instructions, incurredInstructions...)
+	newBeaconBlock.Body.SetInstructions(instructions)
+	if len(newBeaconBlock.Body.Instructions) != 0 {
+		Logger.log.Info("Beacon Produce: Beacon Instruction", newBeaconBlock.Body.Instructions)
+	}
+
+	// calculate hash
+	tempInstructionArr := []string{}
+	for _, strs := range instructions {
+		tempInstructionArr = append(tempInstructionArr, strs...)
+	}
+	instructionHash, err := generateHashFromStringArray(tempInstructionArr)
+	if err != nil {
+		return nil, NewBlockChainError(GenerateInstructionHashError, err)
+	}
+	shardStatesHash, err := generateHashFromShardState(shardStates)
+	if err != nil {
+		return nil, NewBlockChainError(GenerateShardStateError, err)
+	}
+	// Instruction merkle root
+	flattenInsts, err := FlattenAndConvertStringInst(instructions)
+	if err != nil {
+		return nil, NewBlockChainError(FlattenAndConvertStringInstError, err)
+	}
+	// add hash to header
+	newBeaconBlock.Header.AddBeaconHeaderHash(
+		instructionHash,
+		shardStatesHash,
+		GetKeccak256MerkleRoot(flattenInsts),
+		hashes.BeaconCommitteeAndValidatorHash,
+		hashes.BeaconCandidateHash,
+		hashes.ShardCandidateHash,
+		hashes.ShardCommitteeAndValidatorHash,
+		hashes.AutoStakeHash,
+	)
+
+	return newBeaconBlock, nil
+}
+
+// GenerateBeaconBlockBody generate beacon instructions and shard states
+func (blockchain *BlockChain) GenerateBeaconBlockBody(
+	newBeaconBlock *types.BeaconBlock,
+	curView *BeaconBestState,
+	portalParams PortalParams,
+	allShardBlocks map[byte][]*types.ShardBlock,
+) ([][]string, map[byte][]types.ShardState, error) {
+	bridgeInstructions := [][]string{}
+	acceptedRewardInstructions := [][]string{}
+	statefulActionsByShardID := map[byte][][]string{}
+	shardStates := make(map[byte][]types.ShardState)
+	shardInstruction := newShardInstruction()
+	duplicateKeyStakeInstructions := &duplicateKeyStakeInstruction{}
+	validStakePublicKeys := []string{}
+	validUnstakePublicKeys := make(map[string]bool)
+	rewardForCustodianByEpoch := map[common.Hash]uint64{}
+	rewardByEpochInstruction := [][]string{}
+
+	if curView.BeaconHeight%blockchain.config.ChainParams.Epoch == 0 {
+		featureStateDB := curView.GetBeaconFeatureStateDB()
 		totalLockedCollateral, err := getTotalLockedCollateralInEpoch(featureStateDB)
 		if err != nil {
-			return nil, NewBlockChainError(GetTotalLockedCollateralError, err)
+			return nil, nil, NewBlockChainError(GetTotalLockedCollateralError, err)
 		}
+
 		isSplitRewardForCustodian := totalLockedCollateral > 0
 		percentCustodianRewards := portalParams.MaxPercentCustodianRewards
 		if totalLockedCollateral < portalParams.MinLockCollateralAmountInEpoch {
 			percentCustodianRewards = portalParams.MinPercentCustodianRewards
 		}
-		rewardByEpochInstruction, rewardForCustodianByEpoch, err = blockchain.buildRewardInstructionByEpoch(beaconBestState, beaconBlock.Header.Height, beaconBestState.Epoch, curView.GetBeaconRewardStateDB(), isSplitRewardForCustodian, percentCustodianRewards)
+		rewardByEpochInstruction, rewardForCustodianByEpoch, err = blockchain.buildRewardInstructionByEpoch(
+			curView,
+			newBeaconBlock.Header.Height,
+			curView.Epoch,
+			isSplitRewardForCustodian,
+			percentCustodianRewards,
+		)
 		if err != nil {
-			return nil, NewBlockChainError(BuildRewardInstructionError, err)
+			return nil, nil, NewBlockChainError(BuildRewardInstructionError, err)
 		}
 	}
 
-	tempShardState, shardInstruction, duplicateKeyStakeInstruction,
-		bridgeInstructions, acceptedRewardInstructions := blockchain.GetShardState(
-		beaconBestState, rewardForCustodianByEpoch, portalParams)
-	if err != nil {
-		return nil, NewBlockChainError(GenerateShardStateError, err)
-	}
-
-	shardInstruction.compose()
-	Logger.log.Infof("In NewBlockBeacon tempShardState: %+v", tempShardState)
-	tempInstruction, err := beaconBestState.GenerateInstruction(
-		beaconBlock.Header.Height, shardInstruction, duplicateKeyStakeInstruction,
-		bridgeInstructions, acceptedRewardInstructions, blockchain.config.ChainParams.Epoch,
-		blockchain.config.ChainParams.RandomTime, blockchain,
-		tempShardState,
-	)
-	if err != nil {
-		return nil, err
-	}
-	if len(rewardByEpochInstruction) != 0 {
-		tempInstruction = append(tempInstruction, rewardByEpochInstruction...)
-	}
-	beaconBlock.Body.Instructions = tempInstruction
-	beaconBlock.Body.ShardState = tempShardState
-	if len(bridgeInstructions) > 0 {
-		BLogger.log.Infof("Producer instructions: %+v", tempInstruction)
-	}
-	//============End Build Body================
-	//============Update Beacon Best State================
-	// Process new block with beststate
-
-	_, hashes, _, incurredInstructions, err := beaconBestState.updateBeaconBestState(beaconBlock, blockchain)
-	beaconBestState.beaconCommitteeEngine.AbortUncommittedBeaconState()
-
-	if err != nil {
-		return nil, err
-	}
-
-	tempInstruction = append(tempInstruction, incurredInstructions...)
-	beaconBlock.Body.Instructions = tempInstruction
-	if len(beaconBlock.Body.Instructions) != 0 {
-		Logger.log.Info("Beacon Produce: Beacon Instruction", beaconBlock.Body.Instructions)
-	}
-	//============Build Header Hash=============
-	// calculate hash
-	// Shard state hash
-	tempShardStateHash, err := generateHashFromShardState(tempShardState)
-	if err != nil {
-		Logger.log.Error(err)
-		return nil, NewBlockChainError(GenerateShardStateError, err)
-	}
-	// Instruction Hash
-	tempInstructionArr := []string{}
-	for _, strs := range tempInstruction {
-		tempInstructionArr = append(tempInstructionArr, strs...)
-	}
-	tempInstructionHash, err := generateHashFromStringArray(tempInstructionArr)
-	if err != nil {
-		Logger.log.Error(err)
-		return nil, NewBlockChainError(GenerateInstructionHashError, err)
-	}
-	// Instruction merkle root
-	flattenInsts, err := FlattenAndConvertStringInst(tempInstruction)
-	if err != nil {
-		return nil, NewBlockChainError(FlattenAndConvertStringInstError, err)
-	}
-	// add hash to header
-	beaconBlock.Header.BeaconCommitteeAndValidatorRoot = hashes.BeaconCommitteeAndValidatorHash
-	beaconBlock.Header.BeaconCandidateRoot = hashes.BeaconCandidateHash
-	beaconBlock.Header.ShardCandidateRoot = hashes.ShardCandidateHash
-	beaconBlock.Header.ShardCommitteeAndValidatorRoot = hashes.ShardCommitteeAndValidatorHash
-	beaconBlock.Header.ShardStateHash = tempShardStateHash
-	beaconBlock.Header.InstructionHash = tempInstructionHash
-	beaconBlock.Header.AutoStakingRoot = hashes.AutoStakeHash
-	copy(beaconBlock.Header.InstructionMerkleRoot[:], GetKeccak256MerkleRoot(flattenInsts))
-	beaconBlock.Header.Timestamp = startTime
-	//============END Build Header Hash=========
-
-	return beaconBlock, nil
-}
-
-// GetShardState get Shard To Beacon Block
-// Rule:
-// 1. Shard To Beacon Blocks will be get from Shard To Beacon Pool (only valid block)
-// 2. Process shards independently, for each shard:
-//	a. Shard To Beacon Block List must be compatible with current shard state in beacon best state:
-//  + Increased continuosly in height (10, 11, 12,...)
-//	  Ex: Shard state in beacon best state has height 11 then shard to beacon block list must have first block in list with height 12
-//  + Shard To Beacon Block List must have incremental height in list (10, 11, 12,... NOT 10, 12,...)
-//  + Shard To Beacon Block List can be verify with and only with current shard committee in beacon best state
-//  + DO NOT accept Shard To Beacon Block List that can have two arbitrary blocks that can be verify with two different committee set
-//  + If in Shard To Beacon Block List have one block with Swap Instruction, then this block must be the last block in this list (or only block in this list)
-// return param:
-// 1. shard state
-// 2. valid stake instruction
-// 3. valid swap instruction
-// 4. bridge instructions
-// 5. accepted reward instructions
-// 6. stop auto staking instructions
-func (blockchain *BlockChain) GetShardState(
-	beaconBestState *BeaconBestState,
-	rewardForCustodianByEpoch map[common.Hash]uint64,
-	portalParams PortalParams,
-) (map[byte][]types.ShardState, *shardInstruction, *duplicateKeyStakeInstruction,
-	[][]string, [][]string) {
-	shardStates := make(map[byte][]types.ShardState)
-	shardInstruction := &shardInstruction{
-		swapInstructions: make(map[byte][]*instruction.SwapInstruction),
-	}
-	duplicateKeyStakeInstructions := &duplicateKeyStakeInstruction{}
-	validStakePublicKeys := []string{}
-	validUnstakePublicKeys := make(map[string]bool)
-	//Get shard to beacon block from pool
-	allShardBlocks := blockchain.GetShardBlockForBeaconProducer(beaconBestState.BestShardHeight)
 	keys := []int{}
 	for shardID, shardBlocks := range allShardBlocks {
 		strs := fmt.Sprintf("GetShardState shardID: %+v, Height", shardID)
@@ -249,27 +192,22 @@ func (blockchain *BlockChain) GetShardState(
 	}
 	sort.Ints(keys)
 	//Shard block is a map ShardId -> array of shard block
-	bridgeInstructions := [][]string{}
-	acceptedRewardInstructions := [][]string{}
-	statefulActionsByShardID := map[byte][][]string{}
 	for _, v := range keys {
 		shardID := byte(v)
 		shardBlocks := allShardBlocks[shardID]
 		for _, shardBlock := range shardBlocks {
 			shardState, newShardInstruction, newDuplicateKeyStakeInstruction,
 				bridgeInstruction, acceptedRewardInstruction, statefulActions := blockchain.GetShardStateFromBlock(
-				beaconBestState, beaconBestState.BeaconHeight+1, shardBlock, shardID, true, validUnstakePublicKeys, validStakePublicKeys)
+				curView, curView.BeaconHeight+1, shardBlock, shardID, validUnstakePublicKeys, validStakePublicKeys)
 			shardStates[shardID] = append(shardStates[shardID], shardState[shardID])
 			duplicateKeyStakeInstructions.add(newDuplicateKeyStakeInstruction)
 			shardInstruction.add(newShardInstruction)
 			bridgeInstructions = append(bridgeInstructions, bridgeInstruction...)
 			acceptedRewardInstructions = append(acceptedRewardInstructions, acceptedRewardInstruction)
-			tempValidStakePublicKeys := []string{}
-			for _, v := range newShardInstruction.stakeInstructions {
-				tempValidStakePublicKeys = append(tempValidStakePublicKeys, v.PublicKeys...)
-			}
-			validStakePublicKeys = append(validStakePublicKeys, tempValidStakePublicKeys...)
 			// group stateful actions by shardID
+			for _, v := range newShardInstruction.stakeInstructions {
+				validStakePublicKeys = append(validStakePublicKeys, v.PublicKeys...)
+			}
 			_, found := statefulActionsByShardID[shardID]
 			if !found {
 				statefulActionsByShardID[shardID] = statefulActions
@@ -280,9 +218,35 @@ func (blockchain *BlockChain) GetShardState(
 	}
 
 	// build stateful instructions
-	statefulInsts := blockchain.buildStatefulInstructions(beaconBestState.featureStateDB, statefulActionsByShardID, beaconBestState.BeaconHeight+1, rewardForCustodianByEpoch, portalParams)
+	statefulInsts := blockchain.buildStatefulInstructions(
+		curView.featureStateDB,
+		statefulActionsByShardID,
+		newBeaconBlock.Header.Height,
+		rewardForCustodianByEpoch,
+		portalParams,
+	)
 	bridgeInstructions = append(bridgeInstructions, statefulInsts...)
-	return shardStates, shardInstruction, duplicateKeyStakeInstructions, bridgeInstructions, acceptedRewardInstructions
+
+	shardInstruction.compose()
+
+	instructions, err := curView.GenerateInstruction(
+		newBeaconBlock.Header.Height, shardInstruction, duplicateKeyStakeInstructions,
+		bridgeInstructions, acceptedRewardInstructions, blockchain.config.ChainParams.Epoch,
+		blockchain.config.ChainParams.RandomTime, blockchain,
+		shardStates,
+	)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(bridgeInstructions) > 0 {
+		BLogger.log.Infof("Producer instructions: %+v", instructions)
+	}
+
+	if len(rewardByEpochInstruction) != 0 {
+		instructions = append(instructions, rewardByEpochInstruction...)
+	}
+
+	return instructions, shardStates, nil
 }
 
 // GetShardStateFromBlock get state (information) from shard-to-beacon block
@@ -299,7 +263,6 @@ func (blockchain *BlockChain) GetShardStateFromBlock(
 	newBeaconHeight uint64,
 	shardBlock *types.ShardBlock,
 	shardID byte,
-	isProducer bool,
 	validUnstakePublicKeys map[string]bool,
 	validStakePublicKeys []string,
 ) (map[byte]types.ShardState, *shardInstruction, *duplicateKeyStakeInstruction,
@@ -321,7 +284,9 @@ func (blockchain *BlockChain) GetShardStateFromBlock(
 	shardState.Hash = shardBlock.Header.Hash()
 	shardState.Height = shardBlock.Header.Height
 	shardStates[shardID] = shardState
-	instructions, err := CreateShardInstructionsFromTransactionAndInstruction(shardBlock.Body.Transactions, blockchain, shardBlock.Header.ShardID)
+
+	instructions, err := CreateShardInstructionsFromTransactionAndInstruction(
+		shardBlock.Body.Transactions, blockchain, shardID)
 	instructions = append(instructions, shardBlock.Body.Instructions...)
 
 	shardInstruction := curView.preProcessInstructionsFromShardBlock(instructions, shardID)
@@ -330,8 +295,6 @@ func (blockchain *BlockChain) GetShardStateFromBlock(
 
 	allCommitteeValidatorCandidate := []string{}
 	if len(shardInstruction.stopAutoStakeInstructions) != 0 || len(shardInstruction.unstakeInstructions) != 0 {
-		// avoid dead lock
-		// if producer new block then lock beststate
 		allCommitteeValidatorCandidate = curView.getAllCommitteeValidatorCandidateFlattenList()
 	}
 
@@ -363,11 +326,12 @@ func (blockchain *BlockChain) GetShardStateFromBlock(
 	// Collect stateful actions
 	statefulActions := blockchain.collectStatefulActions(instructions)
 	Logger.log.Infof("Becon Produce: Got Shard Block %+v Shard %+v \n", shardBlock.Header.Height, shardID)
+
 	return shardStates, shardInstruction, duplicateKeyStakeInstruction, bridgeInstructions, acceptedRewardInstructions, statefulActions
 }
 
 //GenerateInstruction generate instruction for new beacon block
-func (beaconBestState *BeaconBestState) GenerateInstruction(
+func (curView *BeaconBestState) GenerateInstruction(
 	newBeaconHeight uint64,
 	shardInstruction *shardInstruction,
 	duplicateKeyStakeInstruction *duplicateKeyStakeInstruction,
@@ -381,37 +345,14 @@ func (beaconBestState *BeaconBestState) GenerateInstruction(
 	instructions := [][]string{}
 	instructions = append(instructions, bridgeInstructions...)
 	instructions = append(instructions, acceptedRewardInstructions...)
-	//=======Swap
-	// Shard Swap: both abnormal or normal swap
-	var keys []int
-	for k := range shardInstruction.swapInstructions {
-		keys = append(keys, int(k))
-	}
-	sort.Ints(keys)
-	for _, shardID := range keys {
-		for _, tempSwapInstruction := range shardInstruction.swapInstructions[byte(shardID)] {
-			instructions = append(instructions, tempSwapInstruction.ToString())
-		}
-	}
+
 	// Stake
 	for _, stakeInstruction := range shardInstruction.stakeInstructions {
 		instructions = append(instructions, stakeInstruction.ToString())
 	}
-	// Stop Auto Stake
-	for _, stopAutoStakeInstruction := range shardInstruction.stopAutoStakeInstructions {
-		instructions = append(instructions, stopAutoStakeInstruction.ToString())
-	}
-	// Unstake
-	for _, unstakeInstruction := range shardInstruction.unstakeInstructions {
-		instructions = append(instructions, unstakeInstruction.ToString())
-	}
 
 	// Duplicate Staking Instruction
 	for _, stakeInstruction := range duplicateKeyStakeInstruction.instructions {
-		percentReturns := make([]uint, len(stakeInstruction.PublicKeys))
-		for i, _ := range percentReturns {
-			percentReturns[i] = 100
-		}
 		if len(stakeInstruction.TxStakes) > 0 {
 			txHash, err := common.Hash{}.NewHashFromStr(stakeInstruction.TxStakes[0])
 			if err != nil {
@@ -429,144 +370,99 @@ func (beaconBestState *BeaconBestState) GenerateInstruction(
 			instructions = append(instructions, returnStakingIns.ToString())
 		}
 	}
-	// Random number for Assign Instruction
-	if newBeaconHeight%chainParamEpoch > randomTime && !beaconBestState.IsGetRandomNumber {
-		var err error
-		var chainTimeStamp int64
-		if !TestRandom {
-			chainTimeStamp, err = blockchain.getChainTimeStamp(newBeaconHeight, chainParamEpoch, beaconBestState.CurrentRandomTimeStamp, beaconBestState.BlockMaxCreateTime)
-			if err != nil {
-				return [][]string{}, err
-			}
-		} else {
-			chainTimeStamp = beaconBestState.CurrentRandomTimeStamp + 1
-		}
-		//==================================
-		if chainTimeStamp > beaconBestState.CurrentRandomTimeStamp {
-			randomInstruction, randomNumber, err := beaconBestState.generateRandomInstruction(beaconBestState.CurrentRandomTimeStamp, blockchain.config.RandomClient)
-			if err != nil {
-				return [][]string{}, err
-			}
-			instructions = append(instructions, randomInstruction)
-			Logger.log.Infof("Beacon Producer found Random Instruction at Block Height %+v, %+v", randomInstruction, newBeaconHeight)
-			assignInstructions, _, _ := beaconBestState.beaconCommitteeEngine.GenerateAssignInstruction(randomNumber, blockchain.config.ChainParams.AssignOffset, beaconBestState.ActiveShards)
-			for _, assignInstruction := range assignInstructions {
-				instructions = append(instructions, assignInstruction.ToString())
-			}
-			Logger.log.Info("assignInstructions:", assignInstructions)
+
+	// Shard Swap: both abnormal or normal swap
+	var keys []int
+	for k := range shardInstruction.swapInstructions {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	for _, shardID := range keys {
+		for _, tempSwapInstruction := range shardInstruction.swapInstructions[byte(shardID)] {
+			instructions = append(instructions, tempSwapInstruction.ToString())
 		}
 	}
+
+	// Random number for Assign Instruction
+	if newBeaconHeight%chainParamEpoch > randomTime && !curView.IsGetRandomNumber {
+		randomInstruction, randomNumber := curView.generateRandomInstruction()
+		instructions = append(instructions, randomInstruction)
+		Logger.log.Infof("Beacon Producer found Random Instruction at Block Height %+v, %+v", randomInstruction, newBeaconHeight)
+		assignInstructions, _, _ := curView.beaconCommitteeEngine.GenerateAssignInstruction(
+			randomNumber,
+			blockchain.config.ChainParams.AssignOffset,
+			curView.ActiveShards,
+		)
+		for _, assignInstruction := range assignInstructions {
+			instructions = append(instructions, assignInstruction.ToString())
+		}
+		Logger.log.Info("assignInstructions:", assignInstructions)
+	}
+
 	// Generate swap shard instruction at block height %chainParamEpoch == 0
-	if newBeaconHeight < blockchain.config.ChainParams.UpgradeCommitteeEngineV2Height {
+	if curView.CommitteeEngineVersion() == committeestate.SELF_SWAP_SHARD_VERSION {
 		if newBeaconHeight%chainParamEpoch == 0 {
-			BeaconCommittee := beaconBestState.GetBeaconCommittee()
+			BeaconCommittee := curView.GetBeaconCommittee()
 			beaconCommitteeStr, err := incognitokey.CommitteeKeyListToString(BeaconCommittee)
 			if err != nil {
 				Logger.log.Error(err)
 			}
 			if common.IndexOfUint64(newBeaconHeight/chainParamEpoch, blockchain.config.ChainParams.EpochBreakPointSwapNewKey) > -1 {
 				epoch := newBeaconHeight / chainParamEpoch
-				swapBeaconInstructions, beaconCommittee := CreateBeaconSwapActionForKeyListV2(blockchain.config.GenesisParams, beaconCommitteeStr, beaconBestState.MinBeaconCommitteeSize, epoch)
+				swapBeaconInstructions, beaconCommittee := CreateBeaconSwapActionForKeyListV2(blockchain.config.GenesisParams, beaconCommitteeStr, curView.MinBeaconCommitteeSize, epoch)
 				instructions = append(instructions, swapBeaconInstructions)
 				beaconRootInst, _ := buildBeaconSwapConfirmInstruction(beaconCommittee, newBeaconHeight)
 				instructions = append(instructions, beaconRootInst)
 			}
 		}
-	} else {
+	} else if curView.CommitteeEngineVersion() == committeestate.SLASHING_VERSION {
 		if newBeaconHeight%chainParamEpoch == 1 {
 			// Generate request shard swap instruction, only available after upgrade to BeaconCommitteeEngineV2
-			env := beaconBestState.NewBeaconCommitteeStateEnvironment(blockchain.config.ChainParams)
+			env := curView.NewBeaconCommitteeStateEnvironment(blockchain.config.ChainParams)
 			env.LatestShardsState = shardsState
-			swapShardInstructions, err := beaconBestState.beaconCommitteeEngine.GenerateAllSwapShardInstructions(env)
+			swapShardInstructions, err := curView.beaconCommitteeEngine.GenerateAllSwapShardInstructions(env)
 			if err != nil {
 				return [][]string{}, err
 			}
 			for _, swapShardInstruction := range swapShardInstructions {
-				instructions = append(instructions, swapShardInstruction.ToString())
+				if !swapShardInstruction.IsEmpty() {
+					instructions = append(instructions, swapShardInstruction.ToString())
+				}
+
 			}
 		}
+	}
+
+	// Stop Auto Stake
+	for _, stopAutoStakeInstruction := range shardInstruction.stopAutoStakeInstructions {
+		instructions = append(instructions, stopAutoStakeInstruction.ToString())
+	}
+
+	// Unstake
+	for _, unstakeInstruction := range shardInstruction.unstakeInstructions {
+		instructions = append(instructions, unstakeInstruction.ToString())
 	}
 
 	return instructions, nil
 }
 
 // ["random" "{nonce}" "{blockheight}" "{timestamp}" "{bitcoinTimestamp}"]
-func (beaconBestState *BeaconBestState) generateRandomInstruction(timestamp int64, randomClient btc.RandomClient) ([]string, int64, error) {
-	if !TestRandom {
-		var (
-			blockHeight    int
-			chainTimestamp int64
-			nonce          int64
-			err            error
-		)
-		startTime := time.Now()
-		for {
-			Logger.log.Debug("GetNonceByTimestamp", timestamp)
-			blockHeight, chainTimestamp, nonce, err = randomClient.GetNonceByTimestamp(startTime, beaconBestState.BlockMaxCreateTime, timestamp)
-			if err == nil {
-				break
-			} else {
-				Logger.log.Error("generateRandomInstruction", err)
-			}
-			if time.Since(startTime).Seconds() > beaconBestState.BlockMaxCreateTime.Seconds() {
-				return []string{}, -1, NewBlockChainError(GenerateInstructionError, fmt.Errorf("Get Random Number By Timestmap %+v Timeout", timestamp))
-			}
-			time.Sleep(time.Millisecond * 500)
-		}
-		randomInstruction := instruction.NewRandomInstruction().
-			SetBtcBlockHeight(blockHeight).
-			SetCheckPointTime(timestamp).
-			SetNonce(nonce).
-			SetBtcBlockTime(chainTimestamp)
-		return randomInstruction.ToString(), nonce, nil
-	} else {
-		ran := rand.New(rand.NewSource(timestamp))
-		randInt := ran.Int63()
-		randomInstruction := instruction.NewRandomInstruction().
-			SetBtcBlockHeight(int(timestamp)).
-			SetCheckPointTime(timestamp).
-			SetBtcBlockTime(timestamp + 1).
-			SetNonce(randInt)
-		return randomInstruction.ToString(), randInt, nil
+func (curView *BeaconBestState) generateRandomInstruction() ([]string, int64) {
+	res := []byte{}
+	bestBeaconBlockHash := curView.BestBlockHash
+	res = append(res, bestBeaconBlockHash.Bytes()...)
+	for i := 0; i < curView.ActiveShards; i++ {
+		shardID := byte(i)
+		bestShardBlockHash := curView.BestShardHash[shardID]
+		res = append(res, bestShardBlockHash.Bytes()...)
 	}
-}
 
-func (blockchain *BlockChain) getChainTimeStamp(
-	newBeaconHeight uint64,
-	chainParamEpoch uint64,
-	currentRandomTimeStamp int64,
-	blockMaxCreateTime time.Duration,
-) (int64, error) {
-	var chainTimeStamp int64
-	var err error
-	if newBeaconHeight%chainParamEpoch == chainParamEpoch-1 {
-		startTime := time.Now()
-		for {
-			Logger.log.Criticalf("Block %+v, Enter final block of epoch but still no random number", newBeaconHeight)
-			chainTimeStamp, err = blockchain.config.RandomClient.GetCurrentChainTimeStamp()
-			if err != nil {
-				Logger.log.Error(err)
-			} else {
-				if chainTimeStamp < currentRandomTimeStamp {
-					Logger.log.Infof("Final Block %+v in Epoch but still haven't found new random number", newBeaconHeight)
-				} else {
-					break
-				}
-			}
-			if time.Since(startTime).Seconds() > blockMaxCreateTime.Seconds() {
-				return 0, NewBlockChainError(GenerateInstructionError, fmt.Errorf("Get Current Chain Timestamp for New Block Height %+v Timeout", newBeaconHeight))
-			}
-			time.Sleep(100 * time.Millisecond)
-		}
-	} else {
-		Logger.log.Criticalf("Block %+v, finding random number", newBeaconHeight)
-		chainTimeStamp, err = blockchain.config.RandomClient.GetCurrentChainTimeStamp()
-		if err != nil {
-			Logger.log.Error(err)
-		}
-		return 0, nil
-	}
-	return chainTimeStamp, nil
+	bigInt := new(big.Int)
+	bigInt = bigInt.SetBytes(res)
+	randomNumber := int64(bigInt.Uint64())
+	randomInstruction := []string{instruction.RANDOM_ACTION, strconv.FormatInt(randomNumber, 10), "", "", ""}
+
+	return randomInstruction, randomNumber
 }
 
 func CreateBeaconSwapActionForKeyListV2(
@@ -580,30 +476,15 @@ func CreateBeaconSwapActionForKeyListV2(
 	return swapInstruction, append(newBeaconCommittees, remainBeaconCommittees...)
 }
 
-func (beaconBestState *BeaconBestState) postProcessIncurredInstructions(instructions [][]string) error {
-
-	for _, inst := range instructions {
-		switch inst[0] {
-		case instruction.RETURN_ACTION:
-			returnStakingIns, err := instruction.ValidateAndImportReturnStakingInstructionFromString(inst)
-			if err != nil {
-				return err
-			}
-			err = statedb.DeleteStakerInfo(beaconBestState.consensusStateDB, returnStakingIns.PublicKeysStruct)
-			if err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func (beaconBestState *BeaconBestState) preProcessInstructionsFromShardBlock(instructions [][]string, shardID byte) *shardInstruction {
-	res := &shardInstruction{
-		swapInstructions: make(map[byte][]*instruction.SwapInstruction),
-	}
+	shardInstruction := newShardInstruction()
 	// extract instructions
+
+	waitingValidatorsList, err := incognitokey.CommitteeKeyListToString(beaconBestState.beaconCommitteeEngine.GetCandidateShardWaitingForNextRandom())
+	if err != nil {
+		return shardInstruction
+	}
+
 	for _, inst := range instructions {
 		if len(inst) > 0 {
 			if inst[0] == instruction.STAKE_ACTION {
@@ -612,7 +493,7 @@ func (beaconBestState *BeaconBestState) preProcessInstructionsFromShardBlock(ins
 					continue
 				}
 				tempStakeInstruction := instruction.ImportStakeInstructionFromString(inst)
-				res.stakeInstructions = append(res.stakeInstructions, tempStakeInstruction)
+				shardInstruction.stakeInstructions = append(shardInstruction.stakeInstructions, tempStakeInstruction)
 			}
 			if inst[0] == instruction.SWAP_ACTION {
 				// validate swap instruction
@@ -622,7 +503,7 @@ func (beaconBestState *BeaconBestState) preProcessInstructionsFromShardBlock(ins
 					continue
 				}
 				tempSwapInstruction := instruction.ImportSwapInstructionFromString(inst)
-				res.swapInstructions[shardID] = append(res.swapInstructions[shardID], tempSwapInstruction)
+				shardInstruction.swapInstructions[shardID] = append(shardInstruction.swapInstructions[shardID], tempSwapInstruction)
 			}
 			if inst[0] == instruction.STOP_AUTO_STAKE_ACTION {
 				if err := instruction.ValidateStopAutoStakeInstructionSanity(inst); err != nil {
@@ -630,7 +511,20 @@ func (beaconBestState *BeaconBestState) preProcessInstructionsFromShardBlock(ins
 					continue
 				}
 				tempStopAutoStakeInstruction := instruction.ImportStopAutoStakeInstructionFromString(inst)
-				res.stopAutoStakeInstructions = append(res.stopAutoStakeInstructions, tempStopAutoStakeInstruction)
+				for i := 0; i < len(tempStopAutoStakeInstruction.CommitteePublicKeys); i++ {
+					v := tempStopAutoStakeInstruction.CommitteePublicKeys[i]
+					check, ok := beaconBestState.GetAutoStakingList()[v]
+					if !ok {
+						Logger.log.Errorf("Committee %s is not found or has already been unstaked:", v)
+					}
+					if !ok || !check {
+						tempStopAutoStakeInstruction.DeleteSingleElement(i)
+						i--
+					}
+				}
+				if len(tempStopAutoStakeInstruction.CommitteePublicKeys) != 0 {
+					shardInstruction.stopAutoStakeInstructions = append(shardInstruction.stopAutoStakeInstructions, tempStopAutoStakeInstruction)
+				}
 			}
 			if inst[0] == instruction.UNSTAKE_ACTION {
 				if err := instruction.ValidateUnstakeInstructionSanity(inst); err != nil {
@@ -638,19 +532,35 @@ func (beaconBestState *BeaconBestState) preProcessInstructionsFromShardBlock(ins
 					continue
 				}
 				tempUnstakeInstruction := instruction.ImportUnstakeInstructionFromString(inst)
-				res.unstakeInstructions = append(res.unstakeInstructions, tempUnstakeInstruction)
+				for i := 0; i < len(tempUnstakeInstruction.CommitteePublicKeys); i++ {
+					v := tempUnstakeInstruction.CommitteePublicKeys[i]
+					index := common.IndexOfStr(v, waitingValidatorsList)
+					if index == -1 {
+						check, ok := beaconBestState.GetAutoStakingList()[v]
+						if !ok {
+							Logger.log.Errorf("[unstaking] Committee %s is not found or has already been unstaked:", v)
+						}
+						if !ok || !check {
+							tempUnstakeInstruction.DeleteSingleElement(i)
+							i--
+						}
+					}
+				}
+				if len(tempUnstakeInstruction.CommitteePublicKeys) != 0 {
+					shardInstruction.unstakeInstructions = append(shardInstruction.unstakeInstructions, tempUnstakeInstruction)
+				}
 			}
 		}
 	}
 
-	if len(res.stakeInstructions) != 0 {
-		Logger.log.Info("Beacon Producer/ Process Stakers List ", res.stakeInstructions)
+	if len(shardInstruction.stakeInstructions) != 0 {
+		Logger.log.Info("Beacon Producer/ Process Stakers List ", shardInstruction.stakeInstructions)
 	}
-	if len(res.swapInstructions[shardID]) != 0 {
-		Logger.log.Info("Beacon Producer/ Process Stakers List ", res.swapInstructions[shardID])
+	if len(shardInstruction.swapInstructions[shardID]) != 0 {
+		Logger.log.Info("Beacon Producer/ Process Swap List ", shardInstruction.swapInstructions[shardID])
 	}
 
-	return res
+	return shardInstruction
 }
 
 func (beaconBestState *BeaconBestState) processStakeInstructionFromShardBlock(
@@ -659,7 +569,7 @@ func (beaconBestState *BeaconBestState) processStakeInstructionFromShardBlock(
 
 	duplicateKeyStakeInstruction := &duplicateKeyStakeInstruction{}
 	newShardInstructions := shardInstructions
-	stakeInstructions := []*instruction.StakeInstruction{}
+	newStakeInstructions := []*instruction.StakeInstruction{}
 	stakeShardPublicKeys := []string{}
 	stakeShardTx := []string{}
 	stakeShardRewardReceiver := []string{}
@@ -722,11 +632,10 @@ func (beaconBestState *BeaconBestState) processStakeInstructionFromShardBlock(
 			stakeShardTx, stakeShardRewardReceiver,
 			stakeShardAutoStaking,
 		)
-		stakeInstructions = append(stakeInstructions, tempStakeShardInstruction)
-		validStakePublicKeys = append(validStakePublicKeys, stakeShardPublicKeys...)
+		newStakeInstructions = append(newStakeInstructions, tempStakeShardInstruction)
 	}
 
-	newShardInstructions.stakeInstructions = stakeInstructions
+	newShardInstructions.stakeInstructions = newStakeInstructions
 	return newShardInstructions, duplicateKeyStakeInstruction
 }
 
@@ -789,6 +698,7 @@ func (shardInstruction *shardInstruction) compose() {
 	stakeInstruction := &instruction.StakeInstruction{}
 	unstakeInstruction := &instruction.UnstakeInstruction{}
 	stopAutoStakeInstruction := &instruction.StopAutoStakeInstruction{}
+	unstakeKeys := map[string]bool{}
 
 	for _, v := range shardInstruction.stakeInstructions {
 		if v.IsEmpty() {
@@ -808,6 +718,9 @@ func (shardInstruction *shardInstruction) compose() {
 		if v.IsEmpty() {
 			continue
 		}
+		for _, key := range v.CommitteePublicKeys {
+			unstakeKeys[key] = true
+		}
 		unstakeInstruction.CommitteePublicKeys = append(unstakeInstruction.CommitteePublicKeys, v.CommitteePublicKeys...)
 		unstakeInstruction.CommitteePublicKeysStruct = append(unstakeInstruction.CommitteePublicKeysStruct, v.CommitteePublicKeysStruct...)
 	}
@@ -816,19 +729,30 @@ func (shardInstruction *shardInstruction) compose() {
 		if v.IsEmpty() {
 			continue
 		}
-		stopAutoStakeInstruction.CommitteePublicKeys = append(stopAutoStakeInstruction.CommitteePublicKeys, v.CommitteePublicKeys...)
+
+		committeePublicKeys := []string{}
+		for _, key := range v.CommitteePublicKeys {
+			if !unstakeKeys[key] {
+				committeePublicKeys = append(committeePublicKeys, key)
+			}
+		}
+
+		stopAutoStakeInstruction.CommitteePublicKeys = append(stopAutoStakeInstruction.CommitteePublicKeys, committeePublicKeys...)
 	}
 
+	shardInstruction.stakeInstructions = []*instruction.StakeInstruction{}
+	shardInstruction.unstakeInstructions = []*instruction.UnstakeInstruction{}
+	shardInstruction.stopAutoStakeInstructions = []*instruction.StopAutoStakeInstruction{}
+
 	if !stakeInstruction.IsEmpty() {
-		shardInstruction.stakeInstructions = []*instruction.StakeInstruction{}
 		shardInstruction.stakeInstructions = append(shardInstruction.stakeInstructions, stakeInstruction)
 	}
+
 	if !unstakeInstruction.IsEmpty() {
-		shardInstruction.unstakeInstructions = []*instruction.UnstakeInstruction{}
 		shardInstruction.unstakeInstructions = append(shardInstruction.unstakeInstructions, unstakeInstruction)
 	}
+
 	if !stopAutoStakeInstruction.IsEmpty() {
-		shardInstruction.stopAutoStakeInstructions = []*instruction.StopAutoStakeInstruction{}
 		shardInstruction.stopAutoStakeInstructions = append(shardInstruction.stopAutoStakeInstructions, stopAutoStakeInstruction)
 	}
 }

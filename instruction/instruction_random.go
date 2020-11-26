@@ -74,7 +74,7 @@ func ImportRandomInstructionFromString(instruction []string) *RandomInstruction 
 }
 
 func ValidateRandomInstructionSanity(instruction []string) error {
-	if len(instruction) != 5 {
+	if len(instruction) < 2 {
 		return fmt.Errorf("invalid length, %+v", instruction)
 	}
 	if instruction[0] != RANDOM_ACTION {
@@ -82,15 +82,6 @@ func ValidateRandomInstructionSanity(instruction []string) error {
 	}
 	if _, err := strconv.ParseInt(instruction[1], 10, 64); err != nil {
 		return fmt.Errorf("invalid btc nonce value, %s", err)
-	}
-	if _, err := strconv.ParseInt(instruction[2], 10, 64); err != nil {
-		return fmt.Errorf("invalid btc block height value, %s", err)
-	}
-	if _, err := strconv.ParseInt(instruction[3], 10, 64); err != nil {
-		return fmt.Errorf("invalid check point time stamp value, %s", err)
-	}
-	if _, err := strconv.ParseInt(instruction[4], 10, 64); err != nil {
-		return fmt.Errorf("invalid btc time stamp value, %s", err)
 	}
 	return nil
 }

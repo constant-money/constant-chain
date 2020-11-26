@@ -3,13 +3,14 @@ package mempool
 import (
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"math"
 	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/pubsub"
 
@@ -25,13 +26,16 @@ const (
 	defaultScanTime          = 10 * time.Minute
 	defaultIsUnlockMempool   = true
 	defaultIsBlockGenStarted = false
-	defaultRoleInCommittees  = -1
-	defaultIsTest            = false
-	defaultReplaceFeeRatio   = 1.1
+	// defaultRoleInCommittees  = -1
+	defaultIsTest          = false
+	defaultReplaceFeeRatio = 1.1
 )
 
 // config is a descriptor containing the memory pool configuration.
 type Config struct {
+	ConsensusEngine interface {
+		IsCommitteeInShard(shardID byte) bool
+	}
 	BlockChain        *blockchain.BlockChain       // Block chain of node
 	DataBase          map[int]incdb.Database       // main database of blockchain
 	DataBaseMempool   databasemp.DatabaseInterface // database is used for storage data in mempool into lvdb
@@ -43,8 +47,10 @@ type Config struct {
 	PersistMempool    bool
 	RelayShards       []byte
 	// UserKeyset            *incognitokey.KeySet
-	PubSubManager         *pubsub.PubSubManager
-	RoleInCommitteesEvent pubsub.EventChannel
+	PubSubManager interface {
+		PublishMessage(message *pubsub.Message)
+	}
+	// RoleInCommitteesEvent pubsub.EventChannel
 }
 
 // TxDesc is transaction message in mempool
@@ -68,12 +74,12 @@ type TxPool struct {
 	requestStopStakingMtx     sync.RWMutex
 	CPendingTxs               chan<- metadata.Transaction // channel to deliver txs to block gen
 	CRemoveTxs                chan<- metadata.Transaction // channel to deliver txs to block gen
-	RoleInCommittees          int                         //Current Role of Node
-	roleMtx                   sync.RWMutex
-	ScanTime                  time.Duration
-	IsBlockGenStarted         bool
-	IsUnlockMempool           bool
-	ReplaceFeeRatio           float64
+	// RoleInCommittees          int                         //Current Role of Node
+	roleMtx           sync.RWMutex
+	ScanTime          time.Duration
+	IsBlockGenStarted bool
+	IsUnlockMempool   bool
+	ReplaceFeeRatio   float64
 
 	//for testing
 	IsTest       bool
@@ -91,12 +97,12 @@ func (tp *TxPool) Init(cfg *Config) {
 	tp.poolCandidate = make(map[common.Hash]string)
 	tp.poolRequestStopStaking = make(map[common.Hash]string)
 	tp.duplicateTxs = make(map[common.Hash]uint64)
-	_, subChanRole, _ := tp.config.PubSubManager.RegisterNewSubscriber(pubsub.ShardRoleTopic)
-	tp.config.RoleInCommitteesEvent = subChanRole
+	// _, subChanRole, _ := tp.config.PubSubManager.RegisterNewSubscriber(pubsub.ShardRoleTopic)
+	// tp.config.RoleInCommitteesEvent = subChanRole
 	tp.ScanTime = defaultScanTime
 	tp.IsUnlockMempool = defaultIsUnlockMempool
 	tp.IsBlockGenStarted = defaultIsBlockGenStarted
-	tp.RoleInCommittees = defaultRoleInCommittees
+	// tp.RoleInCommittees = defaultRoleInCommittees
 	tp.IsTest = defaultIsTest
 	tp.ReplaceFeeRatio = defaultReplaceFeeRatio
 }
@@ -144,18 +150,18 @@ func (tp *TxPool) Start(cQuit chan struct{}) {
 		select {
 		case <-cQuit:
 			return
-		case msg := <-tp.config.RoleInCommitteesEvent:
-			{
-				shardID, ok := msg.Value.(int)
-				if !ok {
-					continue
-				}
-				go func() {
-					tp.roleMtx.Lock()
-					defer tp.roleMtx.Unlock()
-					tp.RoleInCommittees = shardID
-				}()
-			}
+			// case msg := <-tp.config.RoleInCommitteesEvent:
+			// 	{
+			// 		shardID, ok := msg.Value.(int)
+			// 		if !ok {
+			// 			continue
+			// 		}
+			// 		go func() {
+			// 			tp.roleMtx.Lock()
+			// 			defer tp.roleMtx.Unlock()
+			// 			tp.RoleInCommittees = shardID
+			// 		}()
+			// 	}
 		}
 	}
 }
@@ -777,7 +783,7 @@ func (tp *TxPool) checkRelayShard(tx metadata.Transaction) bool {
 func (tp *TxPool) checkPublicKeyRole(tx metadata.Transaction) bool {
 	senderShardID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
 	tp.roleMtx.RLock()
-	if tp.RoleInCommittees > -1 && byte(tp.RoleInCommittees) == senderShardID {
+	if tp.config.ConsensusEngine.IsCommitteeInShard(senderShardID) {
 		tp.roleMtx.RUnlock()
 		return true
 	} else {

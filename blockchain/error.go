@@ -29,6 +29,7 @@ const (
 	DatabaseError
 	EpochError
 	WrongTimestampError
+	WrongTimeslotError
 	InstructionHashError
 	ShardStateHashError
 	RandomError
@@ -207,6 +208,7 @@ var ErrCodeMessage = map[int]struct {
 	DatabaseError:                                     {-1014, "Database Error"},
 	EpochError:                                        {-1015, "Epoch Error"},
 	WrongTimestampError:                               {-1016, "Timestamp Error"},
+	WrongTimeslotError:                                {-1016, "Timeslot Error"},
 	InstructionHashError:                              {-1017, "Instruction Hash Error"},
 	ShardStateHashError:                               {-1018, "ShardState Hash Error"},
 	RandomError:                                       {-1019, "Random Number Error"},

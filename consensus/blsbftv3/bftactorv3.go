@@ -153,10 +153,8 @@ func (e *BLSBFT_V3) Start() error {
 					}
 				} else {
 					e.receiveBlockByHash[voteMsg.BlockHash] = newBlockInfoForVoteMsg()
-					if _, ok := e.receiveBlockByHash[voteMsg.BlockHash].votes[voteMsg.Validator]; !ok {
-						e.receiveBlockByHash[voteMsg.BlockHash].votes[voteMsg.Validator] = voteMsg
-						e.Logger.Infof("[Monitor] receive vote for block %s (%d) from %v", voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.Validator)
-					}
+					e.receiveBlockByHash[voteMsg.BlockHash].votes[voteMsg.Validator] = voteMsg
+					e.Logger.Infof("[Monitor] receive vote for block %s (%d) from %v", voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.Validator)
 				}
 				// e.Logger.Infof("receive vote for block %s (%d)", voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes))
 
@@ -391,6 +389,11 @@ func (e *BLSBFT_V3) processIfBlockGetEnoughVote(
 func (e *BLSBFT_V3) validateAndVote(
 	v *ProposeBlockInfo,
 ) error {
+	//already vote for this proposed block
+	if v.isVoted {
+		return nil
+	}
+
 	//not connected
 	e.Logger.Info("validateAndVote")
 	view := e.Chain.GetViewByHash(v.block.GetPrevHash())
@@ -459,6 +462,7 @@ func (e *BLSBFT_V3) validateAndVote(
 	}
 
 	v.isValid = true
+	v.isVoted = true
 	e.voteHistory[v.block.GetHeight()] = v.block
 	e.Logger.Info("sending vote...")
 	go e.Node.PushMessageToChain(msg, e.Chain)

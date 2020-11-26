@@ -1,16 +1,39 @@
 package blockchain
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/transaction"
 	"sort"
 )
+
+func FetchBeaconBlockFromHeight(blockchain *BlockChain, from uint64, to uint64) ([]*types.BeaconBlock, error) {
+	beaconBlocks := []*types.BeaconBlock{}
+	for i := from; i <= to; i++ {
+		beaconHash, err := blockchain.GetBeaconBlockHashByHeight(blockchain.BeaconChain.GetFinalView(), blockchain.BeaconChain.GetBestView(), i)
+		if err != nil {
+			return nil, err
+		}
+		beaconBlockBytes, err := rawdbv2.GetBeaconBlockByHash(blockchain.GetBeaconChainDatabase(), *beaconHash)
+		if err != nil {
+			return beaconBlocks, err
+		}
+		beaconBlock := types.BeaconBlock{}
+		err = json.Unmarshal(beaconBlockBytes, &beaconBlock)
+		if err != nil {
+			return beaconBlocks, NewBlockChainError(UnmashallJsonShardBlockError, err)
+		}
+		beaconBlocks = append(beaconBlocks, &beaconBlock)
+	}
+	return beaconBlocks, nil
+}
 
 func createCrossShardByteArray(txList []metadata.Transaction, fromShardID byte) []byte {
 	crossIDs := []byte{}

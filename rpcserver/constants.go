@@ -263,6 +263,9 @@ const (
 
 	getTotalStaker = "gettotalstaker"
 
+	//validator state
+	getValKeyState = "getvalkeystate"
+
 	// stake
 	unstake = "createunstaketransaction"
 )

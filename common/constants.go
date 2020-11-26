@@ -60,8 +60,9 @@ var (
 
 // special token ids (aka. PropertyID in custom token)
 var (
-	PRVCoinID   = Hash{4} // To send PRV in custom token
-	PRVCoinName = "PRV"   // To send PRV in custom token
+	PRVCoinID      = Hash{4} // To send PRV in custom token
+	PRVCoinName    = "PRV"   // To send PRV in custom token
+	MaxShardNumber = 8       //programmatically config based on networkID
 )
 
 // CONSENSUS
@@ -71,16 +72,15 @@ const (
 	NodeModeAuto   = "auto"
 	NodeModeBeacon = "beacon"
 
-	BeaconRole     = "beacon"
-	ShardRole      = "shard"
-	CommitteeRole  = "committee"
-	ProposerRole   = "proposer"
-	ValidatorRole  = "validator"
-	PendingRole    = "pending"
-	SyncingRole    = "syncing" //this is for shard case - when beacon tell it is committee, but its state not
-	WaitingRole    = "waiting"
+	BeaconRole    = "beacon"
+	ShardRole     = "shard"
+	CommitteeRole = "committee"
+	ProposerRole  = "proposer"
+	ValidatorRole = "validator"
+	PendingRole   = "pending"
+	SyncingRole   = "syncing" //this is for shard case - when beacon tell it is committee, but its state not
+	WaitingRole   = "waiting"
 	UnstakeRole    = "unstake" // for unstake node
-	MaxShardNumber = 8
 
 	BlsConsensus    = "bls"
 	BridgeConsensus = "dsa"

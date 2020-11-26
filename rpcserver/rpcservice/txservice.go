@@ -31,7 +31,23 @@ type TxService struct {
 	BlockChain   *blockchain.BlockChain
 	Wallet       *wallet.Wallet
 	FeeEstimator map[byte]*mempool.FeeEstimator
-	TxMemPool    *mempool.TxPool
+	TxMemPool    MempoolInterface
+}
+
+type MempoolInterface interface {
+	ValidateSerialNumberHashH(serialNumber []byte) error
+	MaybeAcceptTransaction(tx metadata.Transaction, beaconHeight int64) (*common.Hash, *mempool.TxDesc, error)
+	GetTx(txHash *common.Hash) (metadata.Transaction, error)
+	GetClonedPoolCandidate() map[common.Hash]string
+	ListTxs() []string
+	RemoveTx(txs []metadata.Transaction, isInBlock bool)
+	TriggerCRemoveTxs(tx metadata.Transaction)
+	MarkForwardedTransaction(txHash common.Hash)
+	MaxFee() uint64
+	ListTxsDetail() []metadata.Transaction
+	Count() int
+	Size() uint64
+	SendTransactionToBlockGen()
 }
 
 type TxInfo struct {

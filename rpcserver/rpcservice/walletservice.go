@@ -3,7 +3,6 @@ package rpcservice
 import (
 	"encoding/hex"
 	"errors"
-	"log"
 	"math/rand"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
@@ -121,7 +120,7 @@ func (walletService WalletService) GetBalanceByPrivateKey(privateKey string) (ui
 		return uint64(0), NewRPCError(TokenIsInvalidError, err)
 	}
 	outcoints, err := walletService.BlockChain.GetListOutputCoinsByKeyset(keySet, shardIDSender, prvCoinID)
-	log.Println(err)
+	// log.Println(err)
 	if err != nil {
 		return uint64(0), NewRPCError(UnexpectedError, err)
 	}
@@ -130,7 +129,7 @@ func (walletService WalletService) GetBalanceByPrivateKey(privateKey string) (ui
 	for _, out := range outcoints {
 		balance += out.CoinDetails.GetValue()
 	}
-	log.Println(balance)
+	// log.Println(balance)
 
 	return balance, nil
 }

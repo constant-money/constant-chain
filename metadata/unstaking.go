@@ -77,6 +77,18 @@ func (unStakingMetadata UnStakingMetadata) ValidateTxWithBlockChain(tx Transacti
 		return false, NewMetadataTxError(UnStakingRequestInvalidTransactionSenderError, fmt.Errorf("Expect %+v to send unstake request but get %+v", stakingTx.GetSender(), tx.GetSender()))
 	}
 
+	waitingValidatorsList, err := incognitokey.CommitteeKeyListToString(beaconViewRetriever.CandidateWaitingForNextRandom())
+	if err != nil {
+		return false, err
+	}
+	index := common.IndexOfStr(requestedPublicKey, waitingValidatorsList)
+	if index == -1 {
+		if !stakerInfo.AutoStaking() {
+			return false, NewMetadataTxError(UnstakingRequestAlreadyUnstake, errors.New("Public Key Has Already Been Unstaked"))
+		}
+
+	}
+
 	return true, nil
 }
 

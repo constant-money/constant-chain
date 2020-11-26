@@ -39,29 +39,6 @@ func (_m *BeaconCommitteeEngine) ActiveShards() int {
 	return r0
 }
 
-// BuildIncurredInstructions provides a mock function with given fields: env
-func (_m *BeaconCommitteeEngine) BuildIncurredInstructions(env *committeestate.BeaconCommitteeStateEnvironment) ([][]string, error) {
-	ret := _m.Called(env)
-
-	var r0 [][]string
-	if rf, ok := ret.Get(0).(func(*committeestate.BeaconCommitteeStateEnvironment) [][]string); ok {
-		r0 = rf(env)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).([][]string)
-		}
-	}
-
-	var r1 error
-	if rf, ok := ret.Get(1).(func(*committeestate.BeaconCommitteeStateEnvironment) error); ok {
-		r1 = rf(env)
-	} else {
-		r1 = ret.Error(1)
-	}
-
-	return r0, r1
-}
-
 // Clone provides a mock function with given fields:
 func (_m *BeaconCommitteeEngine) Clone() committeestate.BeaconCommitteeEngine {
 	ret := _m.Called()

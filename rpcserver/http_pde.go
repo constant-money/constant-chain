@@ -5,12 +5,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"math/big"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
@@ -47,32 +48,31 @@ type PDETrade struct {
 }
 
 type PDERefundedTradeV2 struct {
-	TraderAddressStr    string
-	TokenIDStr          string
-	ReceiveAmount       uint64
-	ShardID             byte
-	RequestedTxID       common.Hash
-	Status 							string
-	BeaconHeight 				uint64
+	TraderAddressStr string
+	TokenIDStr       string
+	ReceiveAmount    uint64
+	ShardID          byte
+	RequestedTxID    common.Hash
+	Status           string
+	BeaconHeight     uint64
 }
 
 type TradePath struct {
 	TokenIDToBuyStr string
-	ReceiveAmount uint64
-	SellAmount uint64
-	Token1IDStr string
-	Token2IDStr string
+	ReceiveAmount   uint64
+	SellAmount      uint64
+	Token1IDStr     string
+	Token2IDStr     string
 }
 
 type PDEAcceptedTradeV2 struct {
-	TraderAddressStr    string
-	ShardID             byte
-	RequestedTxID       common.Hash
-	Status 							string
-	BeaconHeight 				uint64
-	TradePaths 					[]TradePath
+	TraderAddressStr string
+	ShardID          byte
+	RequestedTxID    common.Hash
+	Status           string
+	BeaconHeight     uint64
+	TradePaths       []TradePath
 }
-
 
 type PDEContribution struct {
 	PDEContributionPairID string
@@ -86,12 +86,12 @@ type PDEContribution struct {
 }
 
 type PDEInfoFromBeaconBlock struct {
-	PDEContributions 		[]*PDEContribution `json:"PDEContributions"`
-	PDETrades        		[]*PDETrade        `json:"PDETrades"`
-	PDEWithdrawals   		[]*PDEWithdrawal   `json:"PDEWithdrawals"`
+	PDEContributions    []*PDEContribution    `json:"PDEContributions"`
+	PDETrades           []*PDETrade           `json:"PDETrades"`
+	PDEWithdrawals      []*PDEWithdrawal      `json:"PDEWithdrawals"`
 	PDEAcceptedTradesV2 []*PDEAcceptedTradeV2 `json:"PDEAcceptedTradesV2"`
 	PDERefundedTradesV2 []*PDERefundedTradeV2 `json:"PDERefundedTradesV2"`
-	BeaconTimeStamp  		int64              `json:"BeaconTimeStamp"`
+	BeaconTimeStamp     int64                 `json:"BeaconTimeStamp"`
 }
 
 type ConvertedPrice struct {
@@ -530,19 +530,12 @@ func (httpServer *HttpServer) handleGetPDEState(params interface{}, closeChan <-
 		return nil, rpcservice.NewRPCError(rpcservice.GetPDEStateError, err)
 	}
 	beaconBlock := beaconBlocks[0]
-	type CurrentPDEState struct {
-		WaitingPDEContributions map[string]*rawdbv2.PDEContribution `json:"WaitingPDEContributions"`
-		PDEPoolPairs            map[string]*rawdbv2.PDEPoolForPair  `json:"PDEPoolPairs"`
-		PDEShares               map[string]uint64                   `json:"PDEShares"`
-		PDETradingFees          map[string]uint64                   `json:"PDETradingFees"`
-		BeaconTimeStamp         int64                               `json:"BeaconTimeStamp"`
-	}
-	result := CurrentPDEState{
+	result := jsonresult.CurrentPDEState{
 		BeaconTimeStamp:         beaconBlock.Header.Timestamp,
 		PDEPoolPairs:            pdeState.PDEPoolPairs,
 		PDEShares:               pdeState.PDEShares,
 		WaitingPDEContributions: pdeState.WaitingPDEContributions,
-		PDETradingFees: 				 pdeState.PDETradingFees,
+		PDETradingFees:          pdeState.PDETradingFees,
 	}
 	return result, nil
 }
@@ -823,13 +816,13 @@ func parsePDERefundedTradeV2Inst(inst []string, beaconHeight uint64) (*PDERefund
 		return nil, err
 	}
 	return &PDERefundedTradeV2{
-		TraderAddressStr    : pdeRefundCrossPoolTrade.TraderAddressStr,
-		TokenIDStr         : pdeRefundCrossPoolTrade.TokenIDStr,
-		ReceiveAmount       : pdeRefundCrossPoolTrade.Amount,
-		ShardID             : byte(shardID),
-		RequestedTxID       : pdeRefundCrossPoolTrade.TxReqID,
-		Status: refundStatus,
-		BeaconHeight: beaconHeight,
+		TraderAddressStr: pdeRefundCrossPoolTrade.TraderAddressStr,
+		TokenIDStr:       pdeRefundCrossPoolTrade.TokenIDStr,
+		ReceiveAmount:    pdeRefundCrossPoolTrade.Amount,
+		ShardID:          byte(shardID),
+		RequestedTxID:    pdeRefundCrossPoolTrade.TxReqID,
+		Status:           refundStatus,
+		BeaconHeight:     beaconHeight,
 	}, nil
 }
 
@@ -851,10 +844,10 @@ func parsePDEAcceptedTradeV2Inst(inst []string, beaconHeight uint64) (*PDEAccept
 	tradePaths := make([]TradePath, len(tradeAcceptedContents))
 	for idx, tradeContent := range tradeAcceptedContents {
 		tradePaths[idx] = TradePath{
-			TokenIDToBuyStr : tradeContent.TokenIDToBuyStr,
-			ReceiveAmount : tradeContent.ReceiveAmount,
-			Token1IDStr : tradeContent.Token1IDStr,
-			Token2IDStr : tradeContent.Token2IDStr,
+			TokenIDToBuyStr: tradeContent.TokenIDToBuyStr,
+			ReceiveAmount:   tradeContent.ReceiveAmount,
+			Token1IDStr:     tradeContent.Token1IDStr,
+			Token2IDStr:     tradeContent.Token2IDStr,
 		}
 		tradePaths[idx].SellAmount = tradeContent.Token2PoolValueOperation.Value
 		if tradeContent.Token1PoolValueOperation.Operator == "+" {
@@ -869,12 +862,12 @@ func parsePDEAcceptedTradeV2Inst(inst []string, beaconHeight uint64) (*PDEAccept
 	}
 
 	return &PDEAcceptedTradeV2{
-		TraderAddressStr    : tradeAcceptedContents[0].TraderAddressStr,
-		ShardID         : byte(shardID),
-		RequestedTxID : tradeAcceptedContents[0].RequestedTxID,
-		Status : "accepted",
-		BeaconHeight : beaconHeight,
-		TradePaths : tradePaths,
+		TraderAddressStr: tradeAcceptedContents[0].TraderAddressStr,
+		ShardID:          byte(shardID),
+		RequestedTxID:    tradeAcceptedContents[0].RequestedTxID,
+		Status:           "accepted",
+		BeaconHeight:     beaconHeight,
+		TradePaths:       tradePaths,
 	}, nil
 }
 
@@ -938,12 +931,12 @@ func (httpServer *HttpServer) handleExtractPDEInstsFromBeaconBlock(
 	}
 	bcBlk := beaconBlocks[0]
 	pdeInfoFromBeaconBlock := PDEInfoFromBeaconBlock{
-		PDEContributions: []*PDEContribution{},
-		PDETrades:        []*PDETrade{},
-		PDEAcceptedTradesV2:        []*PDEAcceptedTradeV2{},
-		PDERefundedTradesV2:        []*PDERefundedTradeV2{},
-		PDEWithdrawals:   []*PDEWithdrawal{},
-		BeaconTimeStamp:  bcBlk.Header.Timestamp,
+		PDEContributions:    []*PDEContribution{},
+		PDETrades:           []*PDETrade{},
+		PDEAcceptedTradesV2: []*PDEAcceptedTradeV2{},
+		PDERefundedTradesV2: []*PDERefundedTradeV2{},
+		PDEWithdrawals:      []*PDEWithdrawal{},
+		BeaconTimeStamp:     bcBlk.Header.Timestamp,
 	}
 	insts := bcBlk.Body.Instructions
 	for _, inst := range insts {

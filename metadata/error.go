@@ -59,6 +59,7 @@ const (
 	UnStakingRequestTypeAssertionError
 	UnStakingRequestAlreadyStopError
 	UnStakingRequestInvalidFormatRequestKey
+	UnstakingRequestAlreadyUnstake
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -106,6 +107,7 @@ var ErrCodeMessage = map[int]struct {
 	UnStakingRequestTypeAssertionError:                    {-4106, "UnStaking Request Type Assertion Error"},
 	UnStakingRequestAlreadyStopError:                      {-4107, "UnStaking Request Already Stop Error"},
 	UnStakingRequestInvalidFormatRequestKey:               {-4108, "Unstaking Request Key Is Invalid Format"},
+	UnstakingRequestAlreadyUnstake:                        {-4109, "Public Key Has Been Already Unstaked"},
 	// -5xxx dev reward error
 	WrongIncognitoDAOPaymentAddressError: {-5001, "Invalid dev account"},
 

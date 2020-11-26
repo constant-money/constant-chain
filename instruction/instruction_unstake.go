@@ -100,3 +100,8 @@ func ValidateUnstakeInstructionSanity(instruction []string) error {
 func (unstakeIns *UnstakeInstruction) InsertIntoStateDB(sDB *statedb.StateDB) error {
 	return nil
 }
+
+func (unstakeIns *UnstakeInstruction) DeleteSingleElement(index int) {
+	unstakeIns.CommitteePublicKeys = append(unstakeIns.CommitteePublicKeys[:index], unstakeIns.CommitteePublicKeys[index+1:]...)
+	unstakeIns.CommitteePublicKeysStruct = append(unstakeIns.CommitteePublicKeysStruct[:index], unstakeIns.CommitteePublicKeysStruct[index+1:]...)
+}

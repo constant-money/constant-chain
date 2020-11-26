@@ -49,7 +49,7 @@ func NewShardCommitteeStateV2WithValue(
 	committeeFromBlockHash common.Hash,
 ) *ShardCommitteeStateV2 {
 	return &ShardCommitteeStateV2{
-		shardCommittee:     shardCommittee,
+		shardCommittee:     incognitokey.DeepCopy(shardCommittee),
 		committeeFromBlock: committeeFromBlockHash,
 		mu:                 new(sync.RWMutex),
 	}
@@ -185,8 +185,7 @@ func (engine *ShardCommitteeEngineV2) InitCommitteeState(env ShardCommitteeState
 	addedCommittees = append(addedCommittees, newShardCandidateStructs[int(env.ShardID())*
 		env.MinShardCommitteeSize():(int(env.ShardID())*env.MinShardCommitteeSize())+env.MinShardCommitteeSize()]...)
 
-	engine.shardCommitteeStateV2.shardCommittee = append(engine.shardCommitteeStateV2.shardCommittee,
-		addedCommittees...)
+	engine.shardCommitteeStateV2.shardCommittee = incognitokey.DeepCopy(addedCommittees)
 	committeeChange.ShardCommitteeAdded[env.ShardID()] = addedCommittees
 
 }

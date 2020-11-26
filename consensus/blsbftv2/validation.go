@@ -1,8 +1,8 @@
 package blsbftv2
 
 import (
-	"errors"
 	"fmt"
+	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"

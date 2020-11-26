@@ -15,9 +15,9 @@ func TestValidateRandomInstructionSanity(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Length of instructions != 5",
+			name: "Length of instructions < 2 ",
 			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "3157440766"},
+				instruction: []string{RANDOM_ACTION},
 			},
 			wantErr: true,
 		},
@@ -32,27 +32,6 @@ func TestValidateRandomInstructionSanity(t *testing.T) {
 			name: "type(instruction[1]) != int",
 			args: args{
 				instruction: []string{RANDOM_ACTION, "abdcd", "637918", "3157440766", "3157440766"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "type(instruction[2]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "dasda", "3157440766", "3157440766"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "type(instruction[3]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "aca", "3157440766"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "type(instruction[4]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "3157440766", "acxac"},
 			},
 			wantErr: true,
 		},
@@ -86,9 +65,9 @@ func TestValidateAndImportRandomInstructionFromString(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "Length of instructions != 5",
+			name: "Length of instructions < 2",
 			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "3157440766"},
+				instruction: []string{RANDOM_ACTION},
 			},
 			wantErr: true,
 		},
@@ -107,36 +86,12 @@ func TestValidateAndImportRandomInstructionFromString(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "type(instruction[2]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "dasda", "3157440766", "3157440766"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "type(instruction[3]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "aca", "3157440766"},
-			},
-			wantErr: true,
-		},
-		{
-			name: "type(instruction[4]) != int",
-			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "3157440766", "acxac"},
-			},
-			wantErr: true,
-		},
-		{
 			name: "Valid Input",
 			args: args{
-				instruction: []string{RANDOM_ACTION, "3157440766", "637918", "3157440766", "3157440766"},
+				instruction: []string{RANDOM_ACTION, "3157440766", "", "", ""},
 			},
 			want: &RandomInstruction{
-				BtcNonce:       3157440766,
-				BtcBlockHeight: 637918,
-				CheckPointTime: 3157440766,
-				BtcBlockTime:   3157440766,
+				BtcNonce: 3157440766,
 			},
 			wantErr: false,
 		},

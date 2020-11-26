@@ -46,10 +46,11 @@ func (s *MapStringString) LazyCopy() *MapStringString {
 //copy ...
 func (s *MapStringString) copy() {
 	prev := s.data
-	s.data = make(map[string]string)
+	newData := make(map[string]string)
 	for k, v := range prev {
-		s.data[k] = v
+		newData[k] = v
 	}
+	s.data = newData
 	s.updated = false
 }
 
@@ -129,10 +130,11 @@ func (s *MapStringBool) LazyCopy() *MapStringBool {
 
 func (s *MapStringBool) copy() {
 	prev := s.data
-	s.data = make(map[string]bool)
+	newData := make(map[string]bool)
 	for k, v := range prev {
-		s.data[k] = v
+		newData[k] = v
 	}
+	s.data = newData
 	s.updated = false
 }
 
