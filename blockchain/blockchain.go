@@ -10,7 +10,6 @@ import (
 	"sort"
 
 	lru "github.com/hashicorp/golang-lru"
-	"github.com/incognitochain/incognito-chain/blockchain/btc"
 	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
@@ -55,7 +54,6 @@ type Config struct {
 	FeeEstimator      map[byte]FeeEstimator
 	IsBlockGenStarted bool
 	PubSubManager     Pubsub
-	RandomClient      btc.RandomClient
 	Syncker           Syncker
 	Server            Server
 	ConsensusEngine   ConsensusEngine

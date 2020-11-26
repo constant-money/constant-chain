@@ -20,7 +20,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/incognitochain/incognito-chain/addrmanager"
 	"github.com/incognitochain/incognito-chain/blockchain"
-	"github.com/incognitochain/incognito-chain/blockchain/btc"
 	"github.com/incognitochain/incognito-chain/blockchain/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/connmanager"
@@ -245,18 +244,6 @@ func (serverObj *Server) NewServer(
 			}
 		}
 	}
-	var randomClient btc.RandomClient
-	if cfg.BtcClient == 0 {
-		randomClient = &btc.BlockCypherClient{}
-		Logger.log.Info("Init 3-rd Party Random Client")
-
-	} else {
-		if cfg.BtcClientIP == common.EmptyString || cfg.BtcClientUsername == common.EmptyString || cfg.BtcClientPassword == common.EmptyString {
-			Logger.log.Error("Please input Bitcoin Client Ip, Username, password. Otherwise, set btcclient is 0 or leave it to default value")
-			os.Exit(2)
-		}
-		randomClient = btc.NewBTCClient(cfg.BtcClientUsername, cfg.BtcClientPassword, cfg.BtcClientIP, cfg.BtcClientPort)
-	}
 	// Init block template generator
 	serverObj.blockgen, err = blockchain.NewBlockGenerator(serverObj.memPool, serverObj.blockChain, serverObj.syncker, cPendingTxs, cRemovedTxs)
 	if err != nil {
@@ -323,7 +310,6 @@ func (serverObj *Server) NewServer(
 		NodeMode:        cfg.NodeMode,
 		FeeEstimator:    make(map[byte]blockchain.FeeEstimator),
 		PubSubManager:   pubsubManager,
-		RandomClient:    randomClient,
 		ConsensusEngine: serverObj.consensusEngine,
 		Highway:         serverObj.highway,
 		GenesisParams:   blockchain.GenesisParam,

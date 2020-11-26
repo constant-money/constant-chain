@@ -5,22 +5,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
-	"github.com/incognitochain/incognito-chain/dataaccessobject"
-	"github.com/incognitochain/incognito-chain/instruction"
-	relaying "github.com/incognitochain/incognito-chain/relaying/bnb"
-	btcRelaying "github.com/incognitochain/incognito-chain/relaying/btc"
-
-	"github.com/incognitochain/incognito-chain/syncker"
-
 	"github.com/incognitochain/incognito-chain/addrmanager"
 	"github.com/incognitochain/incognito-chain/blockchain"
-	main2 "github.com/incognitochain/incognito-chain/blockchain/btc"
+	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/connmanager"
 	consensus "github.com/incognitochain/incognito-chain/consensus_v2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject"
 	"github.com/incognitochain/incognito-chain/databasemp"
 	"github.com/incognitochain/incognito-chain/incdb"
+	"github.com/incognitochain/incognito-chain/instruction"
 	"github.com/incognitochain/incognito-chain/mempool"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/netsync"
@@ -28,8 +22,11 @@ import (
 	"github.com/incognitochain/incognito-chain/peerv2"
 	"github.com/incognitochain/incognito-chain/peerv2/wrapper"
 	"github.com/incognitochain/incognito-chain/privacy"
+	relaying "github.com/incognitochain/incognito-chain/relaying/bnb"
+	btcRelaying "github.com/incognitochain/incognito-chain/relaying/btc"
 	"github.com/incognitochain/incognito-chain/rpcserver"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
+	"github.com/incognitochain/incognito-chain/syncker"
 	"github.com/incognitochain/incognito-chain/transaction"
 	"github.com/incognitochain/incognito-chain/trie"
 	"github.com/incognitochain/incognito-chain/wallet"
@@ -99,7 +96,6 @@ func init() {
 	blockchain.Logger.Init(blockchainLogger)
 	consensus.Logger.Init(consensusLogger)
 	mempool.Logger.Init(mempoolLogger)
-	main2.Logger.Init(randomLogger)
 	transaction.Logger.Init(transactionLogger)
 	privacy.Logger.Init(privacyLogger)
 	databasemp.Logger.Init(dbmpLogger)
