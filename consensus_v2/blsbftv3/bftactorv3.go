@@ -173,10 +173,22 @@ func (e *BLSBFT_V3) Start() error {
 				bestView := e.Chain.GetBestView()
 				committeeViewHash := common.Hash{}
 				committees := []incognitokey.CommitteePublicKey{}
-				proposerPk := bestView.GetProposerByTimeSlot(e.currentTimeSlot, 2)
+				proposerPk := incognitokey.CommitteePublicKey{}
 				var userProposeKey signatureschemes2.MiningKey
 				shouldPropose := false
 				shouldListen := true
+
+				if e.ChainID == -1 {
+					proposerPk = bestView.GetProposerByTimeSlot(e.currentTimeSlot, 2)
+					committees = e.Chain.GetBestView().GetCommittee()
+				} else {
+					committeeViewHash = *e.CommitteeChain.FinalView().GetHash()
+					committees, err = e.CommitteeChain.CommitteesFromViewHashForShard(committeeViewHash, byte(e.ChainID))
+					if err != nil {
+						e.Logger.Error(err)
+					}
+					proposerPk = e.CommitteeChain.ProposerByTimeSlot(byte(e.ChainID), e.currentTimeSlot, committees)
+				}
 
 				for _, userKey := range e.UserKeySet {
 					userPk := userKey.GetPublicKey().GetMiningKeyBase58(common.BlsConsensus)
@@ -190,18 +202,6 @@ func (e *BLSBFT_V3) Start() error {
 							}
 						}
 					}
-				}
-
-				if e.ChainID != -1 {
-					committeeViewHash = *e.CommitteeChain.FinalView().GetHash()
-					committees, err = e.CommitteeChain.CommitteesFromViewHashForShard(committeeViewHash, byte(e.ChainID))
-					if err != nil {
-						e.Logger.Error(err)
-					}
-					proposerPk = e.CommitteeChain.ProposerByTimeSlot(byte(e.ChainID), e.currentTimeSlot, committees)
-				} else {
-					proposerPk = bestView.GetProposerByTimeSlot(e.currentTimeSlot, 2)
-					committees = e.Chain.GetBestView().GetCommittee()
 				}
 
 				if newTimeSlot { //for logging
@@ -340,6 +340,7 @@ func (e *BLSBFT_V3) processIfBlockGetEnoughVote(
 			}
 			err := vote.validateVoteOwner(dsaKey)
 			if err != nil {
+				e.Logger.Error("")
 				e.Logger.Error(dsaKey)
 				e.Logger.Error(err)
 				vote.isValid = -1

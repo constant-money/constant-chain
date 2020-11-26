@@ -2,9 +2,10 @@ package blockchain
 
 import (
 	"encoding/json"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"sync"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/blockchain/committeestate"
 
@@ -219,11 +220,6 @@ func (chain *ShardChain) ValidateBlockSignatures(block types.BlockInterface, com
 	}
 
 	if err := chain.Blockchain.config.ConsensusEngine.ValidateBlockCommitteSig(block, committee); err != nil {
-		Logger.log.Info("[staking-v2] chain.GetBestState().GetHeight():", chain.GetBestState().GetHeight())
-		bestViewCommittees, _ := incognitokey.CommitteeKeyListToString(chain.GetBestState().GetCommittee())
-		Logger.log.Info("[staking-v2] bestViewCommitteess:", bestViewCommittees)
-		Logger.log.Info("[staking-v2] err:", err)
-		Logger.log.Info("[staking-v2] block.CommitteeFromBlock():", block.CommitteeFromBlock())
 		return err
 	}
 	return nil
