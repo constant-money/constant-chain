@@ -211,11 +211,14 @@ func (blockchain *BlockChain) getReturnStakingInfoFromBeaconInstructions(
 					//dont have shard candidate for next epoch => kickout => return staking amount
 					stakerInfo, has, err := statedb.GetStakerInfo(beaconConsensusStateDB, outPublicKey)
 					if err != nil || !has || stakerInfo == nil {
-						return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Cannot get staker info for outpubickey %v", outPublicKey))
+						Logger.log.Errorf("fmt.Errorf(\"Cannot get staker info for outpubickey %v\", outPublicKey), error %+v", outPublicKey, err)
+						//return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Cannot get staker info for outpubickey %v", outPublicKey))
+						continue
 					}
 
 					if stakerInfo.AutoStaking() {
-						return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Beacon kick out this key, but autostaking still true %v", outPublicKey))
+						continue
+						//return nil, nil, NewBlockChainError(ProcessSalaryInstructionsError, fmt.Errorf("Beacon kick out this key, but autostaking still true %v", outPublicKey))
 					}
 
 					// If autostaking or staker who not has tx staking, do nothing
