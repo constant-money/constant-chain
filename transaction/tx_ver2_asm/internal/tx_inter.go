@@ -1,27 +1,35 @@
 package internal
 
 import (
-	"errors"
-	// "fmt"
+	"syscall/js"
 	"encoding/json"
+
 	"github.com/incognitochain/incognito-chain/common"
-	// "github.com/incognitochain/incognito-chain/wallet"
+	"github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes/blsmultisig"
+	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/incognitochain/incognito-chain/wallet"
 
 	// "github.com/incognitochain/incognito-chain/metadata"
-	// "github.com/pkg/errors"
+	"github.com/pkg/errors"
 	// "math/big"
 )
 
-func CreateTransaction(args string, serverTime int64) (string, error) {
+func CreateTransaction(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+
 	params := &InitParamsAsm{}
-	println("Before parse")
+	println("Before parse - TX parameters")
 	println(args)
 	err := json.Unmarshal([]byte(args), params)
 	if err!=nil{
 		println(err.Error())
 		return "", err
 	}
-	println("After parse")
+	println("After parse - TX parameters")
 	thoseBytesAgain, _ := json.Marshal(params)
 	println(string(thoseBytesAgain))
 
@@ -66,82 +74,125 @@ func CreateTransaction(args string, serverTime int64) (string, error) {
 	return res, nil
 }
 
-func DecompressCoins(args string) (string, error) {
-	buf := make([][]byte, 1)
-	err := json.Unmarshal([]byte(args), &buf)
+func NewKeySetFromPrivate(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	skStr := jsInputs[0].String()
+
+	var err error
+	skHolder := struct{
+		PrivateKey []byte `json:"PrivateKey"`
+	}{}
+	err = json.Unmarshal([]byte(skStr), &skHolder)
 	if err!=nil{
 		println(err.Error())
 		return "", err
 	}
-	
-	var cis []CoinInter
-	for _, ele := range buf{
-		temp := &CoinInter{}
-		err := temp.SetBytes(ele)
-		if err!=nil{
-			println(err.Error)
-			return "", err
-		}
-
-		cis = append(cis, *temp)
+	ks := &incognitokey.KeySet{}
+	err = ks.InitFromPrivateKeyByte(skHolder.PrivateKey)
+	if err!=nil{
+		println(err.Error())
+		return "", err
 	}
-	// serialize tx json
-	txJson, err := json.Marshal(cis)
+	txJson, err := json.Marshal(ks)
 	if err != nil {
-		println("Error marshalling coin array: ", err.Error())
+		println("Error marshalling ket set: ", err)
 		return "", err
 	}
 
 	return string(txJson), nil
 }
 
-func CacheCoins(coinsString string, indexesString string) (string, error) {
-	coinBytesArray := make([][]byte, 1)
-	err := json.Unmarshal([]byte(coinsString), &coinBytesArray)
-	if err!=nil{
-		println(err.Error())
-		return "", err
+func DecryptCoin(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
 	}
+	paramStr := jsInputs[0].String()
 
-	indexes := make([]uint64, 1)
-	err = json.Unmarshal([]byte(indexesString), &indexes)
+	var err error
+	temp := &struct{
+		Coin 	CoinInter
+		KeySet 	string
+	}{}
+	err = json.Unmarshal([]byte(paramStr), temp)
+	c, _, err := temp.Coin.ToCoin()
+	if err!=nil{
+		return "", err
+	}
+	kw, err := wallet.Base58CheckDeserialize(temp.KeySet)
+	if err!=nil{
+		return "", err
+	}
+	_, err = c.Decrypt(&kw.KeySet)
 	if err!=nil{
 		println(err.Error())
 		return "", err
 	}
-	if len(coinBytesArray)!=len(indexes){
-		return "", errors.New("Mismatched input lengths")
+	res := GetCoinInter(c)
+	res.Index = temp.Coin.Index
+	resJson, err := json.Marshal(res)
+	if err != nil {
+		println("Error marshalling ket set: ", err)
+		return "", err
 	}
-	
-	cache := MakeCoinCache()
-	var isCA  bool = true
-	for i, cb := range coinBytesArray{
-		temp := &CoinInter{}
-		err := temp.SetBytes(cb)
+	return string(resJson), nil
+}
+
+func CreateCoin(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	paramStr := jsInputs[0].String()
+
+	var err error
+	temp := &struct{
+		PaymentInfo 	printedPaymentInfo
+		TokenID			string
+	}{}
+	err = json.Unmarshal([]byte(paramStr), temp)
+	pInf, err := temp.PaymentInfo.To()
+	if err!=nil{
+		return "", err
+	}
+	var c *privacy.CoinV2
+	if len(temp.TokenID)==0{
+		c, err = privacy.NewCoinFromPaymentInfo(pInf)
 		if err!=nil{
-			println(err.Error)
+			println(err.Error())
 			return "", err
 		}
-
-		cache.PublicKeys 	= append(cache.PublicKeys, temp.PublicKey)
-		cache.Commitments 	= append(cache.Commitments, temp.Commitment)
-		if temp.AssetTag==nil{
-			isCA = false
-		}else{
-			if isCA{
-				cache.AssetTags = append(cache.AssetTags, temp.AssetTag)
-			}
+	}else{
+		var tokenID common.Hash
+		tokenID.NewHashFromStr(temp.TokenID)
+		c, _, err = privacy.NewCoinCA(pInf, &tokenID)
+		if err!=nil{
+			println(err.Error())
+			return "", err
 		}
-		mapKey := b58.Encode(temp.PublicKey, common.ZeroByte)
-		cache.PkToIndexMap[mapKey] = indexes[i]
 	}
-	// serialize tx json
-
-	txJson, err := json.Marshal(cache)
+	
+	res := GetCoinInter(c)
+	resJson, err := json.Marshal(res)
 	if err != nil {
-		println("Error marshalling coin cache: ", err)
+		println("Error marshalling ket set: ", err)
 		return "", err
 	}
-
-	return string(txJson), nil
+	return string(resJson), nil
 }
+
+func GenerateBLSKeyPairFromSeed(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	
+	seed, _ := b64.DecodeString(args)
+	privateKey, publicKey := blsmultisig.KeyGen(seed)
+	keyPairBytes := []byte{}
+	keyPairBytes = append(keyPairBytes, common.AddPaddingBigInt(privateKey, common.BigIntSize)...)
+	keyPairBytes = append(keyPairBytes, blsmultisig.CmprG2(publicKey)...)
+	keyPairEncode := b64.EncodeToString(keyPairBytes)
+	return keyPairEncode, nil
+}
+
