@@ -454,9 +454,11 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlockForSigning(curView *S
 	// Verify Transaction
 	//get beacon height from shard block
 	beaconHeight := shardBlock.Header.BeaconHeight
+	st := time.Now()
 	if err := blockchain.verifyTransactionFromNewBlock(shardID, shardBlock.Body.Transactions, int64(beaconHeight), curView); err != nil {
 		return NewBlockChainError(TransactionFromNewBlockError, err)
 	}
+	Logger.log.Infof("[testperformance] SHARD %v | Validate %v txs of block %v cost %v", shardID, len(shardBlock.Body.Transactions), shardBlock.Header.Height, time.Since(st))
 	// Verify Instruction
 	instructions := [][]string{}
 	shardCommittee, err := incognitokey.CommitteeKeyListToString(curView.ShardCommittee)

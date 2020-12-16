@@ -270,10 +270,12 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 // 4. Build response Transaction For Beacon
 // 5. Return valid transaction from pending, response transactions from shard and beacon
 func (blockGenerator *BlockGenerator) getTransactionForNewBlock(curView *ShardBestState, privatekey *privacy.PrivateKey, shardID byte, beaconBlocks []*BeaconBlock, blockCreation int64, beaconHeight uint64) ([]metadata.Transaction, error) {
+	st := time.Now()
 	txsToAdd, txToRemove, _ := blockGenerator.getPendingTransaction(shardID, beaconBlocks, blockCreation, beaconHeight, curView)
 	if len(txsToAdd) == 0 {
 		Logger.log.Info("Creating empty block...")
 	}
+	Logger.log.Infof("[testperformance] SHARD %v | Crawling %v txs for block %v cost %v", shardID, len(txsToAdd), curView.GetHeight()+1, time.Since(st))
 	go blockGenerator.txPool.RemoveTx(txToRemove, false)
 	var responseTxsBeacon []metadata.Transaction
 	var errInstructions [][]string
