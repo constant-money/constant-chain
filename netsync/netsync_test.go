@@ -18,24 +18,21 @@ import (
 )
 
 var (
-	bc                = &blockchain.BlockChain{}
-	pb                = pubsub.NewPubSubManager()
-	txPool            = &mempool.TxPool{}
-	server            = &Server{}
-	consensus         = NewConsensus()
-	shardToBeaconPool = mempool.GetShardToBeaconPool()
-	crossShardPool    = make(map[byte]blockchain.CrossShardPool)
-	msgPBFT           = &wire.MessageBFT{
+	bc        = &blockchain.BlockChain{}
+	pb        = pubsub.NewPubSubManager()
+	txPool    = &mempool.TxPool{}
+	server    = &Server{}
+	consensus = NewConsensus()
+	msgPBFT   = &wire.MessageBFT{
 		Type:      "",
 		Content:   nil,
 		ChainKey:  "",
 		Timestamp: 0,
 	}
-	crossShardBlock    = blockchain.CrossShardBlock{}
-	shardToBeaconBlock = blockchain.ShardToBeaconBlock{}
-	shardBlock         = blockchain.ShardBlock{}
-	beaconBlock        = blockchain.BeaconBlock{}
-	msgGetBlockShard   = &wire.MessageGetBlockShard{
+	crossShardBlock  = blockchain.CrossShardBlock{}
+	shardBlock       = blockchain.ShardBlock{}
+	beaconBlock      = blockchain.BeaconBlock{}
+	msgGetBlockShard = &wire.MessageGetBlockShard{
 		FromPool:         true,
 		ByHash:           false,
 		BySpecificHeight: true,
@@ -56,36 +53,6 @@ var (
 		Timestamp:        1561733485,
 	}
 	msgGetBlockShardWithSenderID = &wire.MessageGetBlockShard{
-		FromPool:         true,
-		ByHash:           false,
-		BySpecificHeight: true,
-		BlkHashes:        []common.Hash{},
-		BlkHeights:       []uint64{1, 2, 3},
-		ShardID:          0,
-		SenderID:         "QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",
-		Timestamp:        1561733485,
-	}
-	msgGetShardToBeacon = &wire.MessageGetShardToBeacon{
-		FromPool:         true,
-		ByHash:           false,
-		BySpecificHeight: true,
-		BlkHashes:        []common.Hash{},
-		BlkHeights:       []uint64{1, 2, 3},
-		ShardID:          0,
-		SenderID:         "",
-		Timestamp:        1561733485,
-	}
-	msgGetShardToBeaconWithHash = &wire.MessageGetShardToBeacon{
-		FromPool:         true,
-		ByHash:           true,
-		BySpecificHeight: false,
-		BlkHashes:        []common.Hash{},
-		BlkHeights:       []uint64{1, 2, 3},
-		ShardID:          0,
-		SenderID:         "QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",
-		Timestamp:        1561733485,
-	}
-	msgGetShardToBeaconWithSenderID = &wire.MessageGetShardToBeacon{
 		FromPool:         true,
 		ByHash:           false,
 		BySpecificHeight: true,
@@ -162,10 +129,9 @@ var (
 			BlockHash:     common.HashH([]byte{1}),
 			BestStateHash: common.HashH([]byte{1}),
 		},
-		Shards:            make(map[byte]blockchain.ChainState),
-		ShardToBeaconPool: make(map[byte][]uint64),
-		Timestamp:         1561733485,
-		SenderID:          "",
+		Shards:    make(map[byte]blockchain.ChainState),
+		Timestamp: 1561733485,
+		SenderID:  "",
 	}
 	msgPeerStateWithSenderID = &wire.MessagePeerState{
 		Beacon: blockchain.ChainState{
@@ -173,10 +139,9 @@ var (
 			BlockHash:     common.HashH([]byte{1}),
 			BestStateHash: common.HashH([]byte{1}),
 		},
-		Shards:            make(map[byte]blockchain.ChainState),
-		ShardToBeaconPool: make(map[byte][]uint64),
-		Timestamp:         1561733485,
-		SenderID:          "QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",
+		Shards:    make(map[byte]blockchain.ChainState),
+		Timestamp: 1561733485,
+		SenderID:  "QmSoLer265NRgSp2LA3dPaeykiS1J6DifTC88f5uVQKNAd",
 	}
 	base58CheckDataTx             = "13AHwQTSToFvjZFGjxKZbVKL6Mq2sLaGyevhwFUGMvdNd7745xSXhzJ2q2ra6d8pmb8CgieHM4zgbMJSVpsxJFhprUzUu9Ba7FWYcdmHCkqviF1LhysmBugQP7mEGQVo6PJrFp7Xim72ndfwPovTLhWrqYa8475MAM8XMKMEtYRvNXjPghMJuYvN9yxPPWzXUFQGnw3temoR3heaXMCwH4ZGMVWVaom2prZZwQqdKQkC3Yi2E7hjntDny2oCVsvyHpCv7nAZganw9ZqXc2H4V15GNnvTKWUBRxZo8tRK79tnyoRH23SNtPrc7hG3tJc8gtLoZ2FLQP2UrGPi88XpnzNagTix3ydZ3HUMu29bBRJALKdREn7jsMPECN8EjgZayx2XuZNZGJ1Tqzdq7dosUB1TfKfdXk9rVQXuLqxSM7sszST2kdYQ4sLB5YnpcePtFpX3SsR2fbBB7NWNzdq8JroWiLcAcxmH5jVMtkXTkrdLYtEdHDDSm1RQgPEzTkKT3479Hoge5ocDeVBdEqp8v21vbTLvBYWW7cjy3UH9KucqCRWWN7Tiztbnujs3nkazAAHBLFgSSbmVHD9MGKScqnB249ECGqeoHwCnuTTC2GPehyFb3N67mR9bHNFfJz1MG7qwAt3CDVACR68FqCrBpEkkk1ko2jhedYe2ZAmDAWgL8HWvXK112Ji3ucwyaNm3CvjGDWpyyYAs7TjkF58RtMGojwGCutHNoNHwkEtdGoekRoHfVrTQgmgfsxEsAPbL4JcCNKzjMReDAwGVNXu4kWF6KwFtyD5z6jQyYZZX9aEm1fcMmTvFcmX1DBUjsW4BnELPZR6iYeJkikL7bYZZPLmfzKenD17jFLe4F5xhwFcBPN2kxjTFsLKG6VT2EKeShJGzuWgNAbBVBjgjECk6jrZC44HaXgUTdRcgr3MEfp1JAgegCaKJTaXn3eacHqPQrDovMoJ1wijwok4DNFWhA2Ano75udeZHZjHEvytsdEtL1VV74Rs6dFjz591EHvGqvCVFx9qgTRHmSxRDkGox2rYD5LFXSDsL9AZ2aLaoisysT21Dc81WNuG36QhgRjpZ9LZeaCVL8ffjDV5Wbe8uqedN8uZy9P6ZXothXgCjBiAxsDgyHLAbMqND742Sq3wh2N1mTgTRg75S8ijN1smca3U7Snj2iELXRhLrwr6zR8aUxWe4Tdy19knpbEwBoUQcd5i9pwii3q67nYSKLYQZyPnJC5K1tmhskFp7Sxi1Em4wxm3WrQ9aRj2oGLSaKimQ8ECyD8nKSDRynotXC1mFJB2MaMujDUKkEQ9SiVVg2sDvVy6EHGXvQbJtxFu9LiNYa9s23ro4qMAmNL7GaRVew7ss6Rh2f5D6mhBpEG58DewYwNfQnS43xmhDPQ4x55GGDCbxBApRcQd5pqCxF6HmLvipCy3DKm2F59y9QyKNVr1eJzgyRiXUNZFnaSvXdMKcAwBakNjoDSmFzLTQ711WFN731eCr8KtzVR3hpu9U3mptYwRRZXD8oL7FwZt4LaytcvB6x2Rz7ZkQcRFh6wMcEzVugwZvLPAoFyA4ZhcTsFCW8RKgJ1aEUHg79Rjti8p8QffqYaMapr2zKiqqcd4CxA8ssEy1DCNtXDmyMVBEeyQfr9ELeMk8XMTFYGKYMfF6tSDLQWn4gq3beVXC7vD3H2qGk2WKM8sY6jZC4rmJL1arRrN8NARMLwnkqTMWrtWb5Vmj7YDVR92nxdKFGK7Fabhyz6cQP3SxEAHbMfo4B6C1hTv1XebCp4pcBBLsurndpoDgSkTUFdHBFygg5t3jNByF7eJHoRoDQd892wg53zjY13rQ8QbrMJav"
 	base58CheckDataTxToken        = "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"
@@ -406,40 +371,6 @@ func TestNetSyncHandleMessageTx(t *testing.T) {
 	netSync.Stop()
 }
 
-func TestNetSyncHandleMessageTxToken(t *testing.T) {
-	netSync := NetSync{}
-	netSync.Init(&NetSyncConfig{
-		BlockChain:    bc,
-		PubSubManager: pb,
-		Server:        server,
-		TxMemPool:     txPool,
-		Consensus:     consensus,
-	})
-
-	netSync.config.RoleInCommittees = 1
-	rawTxBytes, _, err := base58.Base58Check{}.Decode(base58CheckDataTxToken)
-	if err != nil {
-		t.Fatal("Error parse tx", err)
-	}
-	tx := transaction.TxNormalToken{}
-	err = json.Unmarshal(rawTxBytes, &tx)
-	if err != nil {
-		t.Fatal("Error umarshall tx")
-	}
-	msg := &wire.MessageTxToken{Transaction: &tx}
-	netSync.Start()
-	netSync.cMessage <- msg
-	<-time.Tick(1 * time.Second)
-	netSync.cMessage <- msg
-	<-time.Tick(1 * time.Second)
-	res := netSync.handleCacheTx(*msg.Transaction.Hash())
-	if !res {
-		t.Error("Transaction should be in cache")
-	}
-	netSync.Stop()
-
-}
-
 func TestNetSyncHandleMessageTxPrivacyToken(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
@@ -533,28 +464,6 @@ func TestNetSyncHandleMessageShardBlock(t *testing.T) {
 	netSync.Stop()
 }
 
-func TestNetSyncHandleMessageShardToBeacon(t *testing.T) {
-	netSync := NetSync{}
-	netSync.Init(&NetSyncConfig{
-		BlockChain:    bc,
-		PubSubManager: pb,
-		Server:        server,
-		TxMemPool:     txPool,
-		Consensus:     consensus,
-	})
-
-	block := blockchain.ShardToBeaconBlock{}
-	block.Header.Height = 2
-	netSync.Start()
-	netSync.cMessage <- &wire.MessageShardToBeacon{Block: &block}
-	<-time.Tick(1 * time.Second)
-	res := netSync.handleCacheBlock("s2b" + block.Hash().String())
-	if !res {
-		t.Fatal("Block should be in pool")
-	}
-	netSync.Stop()
-}
-
 func TestNetSyncHandleMessageCrossShard(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
@@ -624,53 +533,6 @@ func TestNetSyncQueueTx(t *testing.T) {
 	netSync.Stop()
 }
 
-func TestNetSyncQueueTxToken(t *testing.T) {
-	netSync := NetSync{}
-	netSync.Init(&NetSyncConfig{
-		BlockChain:    bc,
-		PubSubManager: pb,
-		Server:        server,
-		TxMemPool:     txPool,
-		Consensus:     consensus,
-	})
-
-	netSync.config.RoleInCommittees = 0
-	pr := &peer.Peer{}
-	done := make(chan struct{})
-	rawTxBytes, _, err := base58.Base58Check{}.Decode(base58CheckDataTxToken)
-	if err != nil {
-		t.Fatal("Error parse tx", err)
-	}
-	var tx transaction.TxNormalToken
-	err = json.Unmarshal(rawTxBytes, &tx)
-	msg := &wire.MessageTxToken{Transaction: &tx}
-	// no start net sync
-	if atomic.AddInt32(&netSync.shutdown, 1) != 1 {
-		t.Fatal("Netsync is not shutdown")
-	}
-	go func() {
-		<-done
-	}()
-	netSync.QueueTxToken(pr, msg, done)
-	<-time.Tick(1 * time.Second)
-	res := netSync.handleCacheTx(*msg.Transaction.Hash())
-	if res {
-		t.Error("Transaction should NOT be in cache")
-	}
-	if atomic.AddInt32(&netSync.shutdown, -1) != 0 {
-		t.Fatal("Netsync is shutdown")
-	}
-	// start netsyc
-	netSync.Start()
-	netSync.QueueTxToken(pr, msg, done)
-	<-time.Tick(1 * time.Second)
-	res = netSync.handleCacheTx(*msg.Transaction.Hash())
-	if !res {
-		t.Error("Transaction should be in cache")
-	}
-	netSync.Stop()
-}
-
 func TestNetSyncQueueTxPrivacyToken(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
@@ -732,8 +594,6 @@ func TestNetSyncQueueBlock(t *testing.T) {
 	done := make(chan struct{})
 	crossShardBlock.Header.Height = 2
 	msgCrossShardBlock := &wire.MessageCrossShard{Block: &crossShardBlock}
-	shardToBeaconBlock.Header.Height = 2
-	msgShardToBeaconBlock := &wire.MessageShardToBeacon{Block: &shardToBeaconBlock}
 	shardBlock.Header.Height = 2
 	msgShardBlock := &wire.MessageBlockShard{Block: &shardBlock}
 	beaconBlock.Header.Height = 2
@@ -748,15 +608,6 @@ func TestNetSyncQueueBlock(t *testing.T) {
 	netSync.QueueBlock(pr, msgCrossShardBlock, done)
 	<-time.Tick(1 * time.Second)
 	res := netSync.handleCacheBlock("c" + crossShardBlock.Header.Hash().String())
-	if res {
-		t.Error("Block should NOT be in cache")
-	}
-	go func() {
-		<-done
-	}()
-	netSync.QueueBlock(pr, msgShardToBeaconBlock, done)
-	<-time.Tick(1 * time.Second)
-	res = netSync.handleCacheBlock("s2b" + shardToBeaconBlock.Header.Hash().String())
 	if res {
 		t.Error("Block should NOT be in cache")
 	}
@@ -789,9 +640,6 @@ func TestNetSyncQueueBlock(t *testing.T) {
 	if !res {
 		t.Error("Block should be in cache")
 	}
-	netSync.QueueBlock(pr, msgShardToBeaconBlock, done)
-	<-time.Tick(1 * time.Second)
-	res = netSync.handleCacheBlock("s2b" + shardToBeaconBlock.Header.Hash().String())
 	if !res {
 		t.Error("Block should be in cache")
 	}
@@ -879,37 +727,14 @@ func TestNetSyncQueueGetBlockBeacon(t *testing.T) {
 	netSync.Stop()
 }
 
-func TestNetSyncHandleMessageGetShardToBeacon(t *testing.T) {
-	netSync := NetSync{}
-	netSync.Init(&NetSyncConfig{
-		BlockChain:        bc,
-		PubSubManager:     pb,
-		Server:            server,
-		TxMemPool:         txPool,
-		Consensus:         consensus,
-		ShardToBeaconPool: shardToBeaconPool,
-	})
-
-	// start netsyc
-	netSync.Start()
-	netSync.cMessage <- msgGetShardToBeacon
-	//<-time.Tick(1 * time.Second)
-	netSync.cMessage <- msgGetShardToBeaconWithHash
-	//<-time.Tick(1 * time.Second)
-	netSync.cMessage <- msgGetShardToBeaconWithSenderID
-	<-time.Tick(3 * time.Second)
-	netSync.Stop()
-}
-
 func TestNetSyncHandleMessageGetCrossShard(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
-		BlockChain:     bc,
-		PubSubManager:  pb,
-		Server:         server,
-		TxMemPool:      txPool,
-		Consensus:      consensus,
-		CrossShardPool: crossShardPool,
+		BlockChain:    bc,
+		PubSubManager: pb,
+		Server:        server,
+		TxMemPool:     txPool,
+		Consensus:     consensus,
 	})
 
 	// start netsyc

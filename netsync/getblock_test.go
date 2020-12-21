@@ -44,13 +44,11 @@ var _ = func() (_ struct{}) {
 func TestNetSyncGetBlkShardByHashAndSend(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
-		BlockChain:        bc,
-		PubSubManager:     pb,
-		Server:            server,
-		TxMemPool:         txPool,
-		Consensus:         consensus,
-		CrossShardPool:    crossShardPool,
-		ShardToBeaconPool: shardToBeaconPool,
+		BlockChain:    bc,
+		PubSubManager: pb,
+		Server:        server,
+		TxMemPool:     txPool,
+		Consensus:     consensus,
 	})
 	// type 0: shard block
 	netSync.getBlockShardByHashAndSend(peerID, blockShard, []common.Hash{hash0, hash1, hash2}, 1)
@@ -60,13 +58,11 @@ func TestNetSyncGetBlkShardByHashAndSend(t *testing.T) {
 func TestNetSyncCreateBlkShardMsgByType(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
-		BlockChain:        bc,
-		PubSubManager:     pb,
-		Server:            server,
-		TxMemPool:         txPool,
-		Consensus:         consensus,
-		CrossShardPool:    crossShardPool,
-		ShardToBeaconPool: shardToBeaconPool,
+		BlockChain:    bc,
+		PubSubManager: pb,
+		Server:        server,
+		TxMemPool:     txPool,
+		Consensus:     consensus,
 	})
 	// type 0: shard block
 	_, err := netSync.createBlockShardMsgByType(shardBlockNoCrossShard, 0, 1)
@@ -94,13 +90,11 @@ func TestNetSyncCreateBlkShardMsgByType(t *testing.T) {
 func TestNetSyncGetBlkBeaconByHashAndSend(t *testing.T) {
 	netSync := NetSync{}
 	netSync.Init(&NetSyncConfig{
-		BlockChain:        bc,
-		PubSubManager:     pb,
-		Server:            server,
-		TxMemPool:         txPool,
-		Consensus:         consensus,
-		CrossShardPool:    crossShardPool,
-		ShardToBeaconPool: shardToBeaconPool,
+		BlockChain:    bc,
+		PubSubManager: pb,
+		Server:        server,
+		TxMemPool:     txPool,
+		Consensus:     consensus,
 	})
 	netSync.getBlockBeaconByHashAndSend(peerID, []common.Hash{hash0, hash1, hash2})
 }

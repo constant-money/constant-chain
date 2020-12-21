@@ -23,7 +23,6 @@ type ChainState struct {
 type MessagePeerState struct {
 	Beacon                ChainState
 	Shards                map[byte]ChainState
-	ShardToBeaconPool     map[byte][]uint64
 	CrossShardPool        map[byte]map[byte][]uint64
 	Timestamp             int64
 	SenderID              string

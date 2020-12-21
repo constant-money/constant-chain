@@ -3,6 +3,12 @@ package btcrelaying
 import (
 	"container/list"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/common"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,6 +98,7 @@ type BlockChain struct {
 	checkpoints         []chaincfg.Checkpoint
 	checkpointsByHeight map[int32]*chaincfg.Checkpoint
 	db                  database.DB
+	dbPath              string
 	chainParams         *chaincfg.Params
 	timeSource          MedianTimeSource
 	sigCache            *txscript.SigCache
@@ -1782,8 +1789,8 @@ type Config struct {
 	// store all metadata created by this package such as the utxo set.
 	//
 	// This field is required.
-	DB database.DB
-
+	DB     database.DB
+	dbPath string
 	// Interrupt specifies a channel the caller can close to signal that
 	// long running operations, such as catching up indexes or performing
 	// database migrations, should be interrupted.
@@ -1881,6 +1888,7 @@ func New(config *Config, genesisBlkHeight int32) (*BlockChain, error) {
 		checkpoints:         config.Checkpoints,
 		checkpointsByHeight: checkpointsByHeight,
 		db:                  config.DB,
+		dbPath:              config.dbPath,
 		chainParams:         params,
 		timeSource:          config.TimeSource,
 		sigCache:            config.SigCache,
@@ -1929,4 +1937,105 @@ func New(config *Config, genesisBlkHeight int32) (*BlockChain, error) {
 		bestNode.workSum)
 
 	return &b, nil
+}
+
+func (b *BlockChain) RemoveBackup(backupFile string) {
+	backupFile = filepath.Join(b.dbPath, backupFile)
+	os.Remove(backupFile)
+	return
+}
+func (b *BlockChain) BackupDB(backupFile string) error {
+	b.db.Close()
+
+	backupFile = filepath.Join(b.dbPath, backupFile)
+	fmt.Println("backupFile", backupFile)
+
+	if err := os.MkdirAll(filepath.Dir(backupFile), 0700); err != nil {
+		panic(err)
+	}
+	fmt.Println("mkdir ", filepath.Dir(backupFile))
+
+	err := common.CompressDatabase(b.dbPath, backupFile)
+	if err != nil {
+		panic(err)
+	}
+	db, err := database.Open(testDbType, b.dbPath, blockDataNet)
+	if err != nil {
+		return err
+	}
+	b.db = db
+
+	removeUnusedBackupDatabase(backupFile)
+	return nil
+}
+
+func removeUnusedBackupDatabase(filePath string) error {
+	strs := strings.Split(filePath, "/")
+
+	//Get latest epoch
+	latestEpoch, err := strconv.Atoi(strs[len(strs)-1])
+	if err != nil {
+		return err
+	}
+
+	//Get path directory of this file
+	path := filePath
+	for i := len(path) - 1; i > -1; i-- {
+		if path[i] != '/' {
+			path = path[:len(path)-1]
+		} else {
+			break
+		}
+	}
+
+	//Get needed epoch to download
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return err
+	}
+
+	//Get file name and compare with latest epoch
+	for _, file := range files {
+
+		epoch, err := strconv.Atoi(file.Name())
+		if err != nil {
+			return err
+		}
+
+		if epoch != latestEpoch && epoch != latestEpoch-1 {
+			name := path + "/" + file.Name()
+			err = os.Remove(name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (b *BlockChain) RestoreDBFromBackup(src string) error {
+	b.db.Close()
+	if err := os.RemoveAll(b.dbPath); err != nil {
+		panic(err)
+	}
+	//Create new data
+	if err := os.MkdirAll(b.dbPath, 0700); err != nil {
+		panic(err)
+	}
+
+	err := common.DecompressDatabaseBackup(src, b.dbPath)
+	if err != nil {
+		return err
+	}
+	db, err := database.Open(testDbType, b.dbPath, blockDataNet)
+	if err != nil {
+		return err
+	}
+	b.db = db
+
+	return nil
 }

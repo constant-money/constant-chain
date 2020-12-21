@@ -2,9 +2,13 @@ package blockchain
 
 import (
 	"encoding/json"
+	"github.com/incognitochain/incognito-chain/incdb"
 	"sync"
 	"time"
 
+	lru "github.com/hashicorp/golang-lru"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/multiview"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -15,16 +19,21 @@ type ShardChain struct {
 	shardID   int
 	multiView *multiview.MultiView
 
-	BlockGen   *BlockGenerator
-	Blockchain *BlockChain
-	ChainName  string
-	Ready      bool
+	BlockGen    *BlockGenerator
+	Blockchain  *BlockChain
+	hashHistory *lru.Cache
+	ChainName   string
+	Ready       bool
 
 	insertLock sync.Mutex
 }
 
 func NewShardChain(shardID int, multiView *multiview.MultiView, blockGen *BlockGenerator, blockchain *BlockChain, chainName string) *ShardChain {
 	return &ShardChain{shardID: shardID, multiView: multiView, BlockGen: blockGen, Blockchain: blockchain, ChainName: chainName}
+}
+
+func (chain *ShardChain) GetDatabase() incdb.Database {
+	return chain.Blockchain.GetShardChainDatabase(byte(chain.shardID))
 }
 
 func (chain *ShardChain) GetFinalView() multiview.View {
@@ -111,6 +120,16 @@ func (chain *ShardChain) GetCommittee() []incognitokey.CommitteePublicKey {
 	return append(result, chain.GetBestState().ShardCommittee...)
 }
 
+func (chain *ShardChain) GetCommitteeByHeight(h uint64) ([]incognitokey.CommitteePublicKey, error) {
+	bcStateRootHash := chain.Blockchain.GetBeaconBestState().ConsensusStateDBRootHash
+	bcDB := chain.Blockchain.GetBeaconChainDatabase()
+	bcStateDB, err := statedb.NewWithPrefixTrie(bcStateRootHash, statedb.NewDatabaseAccessWarper(bcDB))
+	if err != nil {
+		return nil, err
+	}
+	return statedb.GetOneShardCommittee(bcStateDB, byte(chain.shardID)), nil
+}
+
 func (chain *ShardChain) GetPendingCommittee() []incognitokey.CommitteePublicKey {
 	result := []incognitokey.CommitteePublicKey{}
 	return append(result, chain.GetBestState().ShardPendingValidator...)
@@ -134,9 +153,10 @@ func (chain *ShardChain) GetLastProposerIndex() int {
 }
 
 func (chain *ShardChain) CreateNewBlock(version int, proposer string, round int, startTime int64) (common.BlockInterface, error) {
-	Logger.log.Infof("Begin Start New Block Shard %+v", time.Now())
-	newBlock, err := chain.Blockchain.NewBlockShard(chain.GetBestState(), version, proposer, round, time.Unix(startTime, 0))
-	Logger.log.Infof("Finish New Block Shard %+v", time.Now())
+	Logger.log.Infof("Begin Start New Block Shard %+v", time.Unix(startTime, 0))
+	time1 := time.Now()
+	newBlock, err := chain.Blockchain.NewBlockShard(chain.GetBestState(), version, proposer, round, startTime)
+	Logger.log.Infof("Finish New Block Shard %+v", time.Since(time1).Seconds())
 	if err != nil {
 		Logger.log.Error(err)
 		return nil, err
@@ -184,7 +204,7 @@ func (chain *ShardChain) ValidateBlockSignatures(block common.BlockInterface, co
 	}
 
 	if err := chain.Blockchain.config.ConsensusEngine.ValidateBlockCommitteSig(block, committee); err != nil {
-		return nil
+		return err
 	}
 	return nil
 }
@@ -197,10 +217,17 @@ func (chain *ShardChain) InsertBlk(block common.BlockInterface, shouldValidate b
 	return err
 }
 
+func (chain *ShardChain) CheckExistedBlk(block common.BlockInterface) bool {
+	blkHash := block.Hash()
+	_, err := rawdbv2.GetBeaconBlockByHash(chain.Blockchain.GetShardChainDatabase(byte(chain.shardID)), *blkHash)
+	return err == nil
+}
+
 func (chain *ShardChain) InsertAndBroadcastBlock(block common.BlockInterface) error {
 	go chain.Blockchain.config.Server.PushBlockToAll(block, false)
-	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), true)
+	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), false)
 	if err != nil {
+		Logger.log.Error(err)
 		return err
 	}
 	return nil
@@ -232,7 +259,11 @@ func (chain *ShardChain) UnmarshalBlock(blockString []byte) (common.BlockInterfa
 }
 
 func (chain *ShardChain) ValidatePreSignBlock(block common.BlockInterface) error {
-	return chain.Blockchain.VerifyPreSignShardBlock(block.(*ShardBlock), byte(block.(*ShardBlock).GetShardID()))
+	err := chain.Blockchain.VerifyPreSignShardBlock(block.(*ShardBlock), byte(block.(*ShardBlock).GetShardID()))
+	if err != nil {
+		Logger.log.Error("ValidatePreSignBlock Shard", err)
+	}
+	return err
 }
 
 func (chain *ShardChain) GetAllView() []multiview.View {

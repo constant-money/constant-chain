@@ -6,6 +6,7 @@ import (
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/pubsub"
 	"github.com/incognitochain/incognito-chain/wire"
+	peer "github.com/libp2p/go-libp2p-peer"
 )
 
 type EngineConfig struct {
@@ -21,6 +22,7 @@ type NodeInterface interface {
 	GetPrivateKey() string
 	GetUserMiningState() (role string, chainID int)
 	RequestMissingViewViaStream(peerID string, hashes [][]byte, fromCID int, chainName string) (err error)
+	GetSelfPeerID() peer.ID
 }
 
 type ConsensusInterface interface {

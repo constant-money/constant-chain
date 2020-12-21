@@ -37,15 +37,16 @@ var HttpHandler = map[string]httpHandler{
 	getPendingTxsInBlockgen: (*HttpServer).handleGetPendingTxsInBlockgen,
 
 	// block pool ver.2
-	// getShardToBeaconPoolStateV2: (*HttpServer).handleGetShardToBeaconPoolStateV2,
 	// getCrossShardPoolStateV2:    (*HttpServer).handleGetCrossShardPoolStateV2,
 	// getShardPoolStateV2:         (*HttpServer).handleGetShardPoolStateV2,
 	// getBeaconPoolStateV2:        (*HttpServer).handleGetBeaconPoolStateV2,
 	// // ver.1
-	// //getShardToBeaconPoolState: (*HttpServer).handleGetShardToBeaconPoolState,
 	// //getCrossShardPoolState:    (*HttpServer).handleGetCrossShardPoolState,
 	// getNextCrossShard: (*HttpServer).handleGetNextCrossShard,
 
+	//backup and preload
+	setBackup:       (*HttpServer).handleSetBackup,
+	getLatestBackup: (*HttpServer).handleGetLatestBackup,
 	// block
 	getBestBlock:                (*HttpServer).handleGetBestBlock,
 	getBestBlockHash:            (*HttpServer).handleGetBestBlockHash,
@@ -63,6 +64,7 @@ var HttpHandler = map[string]httpHandler{
 
 	// transaction
 	listOutputCoins:                         (*HttpServer).handleListOutputCoins,
+	listOutputCoinsFromCache:                (*HttpServer).handleListOutputCoinsFromCache,
 	listOutputTokens:                         (*HttpServer).handleListOutputCoins,
 	createRawTransaction:                    (*HttpServer).handleCreateRawTransaction,
 	sendRawTransaction:                      (*HttpServer).handleSendRawTransaction,
@@ -70,7 +72,9 @@ var HttpHandler = map[string]httpHandler{
 	createAndSendTransaction:                (*HttpServer).handleCreateAndSendTx,
 	getTransactionByHash:                    (*HttpServer).handleGetTransactionByHash,
 	gettransactionhashbyreceiver:            (*HttpServer).handleGetTransactionHashByReceiver,
+	gettransactionhashbyreceiverv2:          (*HttpServer).handleGetTransactionHashByReceiverV2,
 	gettransactionbyreceiver:                (*HttpServer).handleGetTransactionByReceiver,
+	gettransactionbyreceiverv2:              (*HttpServer).handleGetTransactionByReceiverV2,
 	createAndSendStakingTransaction:         (*HttpServer).handleCreateAndSendStakingTx,
 	createAndSendStopAutoStakingTransaction: (*HttpServer).handleCreateAndSendStopAutoStakingTransaction,
 	randomCommitments:                       (*HttpServer).handleRandomCommitments,
@@ -87,7 +91,9 @@ var HttpHandler = map[string]httpHandler{
 	getAndSendTxsFromFileV2: (*HttpServer).handleGetAndSendTxsFromFileV2,
 	unlockMempool:           (*HttpServer).handleUnlockMempool,
 	getAutoStakingByHeight:  (*HttpServer).handleGetAutoStakingByHeight,
+	getCommitteeState:       (*HttpServer).handleGetCommitteeState,
 	getRewardAmountByEpoch:  (*HttpServer).handleGetRewardAmountByEpoch,
+
 	//=================================
 
 	// Beststate
@@ -130,6 +136,7 @@ var HttpHandler = map[string]httpHandler{
 	// wallet
 	getPublicKeyFromPaymentAddress:   (*HttpServer).handleGetPublicKeyFromPaymentAddress,
 	defragmentAccount:                (*HttpServer).handleDefragmentAccount,
+	defragmentAccountToken:           (*HttpServer).handleDefragmentAccountToken,
 	getStackingAmount:                (*HttpServer).handleGetStakingAmount,
 	hashToIdenticon:                  (*HttpServer).handleHashToIdenticon,
 	createAndSendBurningRequest:      (*HttpServer).handleCreateAndSendBurningRequest,
@@ -161,18 +168,25 @@ var HttpHandler = map[string]httpHandler{
 	getProducersBlackListDetail: (*HttpServer).handleGetProducersBlackListDetail,
 
 	// pde
-	getPDEState:                           (*HttpServer).handleGetPDEState,
-	createAndSendTxWithWithdrawalReq:      (*HttpServer).handleCreateAndSendTxWithWithdrawalReq,
-	createAndSendTxWithPTokenTradeReq:     (*HttpServer).handleCreateAndSendTxWithPTokenTradeReq,
-	createAndSendTxWithPRVTradeReq:        (*HttpServer).handleCreateAndSendTxWithPRVTradeReq,
-	createAndSendTxWithPTokenContribution: (*HttpServer).handleCreateAndSendTxWithPTokenContribution,
-	createAndSendTxWithPRVContribution:    (*HttpServer).handleCreateAndSendTxWithPRVContribution,
-	getPDEContributionStatus:              (*HttpServer).handleGetPDEContributionStatus,
-	getPDEContributionStatusV2:            (*HttpServer).handleGetPDEContributionStatusV2,
-	getPDETradeStatus:                     (*HttpServer).handleGetPDETradeStatus,
-	getPDEWithdrawalStatus:                (*HttpServer).handleGetPDEWithdrawalStatus,
-	convertPDEPrices:                      (*HttpServer).handleConvertPDEPrices,
-	extractPDEInstsFromBeaconBlock:        (*HttpServer).handleExtractPDEInstsFromBeaconBlock,
+	getPDEState:                                (*HttpServer).handleGetPDEState,
+	createAndSendTxWithWithdrawalReq:           (*HttpServer).handleCreateAndSendTxWithWithdrawalReq,
+	createAndSendTxWithWithdrawalReqV2:         (*HttpServer).handleCreateAndSendTxWithWithdrawalReqV2,
+	createAndSendTxWithPDEFeeWithdrawalReq:     (*HttpServer).handleCreateAndSendTxWithPDEFeeWithdrawalReq,
+	createAndSendTxWithPTokenTradeReq:          (*HttpServer).handleCreateAndSendTxWithPTokenTradeReq,
+	createAndSendTxWithPTokenCrossPoolTradeReq: (*HttpServer).handleCreateAndSendTxWithPTokenCrossPoolTradeReq,
+	createAndSendTxWithPRVTradeReq:             (*HttpServer).handleCreateAndSendTxWithPRVTradeReq,
+	createAndSendTxWithPRVCrossPoolTradeReq:    (*HttpServer).handleCreateAndSendTxWithPRVCrossPoolTradeReq,
+	createAndSendTxWithPTokenContribution:      (*HttpServer).handleCreateAndSendTxWithPTokenContribution,
+	createAndSendTxWithPRVContribution:         (*HttpServer).handleCreateAndSendTxWithPRVContribution,
+	createAndSendTxWithPTokenContributionV2:    (*HttpServer).handleCreateAndSendTxWithPTokenContributionV2,
+	createAndSendTxWithPRVContributionV2:       (*HttpServer).handleCreateAndSendTxWithPRVContributionV2,
+	getPDEContributionStatus:                   (*HttpServer).handleGetPDEContributionStatus,
+	getPDEContributionStatusV2:                 (*HttpServer).handleGetPDEContributionStatusV2,
+	getPDETradeStatus:                          (*HttpServer).handleGetPDETradeStatus,
+	getPDEWithdrawalStatus:                     (*HttpServer).handleGetPDEWithdrawalStatus,
+	getPDEFeeWithdrawalStatus:                  (*HttpServer).handleGetPDEFeeWithdrawalStatus,
+	convertPDEPrices:                           (*HttpServer).handleConvertPDEPrices,
+	extractPDEInstsFromBeaconBlock:             (*HttpServer).handleExtractPDEInstsFromBeaconBlock,
 
 	getBurningAddress: (*HttpServer).handleGetBurningAddress,
 
@@ -226,23 +240,21 @@ var HttpHandler = map[string]httpHandler{
 	createAndSendBurningForDepositToSCRequest: (*HttpServer).handleCreateAndSendBurningForDepositToSCRequest,
 
 	//new pool info
-	getBeaconPoolInfo:        (*HttpServer).hanldeGetBeaconPoolInfo,
-	getShardToBeaconPoolInfo: (*HttpServer).handleGetShardToBeaconPoolInfo,
-	getShardPoolInfo:         (*HttpServer).hanldeGetShardPoolInfo,
-	getCrossShardPoolInfo:    (*HttpServer).hanldeGetCrossShardPoolInfo,
-	getAllView:               (*HttpServer).hanldeGetAllView,
-	getAllViewDetail:         (*HttpServer).hanldeGetAllViewDetail,
+	getBeaconPoolInfo:     (*HttpServer).hanldeGetBeaconPoolInfo,
+	getShardPoolInfo:      (*HttpServer).hanldeGetShardPoolInfo,
+	getCrossShardPoolInfo: (*HttpServer).hanldeGetCrossShardPoolInfo,
+	getAllView:            (*HttpServer).hanldeGetAllView,
+	getAllViewDetail:      (*HttpServer).hanldeGetAllViewDetail,
 
 	// feature reward
 	getRewardFeature: (*HttpServer).handleGetRewardFeature,
 
-	// "testbuilddoublespend": (*HttpServer).handleTestBuildDoubleSpendTx,
-	// "testbuildduplicateinput": (*HttpServer).handleTestBuildDuplicateInputTx,
-	// "testbuildoutgtin": (*HttpServer).handleTestBuildOutGtInTx,
-	// "testbuildreceiverexists": (*HttpServer).handleTestBuildReceiverExistsTx,
-	// "testbuilddoublespendtoken": (*HttpServer).handleTestBuildDoubleSpendTokenTx,
-	// "testbuildduplicateinputtoken": (*HttpServer).handleTestBuildDuplicateInputTokenTx,
-	// "testbuildreceiverexiststoken": (*HttpServer).handleTestBuildReceiverExistsTokenTx,
+	// get committeeByHeight
+
+	getTotalStaker: (*HttpServer).handleGetTotalStaker,
+
+	//validators state
+	getValKeyState: (*HttpServer).handleGetValKeyState,
 }
 
 // Commands that are available to a limited user
@@ -263,6 +275,7 @@ var LimitedHttpHandler = map[string]httpHandler{
 	setTxFee:                         (*HttpServer).handleSetTxFee,
 	convertNativeTokenToPrivacyToken: (*HttpServer).handleConvertNativeTokenToPrivacyToken,
 	convertPrivacyTokenToNativeToken: (*HttpServer).handleConvertPrivacyTokenToNativeToken,
+	submitKey:                     	  (*HttpServer).handleSubmitKey,
 }
 
 var WsHandler = map[string]wsHandler{

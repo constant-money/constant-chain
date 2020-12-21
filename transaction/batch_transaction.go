@@ -26,23 +26,24 @@ func (b *batchTransaction) AddTxs(txs []metadata.Transaction) {
 	b.txs = append(b.txs, txs...)
 }
 
-func (b *batchTransaction) Validate(transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB) (bool, error, int) {
-	return b.validateBatchTxsByItself(b.txs, transactionStateDB, bridgeStateDB)
+func (b *batchTransaction) Validate(transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, boolParams map[string]bool) (bool, error, int) {
+	return b.validateBatchTxsByItself(b.txs, transactionStateDB, bridgeStateDB, boolParams)
 }
 
-func (b *batchTransaction) validateBatchTxsByItself(txList []metadata.Transaction, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB) (bool, error, int) {
+func (b *batchTransaction) validateBatchTxsByItself(txList []metadata.Transaction, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, boolParams map[string]bool) (bool, error, int) {
 	prvCoinID := &common.Hash{}
 	err := prvCoinID.SetBytes(common.PRVCoinID[:])
 	if err != nil {
 		return false, err, -1
 	}
-	bulletProofListVer1 := make([]*privacy.AggregatedRangeProofV1, 0)
-	bulletProofListVer2 := make([]*privacy.AggregatedRangeProofV2, 0)
+	var bulletProofListVer1 []*privacy.AggregatedRangeProofV1
+	var bulletProofListVer2 []*privacy.AggregatedRangeProofV2
 
 	for i, tx := range txList {
 		shardID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
-		hasPrivacy := tx.IsPrivacy()
-		ok, err := tx.ValidateTransaction(hasPrivacy, transactionStateDB, bridgeStateDB, shardID, prvCoinID, true, false)
+		boolParams["hasPrivacy"] = tx.IsPrivacy()
+
+		ok, batchableProofs, err := tx.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, prvCoinID)
 		if !ok {
 			return false, err, i
 		}
@@ -56,19 +57,17 @@ func (b *batchTransaction) validateBatchTxsByItself(txList []metadata.Transactio
 			}
 		}
 
-		if hasPrivacy {
-			bulletproof := tx.GetProof().GetAggregatedRangeProof()
+		for _, batchableProof := range batchableProofs{
+			bulletproof := batchableProof.GetAggregatedRangeProof()
 			if bulletproof == nil {
 				return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, fmt.Errorf("Privacy TX Proof missing at index %d", i)), -1
 			}
-			if tx.GetProof().GetVersion() == 1 {
-				bulletproofV1 := bulletproof.(*privacy.AggregatedRangeProofV1)
-				bulletProofListVer1 = append(bulletProofListVer1, bulletproofV1)
-			} else if tx.GetProof().GetVersion() == 2 {
-				bulletproofV2 := bulletproof.(*privacy.AggregatedRangeProofV2)
-				bulletProofListVer2 = append(bulletProofListVer2, bulletproofV2)
+			switch proof_specific := bulletproof.(type) {
+			case *privacy.AggregatedRangeProofV1:
+				bulletProofListVer1 = append(bulletProofListVer1, proof_specific)
+			case *privacy.AggregatedRangeProofV2:
+				bulletProofListVer2 = append(bulletProofListVer2, proof_specific)
 			}
-
 		}
 	}
 	//TODO: add go routine

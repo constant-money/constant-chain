@@ -39,7 +39,9 @@ func main() {
 	}
 
 	// load old key committee pub file
-	oldCommitteeKeyFile, err := ioutil.ReadFile(os.Getenv("OLD_PUBKEYS"))
+	oldPubkeyPath := os.Getenv("OLD_PUBKEYS")
+	fmt.Println("Read file from " + oldPubkeyPath)
+	oldCommitteeKeyFile, err := ioutil.ReadFile(oldPubkeyPath)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -105,7 +105,7 @@ func NewGetBeaconBestState(data *blockchain.BeaconBestState) *GetBeaconBestState
 
 	result.RewardReceiver = make(map[string]string)
 	for k, v := range data.RewardReceiver {
-		result.RewardReceiver[k] = v
+		result.RewardReceiver[k] = v.String()
 	}
 
 	result.ShardCommittee = make(map[byte][]string)
@@ -136,8 +136,18 @@ func NewGetBeaconBestState(data *blockchain.BeaconBestState) *GetBeaconBestState
 		}
 	}
 	result.AutoStaking = make(map[string]bool)
-	for k, v := range data.AutoStaking {
+	for k, v := range data.AutoStaking.GetMap() {
 		result.AutoStaking[k] = v
 	}
 	return result
+}
+
+type GetTotalStaker struct {
+	TotalStaker int `json:"TotalStaker"`
+}
+
+func NewGetTotalStaker(total int) *GetTotalStaker {
+	return &GetTotalStaker{
+		TotalStaker: total,
+	}
 }

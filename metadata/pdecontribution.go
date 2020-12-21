@@ -154,7 +154,7 @@ func (pc PDEContribution) ValidateSanityData(chainRetriever ChainRetriever, shar
 }
 
 func (pc PDEContribution) ValidateMetadataByItself() bool {
-	return pc.Type == PDEContributionMeta
+	return pc.Type == PDEContributionMeta || pc.Type == PDEPRVRequiredContributionRequestMeta
 }
 
 func (pc PDEContribution) Hash() *common.Hash {
@@ -179,7 +179,7 @@ func (pc *PDEContribution) BuildReqActions(tx Transaction, chainRetriever ChainR
 		return [][]string{}, err
 	}
 	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
-	action := []string{strconv.Itoa(PDEContributionMeta), actionContentBase64Str}
+	action := []string{strconv.Itoa(pc.Type), actionContentBase64Str}
 	return [][]string{action}, nil
 }
 

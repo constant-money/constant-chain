@@ -22,7 +22,6 @@ type PortalRequestPTokens struct {
 }
 
 // PortalRequestPTokensAction - shard validator creates instruction that contain this action content
-// it will be append to ShardToBeaconBlock
 type PortalRequestPTokensAction struct {
 	Meta    PortalRequestPTokens
 	TxReqID common.Hash

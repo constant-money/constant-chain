@@ -49,6 +49,10 @@ const (
 	StorePreviousBeaconBestStateError
 	GetPreviousBeaconBestStateError
 	CleanUpPreviousBeaconBestStateError
+	StoreBeaconPreCommitteeError
+	StoreBeaconPreCommitteeInfoError
+	GetBeaconPreCommitteeInfoError
+	GetShardPendingValidatorsError
 	// Shard
 	StoreShardBlockError
 	StoreShardBlockWithViewError
@@ -72,6 +76,7 @@ const (
 	GetPreviousShardBestStateError
 	CleanUpPreviousShardBestStateError
 	RestoreCrossShardNextHeightsError
+	StoreShardPreCommitteeError
 	// tx
 	StoreTransactionIndexError
 	GetTransactionByHashError
@@ -83,6 +88,12 @@ const (
 	StoreRelayingBNBHeaderError
 	GetRelayingBNBHeaderError
 	GetBNBDataHashError
+
+	// output coins by OTA key
+	StoreOutcoinByOTAKeyError
+	GetOutcoinByOTAKeyError
+	StoreOTAKeyError
+	GetOTAKeyError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -159,11 +170,20 @@ var ErrCodeMessage = map[int]struct {
 	DeleteShardFeatureRootHashError:         {-4027, "Delete Shard Feature Root Hash Error"},
 	DeleteShardSlashRootHashError:           {-4028, "Delete Shard Slash Root Hash Error"},
 	RestoreCrossShardNextHeightsError:       {-4029, "Restore Cross Shard Next Heights Error"},
+	StoreBeaconPreCommitteeError:            {-4030, "Store Beacon Pre Committee Error"},
+	StoreBeaconPreCommitteeInfoError:        {-4031, "Store Beacon Pre Committee Info Error"},
+	GetBeaconPreCommitteeInfoError:          {-4032, "Get Beacon Pre Committee Info Error"},
+	GetShardPendingValidatorsError:          {-4033, "Get Shard Pending Validators Error"},
 
 	// relaying
 	StoreRelayingBNBHeaderError: {-5001, "Store relaying header bnb error"},
 	GetRelayingBNBHeaderError:   {-5002, "Get relaying header bnb error"},
 	GetBNBDataHashError:         {-5003, "Get bnb data hash by block height error"},
+
+	StoreOutcoinByOTAKeyError: 	 {-6001, "Store output coin by OTA key error"},
+	GetOutcoinByOTAKeyError: 	 {-6002, "Get output coin by OTA key error"},
+	StoreOTAKeyError: 	 {-6003, "Store OTA key error"},
+	GetOTAKeyError: 	 {-6004, "Get OTA keys error"},
 }
 
 type RawdbError struct {

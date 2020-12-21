@@ -77,8 +77,8 @@ func Staking(args string, serverTime int64) (string, error) {
 		println("Invalid meta data reward receiver payment address param")
 		return "", errors.New("Invalid meta data reward receiver payment address param")
 	}
-	stakingAmountShard, ok := metaDataParam["StakingAmountShard"].(float64)
-	if !ok {
+	stakingAmountShard, err := common.AssertAndConvertStrToNumber(metaDataParam["StakingAmountShard"])
+	if err != nil {
 		println("Invalid meta data staking amount param")
 		return "", errors.New("Invalid meta data staking amount param")
 	}

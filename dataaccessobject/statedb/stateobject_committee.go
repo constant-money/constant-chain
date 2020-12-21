@@ -10,7 +10,7 @@ import (
 	"github.com/incognitochain/incognito-chain/incognitokey"
 )
 
-type CommitteeState struct {
+type CommitteeStatev1 struct {
 	shardID            int
 	role               int
 	committeePublicKey incognitokey.CommitteePublicKey
@@ -19,16 +19,65 @@ type CommitteeState struct {
 	enterTime          int64 // unix time
 }
 
+func Convert2NewState(old *CommitteeStatev1) (*CommitteeState, error) {
+	// wl, err := wallet.Base58CheckDeserialize(old.rewardReceiver)
+	// if err != nil {
+	// 	fmt.Printf("\n\n[aaaa] %v %v %v %v %v\n\n", old.role, old.shardID, old.rewardReceiver, old.enterTime, old.committeePublicKey)
+	// 	return nil, err
+	// }
+	return &CommitteeState{
+		shardID:            old.shardID,
+		role:               old.role,
+		committeePublicKey: old.committeePublicKey,
+		enterTime:          old.enterTime,
+	}, nil
+}
+
+func NewCommitteeStatev1() *CommitteeStatev1 {
+	return &CommitteeStatev1{}
+}
+
+func (c *CommitteeStatev1) UnmarshalJSON(data []byte) error {
+	temp := struct {
+		ShardID            int
+		Role               int
+		CommitteePublicKey incognitokey.CommitteePublicKey
+		RewardReceiver     string
+		AutoStaking        bool
+		EnterTime          int64
+	}{}
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return err
+	}
+	c.shardID = temp.ShardID
+	c.role = temp.Role
+	c.committeePublicKey = temp.CommitteePublicKey
+	c.rewardReceiver = temp.RewardReceiver
+	c.autoStaking = temp.AutoStaking
+	c.enterTime = temp.EnterTime
+	return nil
+}
+
+type CommitteeState struct {
+	shardID            int
+	role               int
+	committeePublicKey incognitokey.CommitteePublicKey
+	// rewardReceiver     privacy.PaymentAddress
+	// autoStaking        bool
+	enterTime int64 // unix time
+}
+
 func NewCommitteeState() *CommitteeState {
 	return &CommitteeState{}
 }
 
-func NewCommitteeStateWithValue(shardID int, role int, committeePublicKey incognitokey.CommitteePublicKey, rewardReceiver string, autoStaking bool) *CommitteeState {
-	return &CommitteeState{shardID: shardID, role: role, committeePublicKey: committeePublicKey, rewardReceiver: rewardReceiver, autoStaking: autoStaking, enterTime: time.Now().UnixNano()}
+func NewCommitteeStateWithValue(shardID int, role int, committeePublicKey incognitokey.CommitteePublicKey) *CommitteeState {
+	return &CommitteeState{shardID: shardID, role: role, committeePublicKey: committeePublicKey, enterTime: time.Now().UnixNano()}
 }
 
-func NewCommitteeStateWithValueAndTime(shardID int, role int, committeePublicKey incognitokey.CommitteePublicKey, rewardReceiver string, autoStaking bool, enterTime int64) *CommitteeState {
-	return &CommitteeState{shardID: shardID, role: role, committeePublicKey: committeePublicKey, rewardReceiver: rewardReceiver, autoStaking: autoStaking, enterTime: enterTime}
+func NewCommitteeStateWithValueAndTime(shardID int, role int, committeePublicKey incognitokey.CommitteePublicKey, enterTime int64) *CommitteeState {
+	return &CommitteeState{shardID: shardID, role: role, committeePublicKey: committeePublicKey, enterTime: enterTime}
 }
 
 func (c CommitteeState) EnterTime() int64 {
@@ -37,22 +86,6 @@ func (c CommitteeState) EnterTime() int64 {
 
 func (c *CommitteeState) SetEnterTime(enterTime int64) {
 	c.enterTime = enterTime
-}
-
-func (c CommitteeState) AutoStaking() bool {
-	return c.autoStaking
-}
-
-func (c *CommitteeState) SetAutoStaking(autoStaking bool) {
-	c.autoStaking = autoStaking
-}
-
-func (c CommitteeState) RewardReceiver() string {
-	return c.rewardReceiver
-}
-
-func (c *CommitteeState) SetRewardReceiver(rewardReceiver string) {
-	c.rewardReceiver = rewardReceiver
 }
 
 func (c CommitteeState) CommitteePublicKey() incognitokey.CommitteePublicKey {
@@ -84,15 +117,11 @@ func (c CommitteeState) MarshalJSON() ([]byte, error) {
 		ShardID            int
 		Role               int
 		CommitteePublicKey incognitokey.CommitteePublicKey
-		RewardReceiver     string
-		AutoStaking        bool
 		EnterTime          int64
 	}{
 		ShardID:            c.shardID,
 		Role:               c.role,
 		CommitteePublicKey: c.committeePublicKey,
-		RewardReceiver:     c.rewardReceiver,
-		AutoStaking:        c.autoStaking,
 		EnterTime:          c.enterTime,
 	})
 	if err != nil {
@@ -106,8 +135,6 @@ func (c *CommitteeState) UnmarshalJSON(data []byte) error {
 		ShardID            int
 		Role               int
 		CommitteePublicKey incognitokey.CommitteePublicKey
-		RewardReceiver     string
-		AutoStaking        bool
 		EnterTime          int64
 	}{}
 	err := json.Unmarshal(data, &temp)
@@ -117,8 +144,6 @@ func (c *CommitteeState) UnmarshalJSON(data []byte) error {
 	c.shardID = temp.ShardID
 	c.role = temp.Role
 	c.committeePublicKey = temp.CommitteePublicKey
-	c.rewardReceiver = temp.RewardReceiver
-	c.autoStaking = temp.AutoStaking
 	c.enterTime = temp.EnterTime
 	return nil
 }
@@ -128,11 +153,11 @@ type CommitteeObject struct {
 	// Write caches.
 	trie Trie // storage trie, which becomes non-nil on first access
 
-	version                int
-	committeePublicKeyHash common.Hash
-	committeeState         *CommitteeState
-	objectType             int
-	deleted                bool
+	version           int
+	committeeObjecKey common.Hash
+	committeeState    *CommitteeState
+	objectType        int
+	deleted           bool
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -144,12 +169,12 @@ type CommitteeObject struct {
 
 func newCommitteeObject(db *StateDB, hash common.Hash) *CommitteeObject {
 	return &CommitteeObject{
-		version:                defaultVersion,
-		db:                     db,
-		committeePublicKeyHash: hash,
-		committeeState:         NewCommitteeState(),
-		objectType:             CommitteeObjectType,
-		deleted:                false,
+		version:           defaultVersion,
+		db:                db,
+		committeeObjecKey: hash,
+		committeeState:    NewCommitteeState(),
+		objectType:        CommitteeObjectType,
+		deleted:           false,
 	}
 }
 
@@ -168,16 +193,13 @@ func newCommitteeObjectWithValue(db *StateDB, key common.Hash, data interface{})
 			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidCommitteeStateType, reflect.TypeOf(data))
 		}
 	}
-	if err := SoValidation.ValidatePaymentAddressSanity(newCommitteeState.rewardReceiver); err != nil {
-		return nil, fmt.Errorf("%+v, got err %+v", ErrInvalidPaymentAddressType, err)
-	}
 	return &CommitteeObject{
-		version:                defaultVersion,
-		committeePublicKeyHash: key,
-		committeeState:         newCommitteeState,
-		db:                     db,
-		objectType:             CommitteeObjectType,
-		deleted:                false,
+		version:           defaultVersion,
+		committeeObjecKey: key,
+		committeeState:    newCommitteeState,
+		db:                db,
+		objectType:        CommitteeObjectType,
+		deleted:           false,
 	}, nil
 }
 
@@ -211,9 +233,6 @@ func (c *CommitteeObject) SetValue(data interface{}) error {
 	if !ok {
 		return fmt.Errorf("%+v, got type %+v", ErrInvalidCommitteeStateType, reflect.TypeOf(data))
 	}
-	if err := SoValidation.ValidatePaymentAddressSanity(newCommitteeState.rewardReceiver); err != nil {
-		return fmt.Errorf("%+v, got err %+v", ErrInvalidPaymentAddressType, err)
-	}
 	c.committeeState = newCommitteeState
 	return nil
 }
@@ -232,7 +251,7 @@ func (c CommitteeObject) GetValueBytes() []byte {
 }
 
 func (c CommitteeObject) GetHash() common.Hash {
-	return c.committeePublicKeyHash
+	return c.committeeObjecKey
 }
 
 func (c CommitteeObject) GetType() int {

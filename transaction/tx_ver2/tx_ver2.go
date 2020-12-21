@@ -1,13 +1,11 @@
 package tx_ver2
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
-	"math/big"
-	"strconv"
-	"time"
+	"github.com/incognitochain/incognito-chain/wallet"
+	"sort"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -16,6 +14,10 @@ import (
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
 	"github.com/incognitochain/incognito-chain/transaction/tx_generic"
 	"github.com/incognitochain/incognito-chain/transaction/utils"
+	"math"
+	"math/big"
+	"strconv"
+	"time"
 
 	"github.com/incognitochain/incognito-chain/privacy/privacy_v2/mlsag"
 )
@@ -134,8 +136,9 @@ func (tx *Tx) CheckAuthorizedSender(publicKey []byte) (bool, error) {
 
 	signature := new(privacy.SchnSignature)
 	if err := signature.SetBytes(metaSig); err != nil {
-		utils.Logger.Log.Error(err)
-		return false, utils.NewTransactionErr(utils.InitTxSignatureFromBytesError, err)
+		newErr := utils.NewTransactionErr(utils.InitTxSignatureFromBytesError, err)
+		utils.Logger.Log.Errorf("Metadata Signature Invalid - ", newErr)
+		return false, newErr
 	}
 	fmt.Println("[CheckAuthorizedSender] Metadata Signature - Validate OK")
 	return verifyKey.Verify(signature, tx.HashWithoutMetadataSig()[:]), nil
@@ -171,7 +174,8 @@ func (tx *Tx) Init(paramsInterface interface{}) error {
 		return errors.New("params of tx Init is not TxPrivacyInitParam")
 	}
 
-	utils.Logger.Log.Debugf("CREATING TX........\n")
+	jsb, _ := json.Marshal(params)
+	utils.Logger.Log.Infof("Create TX v2 with params %s", string(jsb))
 	if err := tx_generic.ValidateTxParams(params); err != nil {
 		return err
 	}
@@ -188,14 +192,14 @@ func (tx *Tx) Init(paramsInterface interface{}) error {
 	if check, err := tx.IsNonPrivacyNonInput(params); check {
 		return err
 	}
-	// if params.HasPrivacy{
-	// 	if err := tx.proveCA(params); err != nil {
-	// 		return err
-	// 	}
-	// }else{
-	// }
 	if err := tx.prove(params); err != nil {
 		return err
+	}
+	jsb, _ = json.Marshal(tx)
+	utils.Logger.Log.Infof("TX Creation complete ! The resulting transaction is : %s", string(jsb))
+	txSize := tx.GetTxActualSize()
+	if txSize > common.MaxTxSize {
+		return utils.NewTransactionErr(utils.ExceedSizeTx, nil, strconv.Itoa(int(txSize)))
 	}
 
 	return nil
@@ -206,9 +210,6 @@ func (tx *Tx) signOnMessage(inp []privacy.PlainCoin, out []*privacy.CoinV2, para
 		return utils.NewTransactionErr(utils.UnexpectedError, errors.New("input transaction must be an unsigned one"))
 	}
 	ringSize := privacy.RingSize
-	if !params.HasPrivacy {
-		ringSize = 1
-	}
 
 	// Generate Ring
 	piBig,piErr := common.RandBigIntMaxRange(big.NewInt(int64(ringSize)))
@@ -273,7 +274,7 @@ func (tx *Tx) signMetadata(privateKey *privacy.PrivateKey) error {
 	sigKey.Set(sk, r)
 
 	// signing
-	signature, err := sigKey.Sign(tx.Hash()[:])
+	signature, err := sigKey.Sign(tx.HashWithoutMetadataSig()[:])
 	if err != nil {
 		return err
 	}
@@ -455,7 +456,7 @@ func (tx *Tx) verifySig(transactionStateDB *statedb.StateDB, shardID byte, token
 	return mlsag.Verify(mlsagSignature, ring, tx.Hash()[:])
 }
 
-func (tx *Tx) Verify(hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash, isBatch bool, isNewTransaction bool) (bool, error) {
+func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
 	var err error
 	var valid bool
 	if tokenID, err = tx_generic.ParseTokenID(tokenID); err != nil {
@@ -466,6 +467,12 @@ func (tx *Tx) Verify(hasPrivacy bool, transactionStateDB *statedb.StateDB, bridg
 		utils.Logger.Log.Errorf("Error in tx %s : ver2 transaction cannot have proofs of any other version - %v", tx.Hash().String(), err)
 		return false, utils.NewTransactionErr(utils.UnexpectedError, err)
 	}
+
+	isNewTransaction, ok := boolParams["isNewTransaction"]
+	if !ok {
+		isNewTransaction = false
+	}
+
 	isConfAsset, err := proofAsV2.IsConfidentialAsset()
 	if err!=nil{
 		utils.Logger.Log.Errorf("Error in tx %s : proof is invalid due to inconsistent asset tags - %v", tx.Hash().String(), err)
@@ -486,7 +493,9 @@ func (tx *Tx) Verify(hasPrivacy bool, transactionStateDB *statedb.StateDB, bridg
 		return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf("FAILED VERIFICATION SIGNATURE ver2 with tx hash %s", tx.Hash().String()))
 	}
 
-	if valid, err := tx.Proof.Verify(isConfAsset, tx.SigPubKey, tx.Fee, shardID, tokenID, isBatch, nil); !valid {
+	boolParams["hasConfidentialAsset"] = isConfAsset
+
+	if valid, err := tx.Proof.Verify(boolParams, tx.SigPubKey, tx.Fee, shardID, tokenID, nil); !valid {
 		if err != nil {
 			utils.Logger.Log.Error(err)
 		}
@@ -610,25 +619,45 @@ func (tx *Tx) ValidateTxSalary(db *statedb.StateDB) (bool, error) {
 	return true, nil
 }
 
-func (tx Tx) StringWithoutMetadataSig() string {
-	record := strconv.Itoa(int(tx.Version))
-	record += strconv.FormatInt(tx.LockTime, 10)
-	record += strconv.FormatUint(tx.Fee, 10)
-	if tx.Proof != nil {
-		record += base64.StdEncoding.EncodeToString(tx.Proof.Bytes())
+// func (tx Tx) StringWithoutMetadataSig() string {
+// 	record := strconv.Itoa(int(tx.Version))
+// 	record += strconv.FormatInt(tx.LockTime, 10)
+// 	record += strconv.FormatUint(tx.Fee, 10)
+// 	if tx.Proof != nil {
+// 		record += base64.StdEncoding.EncodeToString(tx.Proof.Bytes())
+// 	}
+// 	if tx.Metadata != nil {
+// 		metadataHash := tx.Metadata.HashWithoutSig()
+// 		record += metadataHash.String()
+// 	}
+// 	record += string(tx.Info)
+// 	return record
+// }
+
+func (tx Tx) Hash() *common.Hash {
+	// leave out signature & its public key when hashing tx
+	tx.Sig = []byte{}
+	tx.SigPubKey = []byte{}
+	inBytes, err := json.Marshal(tx)
+	if err!=nil{
+		return nil
 	}
-	if tx.Metadata != nil {
-		metadataHash := tx.Metadata.HashWithoutSig()
-		record += metadataHash.String()
-	}
-	record += string(tx.Info)
-	return record
+	hash := common.HashH(inBytes)
+	// after this returns, tx is restored since the receiver is not a pointer
+	return &hash
 }
 
-func (tx *Tx) HashWithoutMetadataSig() *common.Hash {
-	inBytes := []byte(tx.StringWithoutMetadataSig())
+func (tx Tx) HashWithoutMetadataSig() *common.Hash {
+	md := tx.GetMetadata()
+	mdHash := md.HashWithoutSig()
+	tx.SetMetadata(nil)
+	txHash := tx.Hash()
+	if mdHash==nil || txHash==nil{
+		return nil
+	}
+	// tx.SetMetadata(md)
+	inBytes := append(mdHash[:], txHash[:]...)
 	hash := common.HashH(inBytes)
-	//tx.cachedHash = &hash
 	return &hash
 }
 
@@ -639,12 +668,12 @@ func (tx Tx) ValidateSanityData(chainRetriever metadata.ChainRetriever, shardVie
 		return false, errors.New("Tx Privacy Ver 2 must have proof")
 	}
 
-	if check, err := tx_generic.ValidateSanityTxWithoutMetadata(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight); !check || err != nil {
+	if check, err := tx_generic.ValidateSanity(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight); !check || err != nil {
 		utils.Logger.Log.Errorf("Cannot check sanity of version, size, proof, type and info: err %v", err)
 		return false, err
 	}
 
-	if check, err := tx_generic.ValidateSanityMetadata(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight); !check || err != nil {
+	if check, err := tx_generic.MdValidateSanity(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight); !check || err != nil {
 		utils.Logger.Log.Errorf("Cannot check sanity of metadata: err %v", err)
 		return false, err
 	}
@@ -658,34 +687,145 @@ func (tx Tx) GetTxMintData() (bool, privacy.Coin, *common.Hash, error) { return 
 
 func (tx Tx) GetTxBurnData() (bool, privacy.Coin, *common.Hash, error) { return tx_generic.GetTxBurnData(&tx) }
 
-func (tx Tx) ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error {
-	return tx_generic.ValidateTxWithBlockChain(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, shardID, stateDB)
+func (tx Tx) GetTxFullBurnData() (bool, privacy.Coin, privacy.Coin, *common.Hash, error) {
+	isBurn, burnedCoin, burnedToken, err := tx.GetTxBurnData()
+	return isBurn, burnedCoin, nil, burnedToken, err
 }
 
-func (tx Tx) ValidateTransaction(hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash, isBatch bool, isNewTransaction bool) (bool, error) {
+func (tx Tx) ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error {
+	err := tx_generic.MdValidateWithBlockChain(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, shardID, stateDB)
+	if err!=nil{
+		return err
+	}
+	return tx.TxBase.ValidateDoubleSpendWithBlockchain(shardID, stateDB, nil)
+}
+
+func (tx Tx) ValidateTransaction(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, []privacy.Proof, error) {
 	switch tx.GetType() {
 	case common.TxRewardType:
-		return tx.ValidateTxSalary(transactionStateDB)
+		valid, err := tx.ValidateTxSalary(transactionStateDB)
+		return valid, nil, err
 	case common.TxReturnStakingType:
-		return tx.ValidateTxReturnStaking(transactionStateDB), nil
+		return tx.ValidateTxReturnStaking(transactionStateDB), nil, nil
 	case common.TxConversionType:
-		return validateConversionVer1ToVer2(&tx, transactionStateDB, shardID, tokenID)
+		valid, err := validateConversionVer1ToVer2(&tx, transactionStateDB, shardID, tokenID)
+		return valid, nil ,err
 	default:
-		return tx.Verify(hasPrivacy, transactionStateDB, bridgeStateDB, shardID, tokenID, isBatch, isNewTransaction)
+		valid, err := tx.Verify(boolParams, transactionStateDB, bridgeStateDB, shardID, tokenID)
+		resultProofs := []privacy.Proof{}
+		isBatch, ok := boolParams["isBatch"]
+		if !ok {
+			isBatch = false
+		}
+		if isBatch{
+			if tx.GetProof()!=nil{
+				resultProofs = append(resultProofs, tx.GetProof())
+			}
+		}
+		return valid, resultProofs, err
 	}
 	// return validateTransaction(&tx, hasPrivacy, transactionStateDB, bridgeStateDB, shardID, tokenID, isBatch, isNewTransaction)
 }
 
-func (tx Tx) ValidateTxByItself(hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, chainRetriever metadata.ChainRetriever, shardID byte, isNewTransaction bool, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever) (bool, error) {
-	return tx_generic.ValidateTxByItself(&tx, hasPrivacy, transactionStateDB, bridgeStateDB, shardID, isNewTransaction)
+func (tx Tx) ValidateTxByItself(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, chainRetriever metadata.ChainRetriever, shardID byte, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever) (bool, error) {
+	prvCoinID := &common.Hash{}
+	err := prvCoinID.SetBytes(common.PRVCoinID[:])
+	if err != nil {
+		return false, err
+	}
+	valid, _, err := tx.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, prvCoinID)
+	if !valid {
+		return false, err
+	}
+
+	hasPrivacy, ok := boolParams["hasPrivacy"]
+	if !ok {
+		hasPrivacy = false
+	}
+	valid, err = tx_generic.MdValidate(&tx, hasPrivacy, transactionStateDB, bridgeStateDB, shardID)
+	if !valid {
+		return false, err
+	}
+	return true, nil
 }
 
 func (tx Tx) GetTxActualSize() uint64 {
-	if tx.GetCachedActualSize() != nil {
-		return *tx.GetCachedActualSize()
+	jsb, err := json.Marshal(tx)
+	if err!=nil{
+		return 0
 	}
-	sizeTx := tx_generic.GetTxActualSizeInBytes(&tx)
-	result := uint64(math.Ceil(float64(sizeTx) / 1024))
-	tx.SetCachedActualSize(&result)
+	return uint64(math.Ceil(float64(len(jsb)) / 1024))
+}
+
+func (tx Tx) ListOTAHashH() []common.Hash {
+	result := make([]common.Hash, 0)
+	if tx.Proof != nil {
+		for _, outputCoin := range tx.Proof.GetOutputCoins() {
+			//Discard coins sent to the burning address
+			if wallet.IsPublicKeyBurningAddress(outputCoin.GetPublicKey().ToBytesS()){
+				continue
+			}
+			hash := common.HashH(outputCoin.GetPublicKey().ToBytesS())
+			result = append(result, hash)
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].String() < result[j].String()
+	})
 	return result
 }
+
+func (tx Tx) validateDuplicateOTAsWithCurrentMempool(poolOTAHashH map[common.Hash][]common.Hash) error {
+	if tx.Proof == nil {
+		return nil
+	}
+	temp := make(map[common.Hash]interface{})
+	for _, outputCoin := range tx.Proof.GetOutputCoins() {
+		//Skip coins sent to the burning address
+		if wallet.IsPublicKeyBurningAddress(outputCoin.GetPublicKey().ToBytesS()){
+			continue
+		}
+		hash := common.HashH(outputCoin.GetPublicKey().ToBytesS())
+		temp[hash] = nil
+	}
+
+	for _, listOTAs := range poolOTAHashH {
+		for _, otaHash := range listOTAs {
+			if _, ok := temp[otaHash]; ok {
+				return fmt.Errorf("duplicate OTA with current mempool %v",
+					otaHash.String())
+			}
+		}
+	}
+	return nil
+}
+
+func (tx Tx) ValidateTxWithCurrentMempool(mr metadata.MempoolRetriever) error {
+	if tx.Proof == nil {
+		return nil
+	}
+
+	//Check if any OTA has been produced in current mempool
+	poolSNDOutputsHashH := mr.GetOTAHashH()
+	err := tx.validateDuplicateOTAsWithCurrentMempool(poolSNDOutputsHashH)
+	if err != nil {
+		return err
+	}
+
+	//Check if any serial number has been used in current mempool
+	temp := make(map[common.Hash]interface{})
+	for _, desc := range tx.Proof.GetInputCoins() {
+		hash := common.HashH(desc.GetKeyImage().ToBytesS())
+		temp[hash] = nil
+	}
+	poolSerialNumbersHashH := mr.GetSerialNumbersHashH()
+	for _, listSerialNumbers := range poolSerialNumbersHashH {
+		for _, serialNumberHash := range listSerialNumbers {
+			if _, ok := temp[serialNumberHash]; ok {
+				return errors.New("double spend in mempool")
+			}
+		}
+	}
+	return nil
+}
+

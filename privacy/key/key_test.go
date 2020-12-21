@@ -2,6 +2,7 @@ package key
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"testing"
 
 	"github.com/incognitochain/incognito-chain/privacy/operation"

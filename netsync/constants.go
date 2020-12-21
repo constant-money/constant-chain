@@ -11,7 +11,6 @@ const (
 // block type
 // Please modify peerv2/constants.go if you change something here.
 const (
-	blockShard    = 0
-	crossShard    = 1
-	shardToBeacon = 2
+	blockShard = 0
+	crossShard = 1
 )

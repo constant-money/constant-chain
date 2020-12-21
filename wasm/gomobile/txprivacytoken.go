@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
-	"github.com/incognitochain/incognito-chain/transaction"
 	"github.com/incognitochain/incognito-chain/wallet"
-	"math/big"
 	"github.com/pkg/errors"
+	"math/big"
 )
 
 func InitPrivacyTokenTx(args string, serverTime int64) (string, error) {
@@ -79,9 +78,8 @@ func InitBurningRequestTx(args string, serverTime int64) (string, error) {
 		return "", nil
 	}
 	burnerAddress := keyWalletBurner.KeySet.PaymentAddress
-
-	burningAmount, ok := metaDataParam["BurningAmount"].(float64)
-	if !ok {
+	burningAmount, err := common.AssertAndConvertStrToNumber(metaDataParam["BurningAmount"])
+	if err != nil {
 		println("Invalid meta data burning amount param")
 		return "", errors.New("Invalid meta data burning amount param")
 	}

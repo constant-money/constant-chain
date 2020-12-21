@@ -13,7 +13,7 @@ func main() {
 		for i := 0; ; i++ {
 			burnPubKeyE := operation.HashToPointFromIndex(int64(i), privacy.CStringBurnAddress)
 			burnPubKey := burnPubKeyE.ToBytesS()
-			if burnPubKey[len(burnPubKey) - 1] == 0 {
+			if burnPubKey[len(burnPubKey)-1] == 0 {
 				// generate public viewing key Vk = H(Pk)
 				viewKey := privacy.HashToPoint(burnPubKey).ToBytesS()
 				burnKey := wallet.KeyWallet{
@@ -43,4 +43,3 @@ func main() {
 //======================================
 //Burning public key bytes: [127 76 149 36 97 166 59 24 204 39 108 209 42 199 106 173 88 95 221 184 142 215 198 51 10 150 125 89 73 86 24 0]
 //======================================
-

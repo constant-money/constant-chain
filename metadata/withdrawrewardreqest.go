@@ -1,6 +1,8 @@
 package metadata
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -16,6 +18,37 @@ type WithDrawRewardRequest struct {
 	TokenID common.Hash
 	Version int
 }
+
+func (withdrawRequestMetadata *WithDrawRewardRequest) UnmarshalJSON(data []byte) error {
+	tmp :=  &struct {MetadataBase
+					PaymentAddress privacy.PaymentAddress
+					TokenID common.Hash
+					Version int}{}
+
+	if err := json.Unmarshal(data, &tmp); err != nil {
+		return err
+	}
+	if tmp.PaymentAddress.Pk == nil && tmp.PaymentAddress.Tk == nil {
+		tmpOld :=  &struct {MetadataBase
+							privacy.PaymentAddress
+							TokenID common.Hash
+							Version int}{}
+		if err := json.Unmarshal(data, &tmpOld); err != nil {
+			return err
+		}
+
+		tmp.PaymentAddress.Tk = tmpOld.Tk
+		tmp.PaymentAddress.Pk = tmpOld.Pk
+	}
+
+
+	withdrawRequestMetadata.Type = tmp.Type
+	withdrawRequestMetadata.PaymentAddress = tmp.PaymentAddress
+	withdrawRequestMetadata.TokenID = tmp.TokenID
+	withdrawRequestMetadata.Version = tmp.Version
+	return nil
+}
+
 
 func (withDrawRewardRequest WithDrawRewardRequest) Hash() *common.Hash {
 	if withDrawRewardRequest.Version == 1 {
@@ -58,9 +91,9 @@ func NewWithDrawRewardRequest(tokenIDStr string, paymentAddStr string, version f
 	if err != nil {
 		return nil, errors.New("payment address is invalid")
 	}
-	ok, err := common.SliceExists(AcceptedWithdrawRewardRequestVersion, int(version));
+	ok, err := common.SliceExists(AcceptedWithdrawRewardRequestVersion, int(version))
 	if !ok || err != nil {
-		return nil, errors.Errorf("Invalid version %d", version)
+		return nil, errors.Errorf("Invalid version %v", version)
 	}
 
 	withdrawRewardRequest := &WithDrawRewardRequest{
@@ -79,7 +112,7 @@ func (withDrawRewardRequest WithDrawRewardRequest) CheckTransactionFee(tr Transa
 func (withDrawRewardRequest WithDrawRewardRequest) ValidateTxWithBlockChain(tx Transaction, chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, transactionStateDB *statedb.StateDB) (bool, error) {
 	//check authorized sender
 	if ok, err := tx.CheckAuthorizedSender(withDrawRewardRequest.PaymentAddress.Pk); err != nil || !ok {
-		return false, errors.New("Public key in withdraw reward request metadata is unauthorized")
+		return false, fmt.Errorf("public key in withdraw reward request metadata is unauthorized. Error %v, OK %v", err, ok)
 	}
 
 	//check token valid (!= PRV)
@@ -127,11 +160,3 @@ func (withDrawRewardRequest WithDrawRewardRequest) GetType() int {
 func (withDrawRewardRequest *WithDrawRewardRequest) CalculateSize() uint64 {
 	return calculateSize(withDrawRewardRequest)
 }
-//
-//func  (withDrawRewardRequest *WithDrawRewardRequest) SetSig(sig []byte) {
-//	withDrawRewardRequest.Sig = sig
-//}
-//
-//func (withDrawRewardRequest WithDrawRewardRequest) GetSig() []byte {
-//	return withDrawRewardRequest.Sig
-//}

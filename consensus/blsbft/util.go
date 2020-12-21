@@ -157,8 +157,8 @@ func (e *BLSBFT) InitRoundData() {
 	e.RoundData.Block = nil
 	e.RoundData.BlockHash = common.Hash{}
 	e.RoundData.NotYetSendVote = true
-	e.RoundData.LastProposerIndex = e.Chain.GetLastProposerIndex()
 	e.RoundData.TimeStart = time.Now()
+	e.RoundData.LastProposerIndex = e.Chain.GetLastProposerIndex()
 	e.UpdateCommitteeBLSList()
 	e.setState(newround)
 }

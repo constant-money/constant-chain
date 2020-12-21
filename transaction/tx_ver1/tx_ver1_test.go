@@ -40,7 +40,7 @@ var (
 	minInputs = 1
 
 	maxTries = 100
-	numOfLoops = 10
+	numOfLoops = 1
 	hasPrivacyForPRV   bool = true
 	hasPrivacyForToken bool = false
 	shardID            byte = byte(0)
@@ -432,7 +432,7 @@ func TestTxVersion1_ValidateTransaction(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 
@@ -517,7 +517,7 @@ func TestTxVersion1_BulletProofCommitmentConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 
@@ -592,7 +592,7 @@ func TestTxVersion1_SerialNumberProofConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 
@@ -665,7 +665,7 @@ func TestTxVersion1_OneOutOfManyProofConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx1.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 
@@ -710,7 +710,7 @@ func TestTxVersion1_OneOutOfManyProofConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx2.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx2.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		//assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, false, res)
 	}
@@ -744,7 +744,7 @@ func TestTxVersion1_SerialNumberNoPrivacyProofConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx1.ValidateTransaction(false, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx1.ValidateTransaction(false, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 
@@ -791,7 +791,7 @@ func TestTxVersion1_SerialNumberNoPrivacyProofConsistency(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res) //This should fail
 
-		res, err = tx2.ValidateTransaction(false, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx2.ValidateTransaction(false, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		//assert.Equal(t, nil, err, "ValidateTransaction returns an error: %v", err)
 		assert.Equal(t, true, res)
 	}
@@ -873,7 +873,7 @@ func TestTxVersion1_OutputTampered(t *testing.T) {
 		assert.Equal(t, nil, err, "ValidateSanityData returns an error: %v", err)
 		assert.Equal(t, true, res)
 
-		res, err = tx.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
+		res, _, err = tx.ValidateTransaction(true, dummyDB, dummyDB, 0, &common.PRVCoinID, false, false)
 		assert.Equal(t, true, res, err)
 
 	}

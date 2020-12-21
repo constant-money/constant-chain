@@ -109,6 +109,10 @@ func NewTransactionDetail(tx metadata.Transaction, blockHash *common.Hash, block
 		}
 	case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
 		{
+			txToken, ok := tx.(transaction.TransactionToken)
+			if !ok {
+				return nil, errors.New("cannot detect transaction type")
+			}
 			txTokenData := transaction.GetTxTokenDataFromTransaction(tx)
 			result = &TransactionDetail{
 				BlockHash:                blockHashStr,
@@ -121,7 +125,7 @@ func NewTransactionDetail(tx metadata.Transaction, blockHash *common.Hash, block
 				Type:                     tx.GetType(),
 				LockTime:                 time.Unix(tx.GetLockTime(), 0).Format(common.DateOutputFormat),
 				Fee:                      tx.GetTxFee(),
-				Proof:                    tx.GetProof(),
+				Proof:                    txToken.GetTxBase().GetProof(),
 				SigPubKey:                base58.Base58Check{}.Encode(tx.GetSigPubKey(), 0x0),
 				Sig:                      base58.Base58Check{}.Encode(tx.GetSig(), 0x0),
 				Info:                     string(tx.GetInfo()),
@@ -131,10 +135,15 @@ func NewTransactionDetail(tx metadata.Transaction, blockHash *common.Hash, block
 				PrivacyCustomTokenID:     txTokenData.PropertyID.String(),
 				PrivacyCustomTokenFee:    txTokenData.TxNormal.GetTxFee(),
 			}
-			inputCoins := result.Proof.GetInputCoins()
-			if result.Proof != nil && len(inputCoins) > 0 && inputCoins[0].GetPublicKey() != nil {
-				result.InputCoinPubKey = base58.Base58Check{}.Encode(inputCoins[0].GetPublicKey().ToBytesS(), common.ZeroByte)
+			
+			if result.Proof != nil {
+				inputCoins := result.Proof.GetInputCoins()
+				if len(inputCoins) > 0 && inputCoins[0].GetPublicKey() != nil {
+					result.InputCoinPubKey = base58.Base58Check{}.Encode(inputCoins[0].GetPublicKey().ToBytesS(), common.ZeroByte)
+				}
 			}
+
+
 			tokenData, _ := json.MarshalIndent(txTokenData, "", "\t")
 			result.PrivacyCustomTokenData = string(tokenData)
 			if tx.GetMetadata() != nil {
@@ -273,9 +282,9 @@ func (c *CoinRPCV2) SetOutputCoin(outputCoin coin.Coin) CoinRPC {
 	c.TxRandom = EncodeBase58Check(coinv2.GetTxRandom().Bytes())
 	c.Value = strconv.FormatUint(coinv2.GetValue(), 10)
 	c.Randomness = OperationScalarPtrToBase58(coinv2.GetRandomness())
-	txRandomPoint, index, _ := coinv2.GetTxRandomDetail()
-	c.TxRandom = OperationPointPtrToBase58(txRandomPoint)
-	c.Index = index
+	//txRandomPoint, index, _ := coinv2.GetTxRandomDetail()
+	//c.TxRandom = OperationPointPtrToBase58(txRandomPoint)
+	//c.Index = index
 
 	return c
 }

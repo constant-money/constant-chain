@@ -64,9 +64,15 @@ func HashToPoint(b []byte) *Point {
 	return operation.HashToPoint(b)
 }
 
+func HashToScalar(data []byte) *Scalar {
+	return operation.HashToScalar(data)
+}
+
 type PublicKey = key.PublicKey
+type TransmissionKey = key.TransmissionKey
 type ViewingKey = key.ViewingKey
 type PrivateKey = key.PrivateKey
+type OTAKey = key.OTAKey
 type PaymentInfo = key.PaymentInfo
 type PaymentAddress = key.PaymentAddress
 
@@ -161,6 +167,9 @@ func RandomPoint() *Point{
 func IsPointEqual(pa *Point, pb *Point) bool {
 	return operation.IsPointEqual(pa,pb)
 }
+func IsScalarEqual(pa *Scalar, pb *Scalar) bool {
+	return operation.IsScalarEqual(pa,pb)
+}
 
 func NewCoinFromPaymentInfo(info *PaymentInfo) (*CoinV2, error) {
 	return coin.NewCoinFromPaymentInfo(info)
@@ -174,10 +183,11 @@ func ProveV2(inputCoins []PlainCoin, outputCoins []*CoinV2, sharedSecrets []*Poi
 	return privacy_v2.Prove(inputCoins, outputCoins, sharedSecrets, hasPrivacy, paymentInfo)
 }
 
-func ComputeAssetTagBlinder(sharedSecret *Point, indexForShard uint32) (*Scalar,error){
-	return coin.ComputeAssetTagBlinder(sharedSecret, indexForShard)
+func ComputeAssetTagBlinder(sharedSecret *Point) (*Scalar,error){
+	return coin.ComputeAssetTagBlinder(sharedSecret)
 }
 
 func NewCoinCA(info *PaymentInfo, tokenID *common.Hash) (*CoinV2, *Point, error){
 	return coin.NewCoinCA(info, tokenID)
 }
+

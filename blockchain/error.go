@@ -29,6 +29,7 @@ const (
 	DatabaseError
 	EpochError
 	WrongTimestampError
+	WrongTimeslotError
 	InstructionHashError
 	ShardStateHashError
 	RandomError
@@ -80,6 +81,7 @@ const (
 	VerifyCrossShardCustomTokenError
 	ShardCommitteeRootHashError
 	ShardPendingValidatorRootHashError
+	ShardStakingTxRootHashError
 	BeaconCommitteeAndPendingValidatorRootError
 	ShardCommitteeAndPendingValidatorRootError
 	ShardCandidateRootError
@@ -109,7 +111,7 @@ const (
 	BeaconBlockSignatureError
 	WrongEpochError
 	GenerateInstructionHashError
-	GetShardToBeaconBlocksError
+	GetShardBlocksForBeaconProcessError
 	ShardStateHeightError
 	ShardStateCrossShardBitMapError
 	ShardBlockSignatureError
@@ -121,11 +123,6 @@ const (
 	ShuffleBeaconCandidateError
 	CleanBackUpError
 	BackUpBestStateError
-	StoreAcceptedShardToBeaconError
-	StoreCrossShardNextHeightError
-	StoreShardCommitteeByHeightError
-	StoreBeaconCommitteeByHeightError
-	StoreBeaconBestStateError
 	StoreBeaconBlockError
 	StoreBeaconBlockIndexError
 	GetStakingTransactionError
@@ -182,6 +179,7 @@ const (
 	InsertShardBlockError
 	GetShardBlockHeightByHashError
 	GetShardBlockByHashError
+	ResponsedTransactionFromBeaconInstructionsError
 	GetListOutputCoinsByKeysetError
 )
 
@@ -206,6 +204,7 @@ var ErrCodeMessage = map[int]struct {
 	DatabaseError:                                     {-1014, "Database Error"},
 	EpochError:                                        {-1015, "Epoch Error"},
 	WrongTimestampError:                               {-1016, "Timestamp Error"},
+	WrongTimeslotError:                                {-1016, "Timeslot Error"},
 	InstructionHashError:                              {-1017, "Instruction Hash Error"},
 	ShardStateHashError:                               {-1018, "ShardState Hash Error"},
 	RandomError:                                       {-1019, "Random Number Error"},
@@ -327,7 +326,7 @@ var ErrCodeMessage = map[int]struct {
 	ProcessSlashingError:                              {-1135, "Process slashing Error"},
 	ConvertCommitteePubKeyToBase58Error:               {-1136, "Convert committee pub key to base58 Error"},
 	ConsensusIsOngoingError:                           {-1137, "Consensus Is Ongoing Error"},
-	GetShardToBeaconBlocksError:                       {-1138, "Get Shard To Beacon Blocks Error"},
+	GetShardBlocksForBeaconProcessError:               {-1138, "Get Shard To Beacon Blocks Error"},
 	RevertStateError:                                  {-1139, "Revert State Error"},
 	NotEnoughRewardError:                              {-1140, "Not enough reward Error"},
 	InitPDETradeResponseTransactionError:              {-1141, "Init PDE trade response tx Error"},
@@ -346,11 +345,13 @@ var ErrCodeMessage = map[int]struct {
 	InsertShardBlockError:                             {-1154, "Insert Shard Block Error"},
 	GetShardBlockHeightByHashError:                    {-1155, "Get Shard Block Height By Hash Error"},
 	GetShardBlockByHashError:                          {-1156, "Get Shard Block By Hash Error"},
+	ShardStakingTxRootHashError:                       {-1157, "Build Shard StakingTX error"},
 	GetListOutputCoinsByKeysetError:                   {-2000, "Get List Output Coins By Keyset Error"},
 	GetTotalLockedCollateralError:                     {-3000, "Get Total Locked Collateral Error"},
 	GetListDecryptedOutputCoinsByKeysetError:          {-2100, "Get List Output Coins By Keyset Error"},
 	GetListDecryptedOutputCoinsV1ByKeysetError:        {-2101, "Get List Output Coins Ver 1 By Ketset Error"},
 	GetAndCheckBurnError:								{-2102, "Get and Check Burn Receiver Error"},
+	ResponsedTransactionFromBeaconInstructionsError:   {-3100, "Build Transaction Response From Beacon Instructions Error"},
 }
 
 type BlockChainError struct {

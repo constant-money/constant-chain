@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"math/rand"
 	"reflect"
 	"strconv"
 	"testing"
@@ -17,13 +16,9 @@ func storeCommitteeObjectOneShard(role int, initRoot common.Hash, shardID, from,
 		panic(err)
 	}
 	tempCommitteePublicKey = tempCommitteePublicKey[from:to]
-	for index, value := range tempCommitteePublicKey {
+	for _, value := range tempCommitteePublicKey {
 		key, _ := GenerateCommitteeObjectKeyWithRole(role, shardID, value)
-		autoStaking := false
-		if rand.Int()%2 == 0 {
-			autoStaking = true
-		}
-		committeeState := NewCommitteeStateWithValue(shardID, role, value, receiverPaymentAddress[index], autoStaking)
+		committeeState := NewCommitteeStateWithValue(shardID, role, value)
 		m[key] = committeeState
 	}
 	sDB, err := NewWithPrefixTrie(initRoot, wrarperDB)
@@ -55,7 +50,7 @@ func TestStateDB_SetStateObjectCommitteeState(t *testing.T) {
 	sampleCommittee2 := tempCommitteePublicKey[1]
 	key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, sampleCommittee)
 	key2, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, sampleCommittee2)
-	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommittee, receiverPaymentAddress[0], true)
+	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommittee)
 	sDB, err := NewWithPrefixTrie(emptyRoot, wrarperDB)
 	if err != nil {
 		panic(err)
@@ -124,7 +119,7 @@ func TestStateDB_SetDuplicateStateObjectCommitteeState(t *testing.T) {
 	}
 	sampleCommittee := tempCommitteePublicKey[0]
 	key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, sampleCommittee)
-	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommittee, receiverPaymentAddress[0], true)
+	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommittee)
 	sDB, err := NewWithPrefixTrie(emptyRoot, wrarperDB)
 	if err != nil {
 		panic(err)
@@ -327,9 +322,9 @@ func TestStateDB_GetAllCurrentValidatorCommitteePublicKey512EightShardMultipleRo
 		prevWantM := wantMs[i-1]
 		newWantMState := make(map[common.Hash]*CommitteeState)
 		for shardID, publicKeys := range prevWantM {
-			for index, value := range publicKeys {
+			for _, value := range publicKeys {
 				key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value)
 				newWantMState[key] = committeeState
 			}
 		}
@@ -337,17 +332,17 @@ func TestStateDB_GetAllCurrentValidatorCommitteePublicKey512EightShardMultipleRo
 		newAddedMState := make(map[common.Hash]*CommitteeState)
 		for _, shardID := range ids {
 			tempCommitteePublicKey := committeePublicKey[from:to]
-			for index, value := range tempCommitteePublicKey {
+			for _, value := range tempCommitteePublicKey {
 				key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value)
 				newAddedMState[key] = committeeState
 			}
 			from += 4
 			to += 4
 			prevWantMStateByShardID := make(map[common.Hash]*CommitteeState)
-			for index, value := range prevWantM[shardID] {
+			for _, value := range prevWantM[shardID] {
 				key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, value)
 				prevWantMStateByShardID[key] = committeeState
 			}
 			count := 0
@@ -653,9 +648,9 @@ func TestStateDB_AllSubstituteValidatorCommitteePublicKey512EightShardMultipleRo
 		prevWantM := wantMs[i-1]
 		newWantMState := make(map[common.Hash]*CommitteeState)
 		for shardID, publicKeys := range prevWantM {
-			for index, value := range publicKeys {
+			for _, value := range publicKeys {
 				key, _ := GenerateCommitteeObjectKeyWithRole(SubstituteValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value)
 				newWantMState[key] = committeeState
 			}
 		}
@@ -663,17 +658,17 @@ func TestStateDB_AllSubstituteValidatorCommitteePublicKey512EightShardMultipleRo
 		newAddedMState := make(map[common.Hash]*CommitteeState)
 		for _, shardID := range ids {
 			tempCommitteePublicKey := committeePublicKey[from:to]
-			for index, value := range tempCommitteePublicKey {
+			for _, value := range tempCommitteePublicKey {
 				key, _ := GenerateCommitteeObjectKeyWithRole(SubstituteValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value)
 				newAddedMState[key] = committeeState
 			}
 			from += 4
 			to += 4
 			prevWantMStateByShardID := make(map[common.Hash]*CommitteeState)
-			for index, value := range prevWantM[shardID] {
+			for _, value := range prevWantM[shardID] {
 				key, _ := GenerateCommitteeObjectKeyWithRole(SubstituteValidator, shardID, value)
-				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value, receiverPaymentAddress[index], true)
+				committeeState := NewCommitteeStateWithValue(shardID, SubstituteValidator, value)
 				prevWantMStateByShardID[key] = committeeState
 			}
 			count := 0
@@ -859,7 +854,7 @@ func BenchmarkStateDB_GetCommitteeState1In1(b *testing.B) {
 	}
 	sampleCommitteePublicKey := tempCommitteePublicKey[0]
 	key, _ = GenerateCommitteeObjectKeyWithRole(CurrentValidator, shardID, sampleCommitteePublicKey)
-	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommitteePublicKey, receiverPaymentAddress[0], true)
+	committeeState := NewCommitteeStateWithValue(shardID, CurrentValidator, sampleCommitteePublicKey)
 	sDB, err := NewWithPrefixTrie(emptyRoot, wrarperDB)
 	if err != nil {
 		panic(err)

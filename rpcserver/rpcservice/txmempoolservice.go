@@ -2,13 +2,12 @@ package rpcservice
 
 import (
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/mempool"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 )
 
 type TxMemPoolService struct {
-	TxMemPool * mempool.TxPool
+	TxMemPool MempoolInterface
 }
 
 func (txMemPoolService TxMemPoolService) GetPoolCandidate() map[common.Hash]string {
@@ -48,7 +47,7 @@ func (txMemPoolService TxMemPoolService) MempoolEntry(txIDString string) (metada
 	return txInPool, shardIDTemp, nil
 }
 
-func (txMemPoolService * TxMemPoolService) RemoveTxInMempool(txIDString string) (bool, *RPCError) {
+func (txMemPoolService *TxMemPoolService) RemoveTxInMempool(txIDString string) (bool, *RPCError) {
 	txID, err := common.Hash{}.NewHashFromStr(txIDString)
 	if err != nil {
 		Logger.log.Debugf("RemoveTxInMempool result: nil %+v", err)
@@ -64,5 +63,3 @@ func (txMemPoolService * TxMemPoolService) RemoveTxInMempool(txIDString string) 
 
 	return true, nil
 }
-
-

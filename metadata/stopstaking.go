@@ -85,7 +85,7 @@ func (stopAutoStakingMetadata StopAutoStakingMetadata) ValidateTxWithBlockChain(
 		if err != nil {
 			return false, err
 		}
-		_, _, _, stakingTx, err := chainRetriever.GetTransactionByHash(*stakingTxHash)
+		_, _, _, _, stakingTx, err := chainRetriever.GetTransactionByHash(*stakingTxHash)
 		if err != nil {
 			return false, NewMetadataTxError(StopAutoStakingRequestStakingTransactionNotFoundError, err)
 		}
@@ -116,12 +116,9 @@ func (stopAutoStakingMetadata StopAutoStakingMetadata) ValidateTxWithBlockChain(
 	return true, nil
 }
 
-/*
-	// Have only one receiver
-	// Have only one amount corresponding to receiver
-	// Receiver Is Burning Address
-	//
-*/
+// Have only one receiver
+// Have only one amount corresponding to receiver
+// Receiver Is Burning Address
 func (stopAutoStakingMetadata StopAutoStakingMetadata) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, tx Transaction) (bool, bool, error) {
 	isBurned, burnCoin, tokenID, err := tx.GetTxBurnData()
 	if err != nil {

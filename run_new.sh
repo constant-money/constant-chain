@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 if [ "$1" == "b0" ]; then
-./incognito --discoverpeersaddress "127.0.0.1:9330" --privatekey "112t8rnX3Cz3ud5HG7EnM8U3apQqbtpmbAjbe5Uox3Lj7aJg85AAko91JVwXjC7wNHENWtMmFqPvQEJrYS8WhYYekDJmH1c5GBkL4YCHKV8o" --nodemode "auto" --datadir "data/b0" --listen "0.0.0.0:8000" --externaladdress "0.0.0.0:8000" --norpcauth --rpclisten "0.0.0.0:9000"
+./incognito  --discoverpeersaddress "127.0.0.1:9330" --privatekey "112t8rnX3Cz3ud5HG7EnM8U3apQqbtpmbAjbe5Uox3Lj7aJg85AAko91JVwXjC7wNHENWtMmFqPvQEJrYS8WhYYekDJmH1c5GBkL4YCHKV8o" --nodemode "auto" --datadir "data/b0" --listen "0.0.0.0:8000" --externaladdress "0.0.0.0:8000" --norpcauth --rpclisten "0.0.0.0:9000"
 fi
 if [ "$1" == "b1" ]; then
 ./incognito --discoverpeersaddress "127.0.0.1:9330" --privatekey "112t8rnXaRvy95YLYEt78ovWCY2Azi7pCrU4v7BCHm6AjfpUNYUDMbksf6WATFjY4tHUr4g6D5bmiKgMgmjB9ih1eNHifwqdRzC6Eqv23FHD" --nodemode "auto" --datadir "data/b1" --listen "0.0.0.0:8001" --externaladdress "0.0.0.0:8001" --norpcauth --rpclisten "0.0.0.0:9001"

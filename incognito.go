@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/metrics/monitor"
-	bnbrelaying "github.com/incognitochain/incognito-chain/relaying/bnb"
 	"log"
 	"net/http"
 	_ "net/http/pprof"
@@ -13,10 +11,12 @@ import (
 	"runtime/debug"
 	"strconv"
 
+	"github.com/incognitochain/incognito-chain/metrics/monitor"
+	bnbrelaying "github.com/incognitochain/incognito-chain/relaying/bnb"
+
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/common"
-	_ "github.com/incognitochain/incognito-chain/consensus/blsbft"
 	"github.com/incognitochain/incognito-chain/databasemp"
 	_ "github.com/incognitochain/incognito-chain/databasemp/lvdb"
 	"github.com/incognitochain/incognito-chain/incdb"
@@ -35,17 +35,19 @@ var (
 // as a service and reacts accordingly.
 var winServiceMain func() (bool, error)
 
-func getBTCRelayingChain(btcRelayingChainID string) (*btcrelaying.BlockChain, error) {
+func getBTCRelayingChain(btcRelayingChainID string, btcDataFolderName string) (*btcrelaying.BlockChain, error) {
 	relayingChainParams := map[string]*chaincfg.Params{
-		blockchain.TestnetBTCChainID: btcrelaying.GetTestNet3Params(),
-		blockchain.MainnetBTCChainID: btcrelaying.GetMainNetParams(),
+		blockchain.TestnetBTCChainID:  btcrelaying.GetTestNet3Params(),
+		blockchain.Testnet2BTCChainID: btcrelaying.GetTestNet3ParamsForInc2(),
+		blockchain.MainnetBTCChainID:  btcrelaying.GetMainNetParams(),
 	}
 	relayingChainGenesisBlkHeight := map[string]int32{
-		blockchain.TestnetBTCChainID: int32(1764110),
-		blockchain.MainnetBTCChainID: int32(634140),
+		blockchain.TestnetBTCChainID:  int32(1861700),
+		blockchain.Testnet2BTCChainID: int32(1863675),
+		blockchain.MainnetBTCChainID:  int32(634140),
 	}
 	return btcrelaying.GetChainV2(
-		filepath.Join(cfg.DataDir, "btcrelayingv7"),
+		filepath.Join(cfg.DataDir, btcDataFolderName),
 		relayingChainParams[btcRelayingChainID],
 		relayingChainGenesisBlkHeight[btcRelayingChainID],
 	)
@@ -70,6 +72,10 @@ func getBNBRelayingChainState(bnbRelayingChainID string) (*bnbrelaying.BNBChainS
 // notified with the server once it is setup so it can gracefully stop it when
 // requested from the service control manager.
 func mainMaster(serverChan chan<- *Server) error {
+	//init key & param
+	blockchain.ReadKey(nil, nil)
+	blockchain.SetupParam()
+
 	tempConfig, _, err := loadConfig()
 	if err != nil {
 		log.Println("Load config error")
@@ -77,6 +83,8 @@ func mainMaster(serverChan chan<- *Server) error {
 		return err
 	}
 	cfg = tempConfig
+	common.MaxShardNumber = activeNetParams.ActiveShards
+	activeNetParams.CreateGenesisBlocks()
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from
 	// another subsystem such as the RPC server.
@@ -132,9 +140,11 @@ func mainMaster(serverChan chan<- *Server) error {
 			}
 		}
 	}
-
 	// Create btcrelaying chain
-	btcChain, err := getBTCRelayingChain(activeNetParams.Params.BTCRelayingHeaderChainID)
+	btcChain, err := getBTCRelayingChain(
+		activeNetParams.Params.BTCRelayingHeaderChainID,
+		activeNetParams.Params.BTCDataFolderName,
+	)
 	if err != nil {
 		Logger.log.Error("could not get or create btc relaying chain")
 		Logger.log.Error(err)
@@ -154,10 +164,26 @@ func mainMaster(serverChan chan<- *Server) error {
 		panic(err)
 	}
 
+	//update preload address
+	if cfg.PreloadAddress != "" {
+		activeNetParams.Params.PreloadAddress = cfg.PreloadAddress
+	}
+
+	useOutcoinDb := len(cfg.UseOutcoinDatabase)>=1
+	var outcoinDb *incdb.Database = nil
+	if useOutcoinDb{
+		temp, err := incdb.Open("leveldb", filepath.Join(cfg.DataDir, cfg.OutcoinDatabaseDir))
+		if err!=nil{
+			Logger.log.Error("could not open leveldb instance for coin storing")
+		}
+		outcoinDb = &temp
+	}
+
 	// Create server and start it.
 	server := Server{}
 	server.wallet = walletObj
-	err = server.NewServer(cfg.Listener, db, dbmp, activeNetParams.Params, version, btcChain, bnbChainState, interrupt)
+	activeNetParams.Params.IsBackup = cfg.ForceBackup
+	err = server.NewServer(cfg.Listener, db, dbmp, outcoinDb, activeNetParams.Params, version, btcChain, bnbChainState, interrupt)
 	if err != nil {
 		Logger.log.Errorf("Unable to start server on %+v", cfg.Listener)
 		Logger.log.Error(err)
@@ -173,6 +199,7 @@ func mainMaster(serverChan chan<- *Server) error {
 	if serverChan != nil {
 		serverChan <- &server
 	}
+
 	// Check Metric analyzation system
 	env := os.Getenv("GrafanaURL")
 	if env != "" {

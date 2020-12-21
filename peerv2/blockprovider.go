@@ -88,24 +88,25 @@ func (bp *BlockProvider) StreamBlockByHeight(
 	stream proto.HighwayService_StreamBlockByHeightServer,
 ) error {
 	uuid := req.GetUUID()
-	// Logger.Infof("[stream] Block provider received request block type %v, blk heights specific %v [%v..%v], len %v", req.GetType(), req.GetSpecific(), req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights))
+	cnt := 0
 	Logger.Infof("[stream] Block provider received request stream block type %v, spec %v, height [%v..%v] len %v, from %v to %v, uuid = %s ", req.Type, req.Specific, req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights), req.From, req.To, uuid)
 	blkRecv := bp.NetSync.StreamBlockByHeight(false, req)
 	for blk := range blkRecv {
+		cnt++
 		rdata, err := wrapper.EnCom(blk)
 		blkData := append([]byte{byte(req.Type)}, rdata...)
 		if err != nil {
 			Logger.Infof("[stream] block channel return error when marshal %v, uuid = %s", err, uuid)
+			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 			return err
 		}
-		Logger.Infof("[stream] block channel return block ok")
 		if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
 			Logger.Infof("[stream] Server send block to client return err %v, uuid = %s", err, uuid)
+			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 			return err
 		}
-		Logger.Infof("[stream] Server send block to client ok, uuid = %s", uuid)
 	}
-	Logger.Infof("[stream] Provider return StreamBlockBeaconByHeight, uuid = %s", uuid)
+	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 	return nil
 }
 
@@ -115,22 +116,24 @@ func (bp *BlockProvider) StreamBlockByHash(
 ) error {
 	uuid := req.GetUUID()
 	Logger.Infof("[stream] Block provider received request stream block type %v, hashes [%v..%v] len %v, from %v to %v, uuid = %s ", req.Type, req.Hashes[0], req.Hashes[len(req.Hashes)-1], len(req.Hashes), req.From, req.To, uuid)
+	cnt := 0
 	blkRecv := bp.NetSync.StreamBlockByHash(false, req)
 	for blk := range blkRecv {
+		cnt++
 		rdata, err := wrapper.EnCom(blk)
 		blkData := append([]byte{byte(req.Type)}, rdata...)
 		if err != nil {
 			Logger.Infof("[stream] blkbyhash block channel return error when marshal %v, uuid = %s", err, uuid)
+			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 			return err
 		}
-		Logger.Infof("[stream] blkbyhash block channel return block ok")
 		if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
 			Logger.Infof("[stream] blkbyhash Server send block to client return err %v, uuid = %s", err, uuid)
+			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 			return err
 		}
-		Logger.Infof("[stream] blkbyhash Server send block to client ok, uuid = %s", uuid)
 	}
-	Logger.Infof("[stream] blkbyhash Provider return StreamBlockBeaconByHeight, uuid = %s", uuid)
+	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 	return nil
 }
 

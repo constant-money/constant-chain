@@ -1,12 +1,11 @@
 package statedb
 
 import (
+	"reflect"
+	"testing"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
-	"log"
-	"reflect"
-	"strings"
-	"testing"
 )
 
 func TestStateDB_TestChangeAutoStaking(t *testing.T) {
@@ -16,7 +15,7 @@ func TestStateDB_TestChangeAutoStaking(t *testing.T) {
 	}
 	tempCommitteePublicKey = tempCommitteePublicKey[:1]
 	key, _ := GenerateCommitteeObjectKeyWithRole(CurrentValidator, 0, tempCommitteePublicKey[0])
-	committeeState := NewCommitteeStateWithValue(0, CurrentValidator, tempCommitteePublicKey[0], receiverPaymentAddress[0], true)
+	committeeState := NewCommitteeStateWithValue(0, CurrentValidator, tempCommitteePublicKey[0])
 	sDB, err := NewWithPrefixTrie(emptyRoot, wrarperDB)
 	if err != nil {
 		t.Fatal(err)
@@ -33,7 +32,7 @@ func TestStateDB_TestChangeAutoStaking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	committeeState1 := NewCommitteeStateWithValue(0, CurrentValidator, tempCommitteePublicKey[0], receiverPaymentAddress[0], false)
+	committeeState1 := NewCommitteeStateWithValue(0, CurrentValidator, tempCommitteePublicKey[0])
 	err = sDB.SetStateObject(CommitteeObjectType, key, committeeState1)
 	rootHash2, err := sDB.Commit(true)
 	if err != nil {
@@ -43,8 +42,8 @@ func TestStateDB_TestChangeAutoStaking(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, newAutoStaking := GetRewardReceiverAndAutoStaking(sDB, []int{0})
-	log.Println(newAutoStaking)
+	// _, newAutoStaking := GetRewardReceiverAndAutoStaking(sDB, []int{0})
+	// log.Println(newAutoStaking)
 }
 
 func TestStateDB_GetMixCommitteePublicKey(t *testing.T) {
@@ -187,8 +186,7 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 	wantSubstituteValidatorM := make(map[int][]incognitokey.CommitteePublicKey)
 	wantNextEpochCandidateM := []incognitokey.CommitteePublicKey{}
 	wantCurrentEpochCandidateM := []incognitokey.CommitteePublicKey{}
-	wantRewardReceiverM := make(map[string]string)
-	wantAutoStakingM := make(map[string]bool)
+
 	rootHashes := []common.Hash{emptyRoot}
 	for index, id := range ids {
 		tempRootHash, tempM := storeCommitteeObjectOneShard(CurrentValidator, rootHashes[index], id, from, to)
@@ -197,14 +195,7 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 		rootHashes = append(rootHashes, tempRootHash)
 		for _, v := range tempM {
 			wantCurrentValidatorM[id] = append(wantCurrentValidatorM[id], v.CommitteePublicKey())
-			committeePublicKey := v.CommitteePublicKey()
-			tempCurrentValidatorString, err := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-			if err != nil {
-				t.Fatal(err)
-			}
-			incPublicKey := committeePublicKey.GetIncKeyBase58()
-			wantRewardReceiverM[incPublicKey] = v.RewardReceiver()
-			wantAutoStakingM[tempCurrentValidatorString[0]] = v.AutoStaking()
+
 		}
 	}
 	tempRootHash := rootHashes[8]
@@ -217,14 +208,6 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 		rootHashes = append(rootHashes, tempRootHash)
 		for _, v := range tempM {
 			wantSubstituteValidatorM[id] = append(wantSubstituteValidatorM[id], v.CommitteePublicKey())
-			committeePublicKey := v.CommitteePublicKey()
-			tempCurrentValidatorString, err := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{committeePublicKey})
-			if err != nil {
-				t.Fatal(err)
-			}
-			incPublicKey := committeePublicKey.GetIncKeyBase58()
-			wantRewardReceiverM[incPublicKey] = v.RewardReceiver()
-			wantAutoStakingM[tempCurrentValidatorString[0]] = v.AutoStaking()
 		}
 	}
 	to = from + 80
@@ -232,14 +215,6 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 	tempRootHash, tempM := storeCommitteeObjectOneShard(NextEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
 	for _, v := range tempM {
 		wantNextEpochCandidateM = append(wantNextEpochCandidateM, v.CommitteePublicKey())
-		committeePublicKey := v.CommitteePublicKey()
-		tempCurrentValidatorString, err := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-		if err != nil {
-			t.Fatal(err)
-		}
-		incPublicKey := committeePublicKey.GetIncKeyBase58()
-		wantRewardReceiverM[incPublicKey] = v.RewardReceiver()
-		wantAutoStakingM[tempCurrentValidatorString[0]] = v.AutoStaking()
 	}
 
 	from += 80
@@ -247,14 +222,6 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 	tempRootHash, tempM = storeCommitteeObjectOneShard(CurrentEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
 	for _, v := range tempM {
 		wantCurrentEpochCandidateM = append(wantCurrentEpochCandidateM, v.CommitteePublicKey())
-		committeePublicKey := v.CommitteePublicKey()
-		tempCurrentValidatorString, err := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-		if err != nil {
-			t.Fatal(err)
-		}
-		incPublicKey := committeePublicKey.GetIncKeyBase58()
-		wantRewardReceiverM[incPublicKey] = v.RewardReceiver()
-		wantAutoStakingM[tempCurrentValidatorString[0]] = v.AutoStaking()
 	}
 
 	tempStateDB, err := NewWithPrefixTrie(tempRootHash, wrarperDB)
@@ -262,7 +229,7 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 		t.Fatal(err, tempStateDB)
 	}
 
-	gotCurrentValidatorM, gotSubstituteValidatorM, gotNextEpochCandidateM, gotCurrentEpochCandidateM, _, _, gotRewardReceiverM, gotAutoStakingM := tempStateDB.getAllCommitteeState(ids)
+	gotCurrentValidatorM, gotSubstituteValidatorM, gotNextEpochCandidateM, gotCurrentEpochCandidateM, _, _ := tempStateDB.getAllCommitteeState(ids)
 	for _, id := range ids {
 		temp, ok := gotCurrentValidatorM[id]
 		if !ok {
@@ -343,23 +310,4 @@ func TestStateDB_GetMixCommitteeState(t *testing.T) {
 		}
 	}
 
-	for k1, v1 := range wantRewardReceiverM {
-		if v2, ok := gotRewardReceiverM[k1]; !ok {
-			t.Fatalf("getAllCommitteeState want %+v but got nothing", k1)
-		} else {
-			if strings.Compare(v1, v2) != 0 {
-				t.Fatalf("getAllCommitteeState want %+v but got %+v", v1, v2)
-			}
-		}
-	}
-
-	for k1, v1 := range wantAutoStakingM {
-		if v2, ok := gotAutoStakingM[k1]; !ok {
-			t.Fatalf("getAllCommitteeState want %+v but got nothing", k1)
-		} else {
-			if v1 != v2 {
-				t.Fatalf("getAllCommitteeState want %+v but got %+v", v1, v2)
-			}
-		}
-	}
 }

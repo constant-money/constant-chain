@@ -31,7 +31,7 @@ func GenerateAddressByShard(shardID byte) ([]string, error) {
 			child, _ := key.NewChildKey(uint32(i))
 			privAddr := child.Base58CheckSerialize(wallet.PriKeyType)
 			paymentAddress := child.Base58CheckSerialize(wallet.PaymentAddressType)
-			if child.KeySet.PaymentAddress.Pk[common.PublicKeySize -1] == byte(shardID) {
+			if child.KeySet.PaymentAddress.Pk[common.PublicKeySize-1] == byte(shardID) {
 				fmt.Printf("Acc %+v : \n", i)
 				fmt.Printf("PublicKey %+v \n ", base58.Base58Check{}.Encode(child.KeySet.PaymentAddress.Pk, common.ZeroByte))
 				fmt.Printf("PaymentAddress: %+v \n", paymentAddress)

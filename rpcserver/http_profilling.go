@@ -6,6 +6,7 @@ import (
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 	"log"
 	"os"
+	"runtime/debug"
 	"runtime/pprof"
 )
 
@@ -19,6 +20,7 @@ func (httpServer *HttpServer) handleStartProfiling(params interface{}, closeChan
 }
 
 func (httpServer *HttpServer) handleStopProfiling(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	debug.FreeOSMemory()
 	pprof.StopCPUProfile()
 	return nil, nil
 }

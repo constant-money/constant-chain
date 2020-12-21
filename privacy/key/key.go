@@ -2,6 +2,7 @@ package key
 
 import (
 	"encoding/hex"
+	"errors"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
 )
 
@@ -52,24 +53,78 @@ func (viewKey ViewingKey) GetPrivateView() *operation.Scalar {
 
 // OTAKey is a pair of keys used to recover coin's one-time-address
 type OTAKey struct{
-	Pk        PublicKey //32 bytes: used to
-	OTASecret PrivateOTAKey
+	pk        PublicKey //32 bytes: used to
+	otaSecret PrivateOTAKey
 }
 
 func (otaKey OTAKey) GetPublicSpend() *operation.Point {
-	pubSpend, _ := new(operation.Point).FromBytesS(otaKey.Pk)
-	return pubSpend
+	pubSpend, err := new(operation.Point).FromBytesS(otaKey.pk)
+	if err != nil{
+		return nil
+	}
+	if pubSpend.PointValid(){
+		return pubSpend
+	}
+	return nil
 }
 
 func (otaKey OTAKey) GetOTASecretKey() *operation.Scalar {
-	return new(operation.Scalar).FromBytesS(otaKey.OTASecret)
+	otaSecret := new(operation.Scalar).FromBytesS(otaKey.otaSecret)
+	if otaSecret.ScalarValid(){
+		return otaSecret
+	}
+	return nil
 }
 
-// PaymentAddress is an address of a payee
+func (otaKey *OTAKey) SetOTASecretKey(otaSecretKey []byte){
+	if len(otaKey.otaSecret) == 0{
+		otaKey.otaSecret = append([]byte{}, otaSecretKey...)
+	}
+}
+
+func (otaKey *OTAKey) SetPublicSpend(publicSpend []byte){
+	if len(otaKey.pk) == 0{
+		otaKey.pk = append([]byte{}, publicSpend...)
+	}
+}
+
+// PaymentAddress is an address of the payee
 type PaymentAddress struct {
 	Pk PublicKey       // 32 bytes, use to receive coin (CoinV1)
 	Tk TransmissionKey // 32 bytes, use to encrypt pointByte
 	OTAPublic PublicOTAKey //32 bytes, used to receive coin (CoinV2)
+}
+
+// Bytes converts payment address to bytes array
+func (addr *PaymentAddress) Bytes() []byte {
+	res := append(addr.Pk[:], addr.Tk[:]...)
+	if addr.OTAPublic != nil {
+		return append(res, addr.OTAPublic[:]...)
+	}
+	return res
+}
+
+// SetBytes reverts bytes array to payment address
+func (addr *PaymentAddress) SetBytes(bytes []byte) error {
+	if len(bytes) != 2*operation.Ed25519KeySize && len(bytes) != 3*operation.Ed25519KeySize{
+		return errors.New("length of payment address not valid")
+	}
+	// the first 33 bytes are public key
+	addr.Pk = bytes[:operation.Ed25519KeySize]
+	// the last 33 bytes are transmission key
+	addr.Tk = bytes[operation.Ed25519KeySize:2*operation.Ed25519KeySize]
+	if len(bytes) == 3 * operation.Ed25519KeySize{
+		addr.OTAPublic = bytes[2*operation.Ed25519KeySize:]
+	}else{
+		addr.OTAPublic = nil
+	}
+	return nil
+}
+
+// String encodes a payment address as a hex string
+func (addr PaymentAddress) String() string {
+	byteArrays := addr.Bytes()
+	return hex.EncodeToString(byteArrays[:])
 }
 
 func (addr PaymentAddress) GetPublicSpend() *operation.Point {
@@ -150,8 +205,8 @@ func GeneratePublicOTAKey(privateOTAKey PrivateOTAKey) PublicOTAKey {
 
 func GenerateOTAKey(privateKey []byte) OTAKey{
 	var otaKey OTAKey
-	otaKey.Pk = GeneratePublicKey(privateKey)
-	otaKey.OTASecret = GeneratePrivateOTAKey(privateKey)
+	otaKey.pk = GeneratePublicKey(privateKey)
+	otaKey.otaSecret = GeneratePrivateOTAKey(privateKey)
 	return otaKey
 }
 
@@ -162,33 +217,4 @@ func GeneratePaymentAddress(privateKey []byte) PaymentAddress {
 	paymentAddress.Tk = GenerateTransmissionKey(GenerateReceivingKey(privateKey))
 	paymentAddress.OTAPublic = GeneratePublicOTAKey(GeneratePrivateOTAKey(privateKey))
 	return paymentAddress
-}
-
-// Bytes converts payment address to bytes array
-func (addr *PaymentAddress) Bytes() []byte {
-	res := append(addr.Pk[:], addr.Tk[:]...)
-	if addr.OTAPublic != nil {
-		return append(res, addr.OTAPublic[:]...)
-	}
-	return res
-}
-
-// SetBytes reverts bytes array to payment address
-func (addr *PaymentAddress) SetBytes(bytes []byte) *PaymentAddress {
-	// the first 33 bytes are public key
-	addr.Pk = bytes[:operation.Ed25519KeySize]
-	// the last 33 bytes are transmission key
-	addr.Tk = bytes[operation.Ed25519KeySize:2*operation.Ed25519KeySize]
-	if len(bytes) == 3 * operation.Ed25519KeySize{
-		addr.OTAPublic = bytes[2*operation.Ed25519KeySize:]
-	}else{
-		addr.OTAPublic = nil
-	}
-	return addr
-}
-
-// String encodes a payment address as a hex string
-func (addr PaymentAddress) String() string {
-	byteArrays := addr.Bytes()
-	return hex.EncodeToString(byteArrays[:])
 }

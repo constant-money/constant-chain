@@ -27,8 +27,8 @@ func (blockchain *BlockChain) processRelayingInstructions(block *BeaconBlock) er
 		}
 		var err error
 		switch inst[0] {
-		case strconv.Itoa(metadata.RelayingBNBHeaderMeta):
-			err = blockchain.processRelayingBNBHeaderInst(inst, relayingState)
+		//case strconv.Itoa(metadata.RelayingBNBHeaderMeta):
+		//	err = blockchain.processRelayingBNBHeaderInst(inst, relayingState)
 		case strconv.Itoa(metadata.RelayingBTCHeaderMeta):
 			err = blockchain.processRelayingBTCHeaderInst(inst, relayingState)
 		}
@@ -38,10 +38,10 @@ func (blockchain *BlockChain) processRelayingInstructions(block *BeaconBlock) er
 	}
 
 	// store updated relayingState to leveldb with new beacon height
-	err = relayingState.BNBHeaderChain.StoreBNBChainState()
-	if err != nil {
-		Logger.log.Error(err)
-	}
+	//err = relayingState.BNBHeaderChain.StoreBNBChainState()
+	//if err != nil {
+	//	Logger.log.Error(err)
+	//}
 	return nil
 }
 

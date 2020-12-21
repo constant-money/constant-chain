@@ -183,7 +183,6 @@ func (engine *Engine) ValidateProducerSig(block common.BlockInterface, consensus
 }
 
 func (engine *Engine) ValidateBlockCommitteSig(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error {
-	//fmt.Println("Xxx ValidateBlockCommitteSig", len(committee))
 	if block.GetVersion() == 1 {
 		return blsbft.ValidateCommitteeSig(block, committee)
 	} else if block.GetVersion() == 2 {

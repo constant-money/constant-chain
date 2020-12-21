@@ -5,14 +5,15 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"math/big"
+	"strconv"
+
 	rCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/pkg/errors"
-	"math/big"
-	"strconv"
 )
 
 // NOTE: for whole bridge's deposit process, anytime an error occurs it will be logged for debugging and the request will be skipped for retry later. No error will be returned so that the network can still continue to process others.
@@ -47,7 +48,7 @@ func (blockchain *BlockChain) processBridgeInstructions(bridgeStateDB *statedb.S
 		case strconv.Itoa(metadata.ContractingRequestMeta):
 			updatingInfoByTokenID, err = blockchain.processContractingReq(inst, updatingInfoByTokenID)
 
-		case strconv.Itoa(metadata.BurningConfirmMeta), strconv.Itoa(metadata.BurningConfirmForDepositToSCMeta):
+		case strconv.Itoa(metadata.BurningConfirmMeta), strconv.Itoa(metadata.BurningConfirmForDepositToSCMeta), strconv.Itoa(metadata.BurningConfirmMetaV2), strconv.Itoa(metadata.BurningConfirmForDepositToSCMetaV2):
 			updatingInfoByTokenID, err = blockchain.processBurningReq(inst, updatingInfoByTokenID)
 
 		}
@@ -244,19 +245,26 @@ func (blockchain *BlockChain) processBurningReq(instruction []string, updatingIn
 	return updatingInfoByTokenID, nil
 }
 
-func (blockchain *BlockChain) storeBurningConfirm(bridgeStateDB *statedb.StateDB, shardBlock *ShardBlock) error {
-	for _, inst := range shardBlock.Body.Instructions {
-		if inst[0] != strconv.Itoa(metadata.BurningConfirmMeta) &&
-			inst[0] != strconv.Itoa(metadata.BurningConfirmForDepositToSCMeta) {
+func (blockchain *BlockChain) storeBurningConfirm(stateDB *statedb.StateDB, instructions [][]string, blockHeight uint64, metas []string) error {
+	for _, inst := range instructions {
+		found := false
+		for _, meta := range metas {
+			if inst[0] == meta {
+				found = true
+			}
+		}
+
+		if !found {
 			continue
 		}
-		BLogger.log.Infof("storeBurningConfirm for shardBlock %d, inst %v, meta type %d", shardBlock.Header.Height, inst, inst[0])
+
+		BLogger.log.Infof("storeBurningConfirm for block %d, inst %v, meta type %v", blockHeight, inst, inst[0])
 
 		txID, err := common.Hash{}.NewHashFromStr(inst[5])
 		if err != nil {
 			return errors.Wrap(err, "txid invalid")
 		}
-		if err := statedb.StoreBurningConfirm(bridgeStateDB, *txID, shardBlock.Header.Height); err != nil {
+		if err := statedb.StoreBurningConfirm(stateDB, *txID, blockHeight); err != nil {
 			return errors.Wrapf(err, "store failed, txID: %x", txID)
 		}
 	}

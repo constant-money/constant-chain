@@ -86,9 +86,20 @@ func NewTxTokenParams(senderKey *privacy.PrivateKey,
 // ========== Get/Set FUNCTION ============
 
 func (txToken TxTokenBase) GetTxBase() metadata.Transaction    { return txToken.Tx }
-func (txToken *TxTokenBase) SetTxBase(tx metadata.Transaction) { txToken.Tx = tx }
+func (txToken *TxTokenBase) SetTxBase(tx metadata.Transaction) error{ 
+	txToken.Tx = tx 
+	return nil
+}
+func (txToken TxTokenBase) GetTxNormal() metadata.Transaction    { return txToken.TxTokenData.TxNormal }
+func (txToken *TxTokenBase) SetTxNormal(tx metadata.Transaction) error{ 
+	txToken.TxTokenData.TxNormal = tx 
+	return nil
+}
 func (txToken TxTokenBase) GetTxTokenData() TxTokenData { return txToken.TxTokenData }
-func (txToken *TxTokenBase) SetTxTokenData(data TxTokenData) { txToken.TxTokenData = data }
+func (txToken *TxTokenBase) SetTxTokenData(data TxTokenData)error { 
+	txToken.TxTokenData = data
+	return nil
+}
 
 func (txToken TxTokenBase) GetTxMintData() (bool, privacy.Coin, *common.Hash, error) {
 	tokenID := txToken.TxTokenData.GetPropertyID()
@@ -96,15 +107,30 @@ func (txToken TxTokenBase) GetTxMintData() (bool, privacy.Coin, *common.Hash, er
 }
 
 func (txToken TxTokenBase) GetTxBurnData() (bool, privacy.Coin, *common.Hash, error) {
-	fmt.Println("[BUGLOC] Burn Data Token")
 	tokenID := txToken.TxTokenData.GetPropertyID()
 	isBurn, burnCoin, _, err := txToken.TxTokenData.TxNormal.GetTxBurnData()
 	return isBurn, burnCoin, &tokenID, err
 }
+
+func (txToken TxTokenBase) GetTxFullBurnData() (bool, privacy.Coin, privacy.Coin, *common.Hash, error) {
+	isBurnToken, burnToken, burnedTokenID, errToken :=  txToken.GetTxBurnData()
+	isBurnPrv, burnPrv, _, errPrv := txToken.GetTxBase().GetTxBurnData()
+
+	if errToken != nil && errPrv != nil {
+		return false, nil, nil, nil, fmt.Errorf("%v and %v", errPrv, errToken)
+	}
+
+	return isBurnPrv || isBurnToken, burnPrv, burnToken, burnedTokenID, nil
+}
 // ========== CHECK FUNCTION ===========
 
-func (txToken TxTokenBase) CheckAuthorizedSender([]byte) (bool, error) {
-	return false, errors.New("TxTokenBase does not has CheckAuthorizedSender")
+func (txToken TxTokenBase) CheckAuthorizedSender(publicKey []byte) (bool, error) {
+	sigPubKey := txToken.TxTokenData.TxNormal.GetSigPubKey()
+	if bytes.Equal(sigPubKey, publicKey) {
+		return true, nil
+	} else {
+		return false, nil
+	}
 }
 
 func (txToken TxTokenBase) IsSalaryTx() bool {
@@ -174,7 +200,7 @@ func (txToken TxTokenBase) JSONString() string {
 // =================== FUNCTIONS THAT GET STUFF ===================
 
 // Hash returns the hash of all fields of the transaction
-func (txToken TxTokenBase) Hash() *common.Hash {
+func (txToken *TxTokenBase) Hash() *common.Hash {
 	if txToken.cachedHash != nil {
 		return txToken.cachedHash
 	}
@@ -273,7 +299,7 @@ func (txToken TxTokenBase) GetTxFee() uint64 {
 
 // ================== NORMAL INIT FUNCTIONS ===================
 
-func EstimateTxSizeOfInitTokenSalary(publicKey []byte, amount uint64, coinName string, coinID *common.Hash) uint64 {
+func EstimateTxSizeOfInitTokenSalary(version int, publicKey []byte, amount uint64, coinName string, coinID *common.Hash) uint64 {
 	receiver := &privacy.PaymentInfo{
 		Amount: amount,
 		PaymentAddress: privacy.PaymentAddress{
@@ -292,7 +318,7 @@ func EstimateTxSizeOfInitTokenSalary(publicKey []byte, amount uint64, coinName s
 		TokenInput:     []privacy.PlainCoin{},
 		Mintable:       true,
 	}
-	estimateTxSizeParam := NewEstimateTxSizeParam(0, 0, false, nil, tokenParams, uint64(0))
+	estimateTxSizeParam := NewEstimateTxSizeParam(version, 0, 0, false, nil, tokenParams, uint64(0))
 	return EstimateTxSize(estimateTxSizeParam)
 }
 

@@ -3,8 +3,9 @@ package rpcserver
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/incdb"
 	"strconv"
+
+	"github.com/incognitochain/incognito-chain/incdb"
 
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 
@@ -57,7 +58,7 @@ func (httpServer *HttpServer) handleGetBeaconSwapProof(params interface{}, close
 	}
 	beaconHeigh := uint64(heightParam)
 	// Get proof of instruction on beacon
-	beaconInstProof, _, errProof := getSwapProofOnBeacon(beaconHeigh, httpServer.GetBeaconChainDatabase(), httpServer.config.ConsensusEngine, metadata.BeaconSwapConfirmMeta)
+	beaconInstProof, _, errProof := getSwapProofOnBeacon(beaconHeigh, httpServer.config.BlockChain, httpServer.config.ConsensusEngine, metadata.BeaconSwapConfirmMeta)
 	if errProof != nil {
 		return nil, errProof
 	}
@@ -75,12 +76,12 @@ func (httpServer *HttpServer) handleGetBeaconSwapProof(params interface{}, close
 // returns rpcservice.RPCError if proof not found
 func getSwapProofOnBeacon(
 	height uint64,
-	db incdb.Database,
+	bc *blockchain.BlockChain,
 	ce ConsensusEngine,
 	meta int,
 ) (*swapProof, *blockchain.BeaconBlock, *rpcservice.RPCError) {
 	// Get beacon block
-	beaconBlocks, err := blockchain.FetchBeaconBlockFromHeight(db, height, height)
+	beaconBlocks, err := blockchain.FetchBeaconBlockFromHeight(bc, height, height)
 	if len(beaconBlocks) == 0 {
 		err := fmt.Errorf("cannot find beacon block with height %d", height)
 		return nil, nil, rpcservice.NewRPCError(rpcservice.GetBeaconBlockByHeightError, err)
@@ -132,6 +133,7 @@ func getShardAndBeaconBlocks(
 	if err != nil {
 		return nil, nil, err
 	}
+	fmt.Println("Bridge Instruction", bridgeInsts)
 	bridgeBlock.Body.Instructions = bridgeInsts
 	return bridgeBlock, beaconBlocks, nil
 }
@@ -214,7 +216,7 @@ func getIncludedBeaconBlocks(
 		previousShardBlock = temp
 	}
 	beaconBlocks, err := blockchain.FetchBeaconBlockFromHeight(
-		bc.GetBeaconChainDatabase(),
+		bc,
 		previousShardBlock.Header.BeaconHeight+1,
 		beaconHeight,
 	)
@@ -356,7 +358,7 @@ func buildProofResult(
 	beaconHeight string,
 	bridgeHeight string,
 ) jsonresult.GetInstructionProof {
-	return jsonresult.GetInstructionProof{
+	r := jsonresult.GetInstructionProof{
 		Instruction:  decodedInst,
 		BeaconHeight: beaconHeight,
 		BridgeHeight: bridgeHeight,
@@ -367,12 +369,14 @@ func buildProofResult(
 		BeaconBlkData:        beaconInstProof.blkData,
 		BeaconSigs:           beaconInstProof.signerSigs,
 		BeaconSigIdxs:        beaconInstProof.sigIdxs,
-
-		BridgeInstPath:       bridgeInstProof.instPath,
-		BridgeInstPathIsLeft: bridgeInstProof.instPathIsLeft,
-		BridgeInstRoot:       bridgeInstProof.instRoot,
-		BridgeBlkData:        bridgeInstProof.blkData,
-		BridgeSigs:           bridgeInstProof.signerSigs,
-		BridgeSigIdxs:        bridgeInstProof.sigIdxs,
 	}
+	if bridgeInstProof != nil {
+		r.BridgeInstPath = bridgeInstProof.instPath
+		r.BridgeInstPathIsLeft = bridgeInstProof.instPathIsLeft
+		r.BridgeInstRoot = bridgeInstProof.instRoot
+		r.BridgeBlkData = bridgeInstProof.blkData
+		r.BridgeSigs = bridgeInstProof.signerSigs
+		r.BridgeSigIdxs = bridgeInstProof.sigIdxs
+	}
+	return r
 }

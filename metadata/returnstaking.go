@@ -103,7 +103,7 @@ func (sbsRes ReturnStakingMetadata) VerifyMinerCreatedTxBeforeGettingInBlock(min
 			if err != nil {
 				return false, errors.New("Return Staking: Cannot Convert TxID from string to common.Hash")
 			}
-			_, _, _, txReq, err := chainRetriever.GetTransactionByHash(*txIDReq)
+			_, _, _, _, txReq, err := chainRetriever.GetTransactionByHash(*txIDReq)
 			if err != nil {
 				return false, errors.Errorf("Return Staking: Cannot get tx request from tx hash %v", value)
 			}
@@ -126,3 +126,4 @@ func (sbsRes ReturnStakingMetadata) VerifyMinerCreatedTxBeforeGettingInBlock(min
 func (sbsRes *ReturnStakingMetadata) SetSharedRandom(r []byte) {
 	sbsRes.SharedRandom = r
 }
+

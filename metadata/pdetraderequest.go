@@ -112,6 +112,9 @@ func (pc PDETradeRequest) ValidateSanityData(chainRetriever ChainRetriever, shar
 	if (pc.SellAmount + pc.TradingFee) != burnCoin.GetValue() {
 		return false, false, errors.New("Error Selling amount should be equal to the burned amount")
 	}
+	if pc.SellAmount > burnCoin.GetValue() || pc.TradingFee > burnCoin.GetValue() {
+		return false, false, errors.New("Neither selling amount nor trading fee allows to be larger than the tx value")
+	}
 
 	tokenIDToSell, err := common.Hash{}.NewHashFromStr(pc.TokenIDToSellStr)
 	if err != nil {

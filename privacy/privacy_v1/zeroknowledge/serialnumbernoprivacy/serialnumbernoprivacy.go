@@ -38,6 +38,10 @@ func (proof SNNoPrivacyProof) GetOutput() *operation.Point{
 	return proof.stmt.output
 }
 
+func (proof SNNoPrivacyProof) GetInput() *operation.Scalar{
+	return proof.stmt.input
+}
+
 
 func (proof SNNoPrivacyProof) ValidateSanity() bool {
 	if !proof.stmt.output.PointValid() {
@@ -210,7 +214,7 @@ func (wit SNNoPrivacyWitness) Prove(mess []byte) (*SNNoPrivacyProof, error) {
 	if mess == nil {
 		// calculate x = hash(tSeed || tInput || tSND2 || tOutput)
 		// recheck frombytes is valid scalar
-		x = utils.GenerateChallenge([][]byte{tSK.ToBytesS(), tE.ToBytesS()})
+		x = utils.GenerateChallenge([][]byte{wit.stmt.output.ToBytesS(), wit.stmt.vKey.ToBytesS(), tSK.ToBytesS(), tE.ToBytesS()})
 	} else {
 		x.FromBytesS(mess)
 	}
@@ -229,7 +233,7 @@ func (pro SNNoPrivacyProof) Verify(mess []byte) (bool, error) {
 	x := new(operation.Scalar)
 	if mess == nil {
 		// calculate x = hash(tSeed || tInput || tSND2 || tOutput)
-		x = utils.GenerateChallenge([][]byte{pro.tSeed.ToBytesS(), pro.tOutput.ToBytesS()})
+		x = utils.GenerateChallenge([][]byte{pro.stmt.output.ToBytesS(), pro.stmt.vKey.ToBytesS(), pro.tSeed.ToBytesS(), pro.tOutput.ToBytesS()})
 	} else {
 		x.FromBytesS(mess)
 	}
@@ -255,6 +259,42 @@ func (pro SNNoPrivacyProof) Verify(mess []byte) (bool, error) {
 	if !operation.IsPointEqual(leftPoint2, rightPoint2) {
 		Logger.Log.Errorf("verify serial number no privacy proof statement 2 failed")
 		return false, errors.New("verify serial number no privacy proof statement 2 failed")
+	}
+
+	return true, nil
+}
+
+func (pro SNNoPrivacyProof) VerifyOld(mess []byte) (bool, error) {
+	// re-calculate x = hash(tSeed || tOutput)
+	x := new(operation.Scalar)
+	if mess == nil {
+		// calculate x = hash(tSeed || tInput || tSND2 || tOutput)
+		x = utils.GenerateChallenge([][]byte{pro.tSeed.ToBytesS(), pro.tOutput.ToBytesS()})
+	} else {
+		x.FromBytesS(mess)
+	}
+
+	// Check gSK^zSeed = vKey^x * tSeed
+	leftPoint1 := new(operation.Point).ScalarMult(operation.PedCom.G[operation.PedersenPrivateKeyIndex], pro.zSeed)
+
+	rightPoint1 := new(operation.Point).ScalarMult(pro.stmt.vKey, x)
+	rightPoint1 = rightPoint1.Add(rightPoint1, pro.tSeed)
+
+	if !operation.IsPointEqual(leftPoint1, rightPoint1) {
+		Logger.Log.Errorf("verifyOld serial number no privacy proof statement 1 failed")
+		return false, errors.New("verifyOld serial number no privacy proof statement 1 failed")
+	}
+
+	// Check sn^(zSeed + x*input) = gSK^x * tOutput
+	tmp := new(operation.Scalar).Add(pro.zSeed, new(operation.Scalar).Mul(x, pro.stmt.input))
+	leftPoint2 := new(operation.Point).ScalarMult(pro.stmt.output, tmp)
+
+	rightPoint2 := new(operation.Point).ScalarMult(operation.PedCom.G[operation.PedersenPrivateKeyIndex], x)
+	rightPoint2 = rightPoint2.Add(rightPoint2, pro.tOutput)
+
+	if !operation.IsPointEqual(leftPoint2, rightPoint2) {
+		Logger.Log.Errorf("verifyOld serial number no privacy proof statement 2 failed")
+		return false, errors.New("verifyOld serial number no privacy proof statement 2 failed")
 	}
 
 	return true, nil

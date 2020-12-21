@@ -21,10 +21,6 @@ func (s *SynkerService) GetCrossShardPoolInfo(toShard int) []common.BlockPoolInt
 	return s.Synker.GetPoolInfo(syncker.CrossShardPoolType, toShard)
 }
 
-func (s *SynkerService) GetShardToBeaconPoolInfo() []common.BlockPoolInterface {
-	return s.Synker.GetPoolInfo(syncker.S2BPoolType, 0)
-}
-
 func (s *SynkerService) GetAllViewShardByHash(bestHash string, sID int) []common.BlockPoolInterface {
 	return s.Synker.GetAllViewByHash(syncker.ShardPoolType, bestHash, sID)
 }

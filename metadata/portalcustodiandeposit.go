@@ -66,7 +66,6 @@ func (object *PortalCustodianDeposit) UnmarshalJSON(data []byte) error {
 }
 
 // PortalCustodianDepositAction - shard validator creates instruction that contain this action content
-// it will be append to ShardToBeaconBlock
 type PortalCustodianDepositAction struct {
 	Meta    PortalCustodianDeposit
 	TxReqID common.Hash

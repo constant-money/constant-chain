@@ -2,8 +2,9 @@ package rawdbv2
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"sort"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 // key prefix
@@ -12,10 +13,12 @@ var (
 	WaitingPDEContributionPrefix = []byte("waitingpdecontribution-")
 	PDEPoolPrefix                = []byte("pdepool-")
 	PDESharePrefix               = []byte("pdeshare-")
+	PDETradingFeePrefix          = []byte("pdetradingfee-")
 	PDETradeFeePrefix            = []byte("pdetradefee-")
 	PDEContributionStatusPrefix  = []byte("pdecontributionstatus-")
 	PDETradeStatusPrefix         = []byte("pdetradestatus-")
 	PDEWithdrawalStatusPrefix    = []byte("pdewithdrawalstatus-")
+	PDEFeeWithdrawalStatusPrefix = []byte("pdefeewithdrawalstatus-")
 )
 
 // TODO - change json to CamelCase
@@ -90,6 +93,19 @@ func BuildPDEPoolForPairKey(
 	tokenIDStrs := []string{token1IDStr, token2IDStr}
 	sort.Strings(tokenIDStrs)
 	return append(pdePoolForPairByBCHeightPrefix, []byte(tokenIDStrs[0]+"-"+tokenIDStrs[1])...)
+}
+
+func BuildPDETradingFeeKey(
+	beaconHeight uint64,
+	token1IDStr string,
+	token2IDStr string,
+	contributorAddressStr string,
+) []byte {
+	beaconHeightBytes := []byte(fmt.Sprintf("%d-", beaconHeight))
+	pdeTradingFeeByBCHeightPrefix := append(PDETradingFeePrefix, beaconHeightBytes...)
+	tokenIDStrs := []string{token1IDStr, token2IDStr}
+	sort.Strings(tokenIDStrs)
+	return append(pdeTradingFeeByBCHeightPrefix, []byte(tokenIDStrs[0]+"-"+tokenIDStrs[1]+"-"+contributorAddressStr)...)
 }
 
 func BuildPDETradeFeesKey(

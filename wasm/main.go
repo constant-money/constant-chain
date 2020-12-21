@@ -184,6 +184,33 @@ func hybridDecryptionASM(_ js.Value, args []js.Value) interface{} {
 	return result
 }
 
+func getSignPublicKey(_ js.Value, args []js.Value) interface{} {
+	result, err := gomobile.GetSignPublicKey(args[0].String())
+	if err != nil {
+		return nil
+	}
+
+	return result
+}
+
+func signPoolWithdraw(_ js.Value, args []js.Value) interface{} {
+	result, err := gomobile.SignPoolWithdraw(args[0].String())
+	if err != nil {
+		return nil
+	}
+
+	return result
+}
+
+func verifySign(_ js.Value, args []js.Value) interface{} {
+	result, err := gomobile.VerifySign(args[0].String(), args[1].String(), args[2].String(), args[3].String())
+	if err != nil {
+		return nil
+	}
+
+	return result
+}
+
 func main() {
 	c := make(chan struct{}, 0)
 	println("Hello WASM")
@@ -211,6 +238,10 @@ func main() {
 
 	js.Global().Set("hybridEncryptionASM", js.FuncOf(hybridEncryptionASM))
 	js.Global().Set("hybridDecryptionASM", js.FuncOf(hybridDecryptionASM))
+
+	js.Global().Set("getSignPublicKey", js.FuncOf(getSignPublicKey))
+	js.Global().Set("signPoolWithdraw", js.FuncOf(signPoolWithdraw))
+	js.Global().Set("verifySign", js.FuncOf(verifySign))
 
 	<-c
 }

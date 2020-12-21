@@ -17,7 +17,7 @@ type Base58 struct {
 func (base58 Base58) Decode(b string) []byte {
 	d, err := Decode(b)
 	if err != nil {
-		fmt.Print(err)
+		fmt.Printf("decode base58 from string %v error. Error %v\n", b, err)
 		d = nil
 	}
 	return d

@@ -4,15 +4,16 @@ import (
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha512"
+	"errors"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/privacy/operation"
 )
 
 // burnAddress1BytesDecode is a decoded bytes array of old burning address "15pABFiJVeh9D5uiQEhQX4SVibGGbdAVipQxBdxkmDqAJaoG1EdFKHBrNfs"
 // burnAddress1BytesDecode,_, err := base58.Base58Check{}.Decode("15pABFiJVeh9D5uiQEhQX4SVibGGbdAVipQxBdxkmDqAJaoG1EdFKHBrNfs")
 var burnAddress1BytesDecode = []byte{1, 32, 99, 183, 246, 161, 68, 172, 228, 222, 153, 9, 172, 39, 208, 245, 167, 79, 11, 2, 114, 65, 241, 69, 85, 40, 193, 104, 199, 79, 70, 4, 53, 0, 0, 163, 228, 236, 208}
-
 
 // KeyWallet represents with bip32 standard
 type KeyWallet struct {
@@ -111,6 +112,12 @@ func (key *KeyWallet) Serialize(keyType byte) ([]byte, error) {
 
 		keyBytes = append(keyBytes, byte(len(key.KeySet.PaymentAddress.Tk))) // set length Pkenc
 		keyBytes = append(keyBytes, key.KeySet.PaymentAddress.Tk[:]...)      // set Pkenc
+
+		if len(key.KeySet.PaymentAddress.OTAPublic) > 0 {
+			keyBytes = append(keyBytes, byte(len(key.KeySet.PaymentAddress.OTAPublic))) // set length OTAPublicKey
+			keyBytes = append(keyBytes, key.KeySet.PaymentAddress.OTAPublic[:]...)      // set OTAPublicKey
+		}
+
 		buffer.Write(keyBytes)
 	} else if keyType == ReadonlyKeyType {
 		keyBytes := make([]byte, 0)
@@ -120,7 +127,15 @@ func (key *KeyWallet) Serialize(keyType byte) ([]byte, error) {
 		keyBytes = append(keyBytes, byte(len(key.KeySet.ReadonlyKey.Rk))) // set length Skenc
 		keyBytes = append(keyBytes, key.KeySet.ReadonlyKey.Rk[:]...)      // set Pkenc
 		buffer.Write(keyBytes)
-	} else {
+	} else if keyType == OTAKeyType {
+		keyBytes := make([]byte, 0)
+		keyBytes = append(keyBytes, byte(len(key.KeySet.OTAKey.GetPublicSpend().ToBytesS()))) // set length publicSpend
+		keyBytes = append(keyBytes, key.KeySet.OTAKey.GetPublicSpend().ToBytesS()[:]...)      // set publicSpend
+
+		keyBytes = append(keyBytes, byte(len(key.KeySet.OTAKey.GetOTASecretKey().ToBytesS()))) // set length OTASecretKey
+		keyBytes = append(keyBytes, key.KeySet.OTAKey.GetOTASecretKey().ToBytesS()[:]...)      // set OTASecretKey
+		buffer.Write(keyBytes)
+	}else{
 		return []byte{}, NewWalletError(InvalidKeyTypeErr, nil)
 	}
 
@@ -161,7 +176,7 @@ func deserialize(data []byte) (*KeyWallet, error) {
 	}
 	keyType := data[0]
 	if keyType == PriKeyType {
-		if len(data) != privKeySerializedBytesLen{
+		if len(data) != privKeySerializedBytesLen {
 			return nil, NewWalletError(InvalidSeserializedKey, nil)
 		}
 
@@ -171,10 +186,14 @@ func deserialize(data []byte) (*KeyWallet, error) {
 		keyLength := int(data[38])
 		key.KeySet.PrivateKey = make([]byte, keyLength)
 		copy(key.KeySet.PrivateKey[:], data[39:39+keyLength])
+		err := key.KeySet.InitFromPrivateKey(&key.KeySet.PrivateKey)
+		if err != nil {
+			return nil, err
+		}
 	} else if keyType == PaymentAddressType {
 		if !bytes.Equal(burnAddress1BytesDecode, data){
-			if len(data) != paymentAddrSerializedBytesLen{
-				return nil, NewWalletError(InvalidSeserializedKey, nil)
+			if len(data) != paymentAddrSerializedBytesLen && len(data) != paymentAddrSerializedBytesLen + 1 +operation.Ed25519KeySize{
+				return nil, NewWalletError(InvalidSeserializedKey, errors.New("length ota public key not valid: " + string(len(data))))
 			}
 		}
 		apkKeyLength := int(data[1])
@@ -183,8 +202,17 @@ func deserialize(data []byte) (*KeyWallet, error) {
 		key.KeySet.PaymentAddress.Tk = make([]byte, pkencKeyLength)
 		copy(key.KeySet.PaymentAddress.Pk[:], data[2:2+apkKeyLength])
 		copy(key.KeySet.PaymentAddress.Tk[:], data[3+apkKeyLength:3+apkKeyLength+pkencKeyLength])
+		//Deserialize OTAPublic Key
+		if len(data) > paymentAddrSerializedBytesLen{
+			otapkLength := int(data[apkKeyLength+pkencKeyLength+3])
+			if otapkLength != operation.Ed25519KeySize {
+				return nil, NewWalletError(InvalidSeserializedKey, errors.New("length ota public key not valid: " + string(otapkLength)))
+			}
+			key.KeySet.PaymentAddress.OTAPublic = append([]byte{}, data[apkKeyLength+pkencKeyLength+4:apkKeyLength+pkencKeyLength+otapkLength+4]...)
+		}
+
 	} else if keyType == ReadonlyKeyType {
-		if len(data) != readOnlyKeySerializedBytesLen{
+		if len(data) != readOnlyKeySerializedBytesLen {
 			return nil, NewWalletError(InvalidSeserializedKey, nil)
 		}
 
@@ -197,6 +225,21 @@ func deserialize(data []byte) (*KeyWallet, error) {
 		key.KeySet.ReadonlyKey.Rk = make([]byte, skencKeyLength)
 		copy(key.KeySet.ReadonlyKey.Pk[:], data[2:2+apkKeyLength])
 		copy(key.KeySet.ReadonlyKey.Rk[:], data[3+apkKeyLength:3+apkKeyLength+skencKeyLength])
+	}else if keyType == OTAKeyType {
+		if len(data) != otaKeySerializedBytesLen{
+			return nil, NewWalletError(InvalidSeserializedKey, nil)
+		}
+
+		pkKeyLength := int(data[1])
+		if len(data) < pkKeyLength+3 {
+			return nil, NewWalletError(InvalidKeyTypeErr, nil)
+		}
+		skKeyLength := int(data[pkKeyLength+2])
+
+		key.KeySet.OTAKey.SetPublicSpend(data[2:2+pkKeyLength])
+		key.KeySet.OTAKey.SetOTASecretKey(data[3+pkKeyLength :3+pkKeyLength+skKeyLength])
+	} else{
+		return nil, NewWalletError(InvalidKeyTypeErr, errors.New("cannot detect key type"))
 	}
 
 	// validate checksum

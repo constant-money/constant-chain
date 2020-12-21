@@ -150,7 +150,7 @@ func TestInnerProductProveVerify(t *testing.T) {
 }
 
 func TestAggregatedRangeProveVerify(t *testing.T) {
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1; i++ {
 		//prepare witness for Aggregated range protocol
 		wit := new(AggregatedRangeWitness)
 		numValue := rand.Intn(privacy_util.MaxOutputCoin)
@@ -185,7 +185,7 @@ func TestAggregatedRangeProveVerify(t *testing.T) {
 		assert.Equal(t, true, res)
 		assert.Equal(t, nil, err)
 
-		// verify the proof faster
+		//verify the proof faster
 		res, err = proof2.VerifyFaster()
 		assert.Equal(t, true, res)
 		assert.Equal(t, nil, err)

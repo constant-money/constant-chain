@@ -3,6 +3,8 @@ package transaction
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/incognitochain/incognito-chain/privacy/coin"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -128,76 +130,170 @@ type txJsonDataVersion struct {
 
 // For PRV and the Fee inside TokenTx
 func NewTransactionFromJsonBytes(data []byte) (metadata.Transaction, error) {
-	//fmt.Println(string(data))
-	txJsonVersion := new(txJsonDataVersion)
-	if err := json.Unmarshal(data, txJsonVersion); err != nil {
+	choices, err := DeserializeTransactionJSON(data)
+	if err!=nil{
 		return nil, err
 	}
-	if txJsonVersion.Type == common.TxConversionType || txJsonVersion.Type == common.TxTokenConversionType {
-		if txJsonVersion.Version == int8(utils.TxConversionVersion12Number) {
-				tx := new(TxVersion2)
-				if err := json.Unmarshal(data, tx); err != nil {
-					return nil, err
-				}
-				return tx, nil
-		} else {
-			return nil, errors.New("Cannot new txConversion from jsonBytes, type is incorrect.")
-		}
-	} else {
-		switch txJsonVersion.Version {
-		case int8(utils.TxVersion1Number), int8(utils.TxVersion0Number):
-			tx := new(TxVersion1)
-			if err := json.Unmarshal(data, tx); err != nil {
-				return nil, err
-			}
-			return tx, nil
-		case int8(utils.TxVersion2Number):
-			tx := new(TxVersion2)
-			if err := json.Unmarshal(data, tx); err != nil {
-				return nil, err
-			}
-			return tx, nil
-		default:
-			return nil, errors.New("Cannot new tx from jsonBytes, version is incorrect")
-		}
+	if choices.Version1!=nil{
+		return choices.Version1, nil
 	}
+	if choices.Version2!=nil{
+		return choices.Version2, nil
+	}
+	return nil, errors.New("Cannot parse TX as PRV transaction")
+	// txJsonVersion := new(txJsonDataVersion)
+	// if err := json.Unmarshal(data, txJsonVersion); err != nil {
+	// 	return nil, err
+	// }
+	// if txJsonVersion.Type == common.TxConversionType || txJsonVersion.Type == common.TxTokenConversionType {
+	// 	if txJsonVersion.Version == int8(utils.TxConversionVersion12Number) {
+	// 			tx := new(TxVersion2)
+	// 			if err := json.Unmarshal(data, tx); err != nil {
+	// 				return nil, err
+	// 			}
+	// 			return tx, nil
+	// 	} else {
+	// 		return nil, errors.New("Cannot new txConversion from jsonBytes, type is incorrect.")
+	// 	}
+	// } else {
+	// 	switch txJsonVersion.Version {
+	// 	case int8(utils.TxVersion1Number), int8(utils.TxVersion0Number):
+	// 		tx := new(TxVersion1)
+	// 		if err := json.Unmarshal(data, tx); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return tx, nil
+	// 	case int8(utils.TxVersion2Number):
+	// 		tx := new(TxVersion2)
+	// 		if err := json.Unmarshal(data, tx); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return tx, nil
+	// 	default:
+	// 		return nil, errors.New("Cannot new tx from jsonBytes, version is incorrect")
+	// 	}
+	// }
 }
 
 // Return token transaction from bytes
 func NewTransactionTokenFromJsonBytes(data []byte) (tx_generic.TransactionToken, error) {
-	txJsonVersion := new(txJsonDataVersion)
-	if err := json.Unmarshal(data, txJsonVersion); err != nil {
+	choices, err := DeserializeTransactionJSON(data)
+	if err!=nil{
 		return nil, err
 	}
+	if choices.TokenVersion1!=nil{
+		return choices.TokenVersion1, nil
+	}
+	if choices.TokenVersion2!=nil{
+		return choices.TokenVersion2, nil
+	}
+	return nil, errors.New("Cannot parse TX as token transaction")
+	// txJsonVersion := new(txJsonDataVersion)
+	// if err := json.Unmarshal(data, txJsonVersion); err != nil {
+	// 	return nil, err
+	// }
 
-	if txJsonVersion.Type == common.TxTokenConversionType {
-		if txJsonVersion.Version == utils.TxConversionVersion12Number {
-			tx := new(TxTokenVersion2)
-			if err := json.Unmarshal(data, tx); err != nil {
-				return nil, err
+	// if txJsonVersion.Type == common.TxTokenConversionType {
+	// 	if txJsonVersion.Version == utils.TxConversionVersion12Number {
+	// 		tx := new(TxTokenVersion2)
+	// 		if err := json.Unmarshal(data, tx); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return tx, nil
+	// 	} else {
+	// 		return nil, errors.New("Cannot new txTokenConversion from jsonBytes, version is incorrect")
+	// 	}
+	// } else {
+	// 	switch txJsonVersion.Version {
+	// 	case int8(utils.TxVersion1Number), utils.TxVersion0Number:
+	// 		tx := new(TxTokenVersion1)
+	// 		if err := json.Unmarshal(data, tx); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return tx, nil
+	// 	case int8(utils.TxVersion2Number):
+	// 		tx := new(TxTokenVersion2)
+	// 		if err := json.Unmarshal(data, tx); err != nil {
+	// 			return nil, err
+	// 		}
+	// 		return tx, nil
+	// 	default:
+	// 		return nil, errors.New("Cannot new txToken from bytes because version is incorrect")
+	// 	}
+	// }
+}
+
+type TxChoice struct{
+	Version1 		*TxVersion1 		`json:"TxVersion1,omitempty"`
+	TokenVersion1 	*TxTokenVersion1 	`json:"TxTokenVersion1,omitempty"`
+	Version2 		*TxVersion2 		`json:"TxVersion2,omitempty"`
+	TokenVersion2 	*TxTokenVersion2 	`json:"TxTokenVersion2,omitempty"`
+}
+func (ch *TxChoice) ToTx() metadata.Transaction{
+	// `choice` struct only ever contains 1 non-nil field
+	if ch.Version1!=nil{
+		return ch.Version1
+	}
+	if ch.Version2!=nil{
+		return ch.Version2
+	}
+	if ch.TokenVersion1!=nil{
+		return ch.TokenVersion1
+	}
+	if ch.TokenVersion2!=nil{
+		return ch.TokenVersion2
+	}
+	return nil
+}
+func DeserializeTransactionJSON(data []byte) (*TxChoice, error){
+	result := &TxChoice{}
+	holder := make(map[string]interface{})
+	err := json.Unmarshal(data, &holder)
+	if err!=nil{
+		return nil, err
+	}
+	_, isTokenTx := holder["TxTokenPrivacyData"]
+	_, hasVersionOutside := holder["Version"]
+	var verHolder txJsonDataVersion
+	json.Unmarshal(data, &verHolder)
+	if hasVersionOutside {
+		switch verHolder.Version{
+		case utils.TxVersion1Number:
+			if isTokenTx{
+				// token ver 1
+				result.TokenVersion1 = &TxTokenVersion1{}
+				err := json.Unmarshal(data, result.TokenVersion1)
+				return result, err
+			}else{
+				// tx ver 1
+				result.Version1 = &TxVersion1{}
+				err := json.Unmarshal(data, result.Version1)
+				return result, err
 			}
-			return tx, nil
-		} else {
-			return nil, errors.New("Cannot new txTokenConversion from jsonBytes, version is incorrect")
-		}
-	} else {
-		switch txJsonVersion.Version {
-		case int8(utils.TxVersion1Number), utils.TxVersion0Number:
-			tx := new(TxTokenVersion1)
-			if err := json.Unmarshal(data, tx); err != nil {
-				return nil, err
+		case utils.TxVersion2Number: // the same as utils.TxConversionVersion12Number
+			if isTokenTx{
+				// rejected
+				return nil, errors.New("Error unmarshalling TX from JSON : misplaced version")
+			}else{
+				// tx ver 2
+				result.Version2 = &TxVersion2{}
+				err := json.Unmarshal(data, result.Version2)
+				return result, err
 			}
-			return tx, nil
-		case int8(utils.TxVersion2Number):
-			tx := new(TxTokenVersion2)
-			if err := json.Unmarshal(data, tx); err != nil {
-				return nil, err
-			}
-			return tx, nil
 		default:
-			return nil, errors.New("Cannot new txToken from bytes because version is incorrect")
+			return nil, errors.New(fmt.Sprintf("Error unmarshalling TX from JSON : wrong version of %d", verHolder.Version))
+		}
+	}else{
+		if isTokenTx{
+			// token ver 2
+			result.TokenVersion2 = &TxTokenVersion2{}
+			err := json.Unmarshal(data, result.TokenVersion2)
+			return result, err
+		}else{
+			return nil, errors.New("Error unmarshalling TX from JSON")
 		}
 	}
+
 }
 
 type BuildCoinBaseTxByCoinIDParams struct {
@@ -280,11 +376,39 @@ func GetTxTokenDataFromTransaction(tx metadata.Transaction) *tx_generic.TxTokenD
 	// } else if tx.GetVersion() == utils.TxVersion2Number || tx.GetVersion() == utils.TxConversionVersion12Number {
 	case *TxTokenVersion2:
 		// txTemp := tx.(*TxTokenVersion2)
-		return &tx_specific.TxTokenData
+		res := tx_specific.GetTxTokenData()
+		return &res
 	default:
 		return nil
 	}
-	return nil
+}
+
+func GetFullBurnData(tx metadata.Transaction) (bool, coin.Coin, coin.Coin, *common.Hash, error) {
+
+	switch  tx.GetType() {
+	case common.TxNormalType:
+		isBurned, burnPrv, _, err :=  tx.GetTxBurnData()
+		if err != nil || isBurned == false {
+			return false, nil, nil, nil, err
+		}
+		return true, burnPrv, nil, nil, err
+	case common.TxCustomTokenPrivacyType:
+		if txTmp, ok := tx.(TransactionToken); !ok {
+			return false, nil, nil, nil, fmt.Errorf("tx is not tp")
+		} else {
+			isBurnToken, burnToken, burnedTokenID, err1 :=  txTmp.GetTxBurnData()
+			isBurnPrv, burnPrv, _, err2 := txTmp.GetTxBase().GetTxBurnData()
+
+			if err1 != nil && err2 != nil {
+				return false, nil, nil, nil, fmt.Errorf("%v and %v", err1, err2)
+			}
+
+			return isBurnPrv || isBurnToken, burnToken, burnPrv, burnedTokenID, nil
+		}
+
+	default:
+		return false, nil, nil, nil, nil
+	}
 }
 
 // func (txToken *tx_generic.TxTokenBase) UnmarshalJSON(data []byte) error {

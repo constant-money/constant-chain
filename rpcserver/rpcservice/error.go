@@ -44,6 +44,7 @@ const (
 	GetClonedShardBestStateError
 	GetShardBlockByHeightError
 	GetShardBestBlockError
+	GetLatestFinalizedShardBlockError
 	GetShardBlockByHashError
 	GetBeaconBlockByHashError
 	GetBeaconBlockByHeightError
@@ -112,6 +113,23 @@ const (
 
 	// feature reward
 	GetRewardFeatureByFeatureNameError
+
+	// Init State Root hash
+	InitStateRootHash
+
+	GetAllBeaconViews
+
+	// Restore
+	RestoreBeaconCommittee
+	RestoreShardCommittee
+	RestoreBeaconPendingValidator
+	RestoreShardPendingValidator
+	RestoreCandidateBeaconWaitingForCurrentRandom
+	RestoreCandidateBeaconWaitingForNextRandom
+	RestoreCandidateShardWaitingForCurrentRandom
+	RestoreCandidateShardWaitingForNextRandom
+
+	GetTotalStakerError
 )
 
 // Standard JSON-RPC 2.0 errors.
@@ -150,13 +168,14 @@ var ErrCodeMessage = map[int]struct {
 	GetOutputCoinsVer1Error:               {-1022, "Get output coins of ver 1 in database error"},
 	GetOutputCoinsVer2Error:			   {-1023, "Get output coins of ver 2 in database error"},
 	// for block -2xxx
-	GetShardBlockByHeightError:  {-2000, "Get shard block by height error"},
-	GetShardBlockByHashError:    {-2001, "Get shard block by hash error"},
-	GetShardBestBlockError:      {-2002, "Get shard best block error"},
-	GetBeaconBlockByHashError:   {-2003, "Get beacon block by hash error"},
-	GetBeaconBlockByHeightError: {-2004, "Get beacon block by height error"},
-	GetBeaconBestBlockHashError: {-2004, "Get beacon best block hash error"},
-	GetBeaconBestBlockError:     {-2005, "Get beacon best block error"},
+	GetShardBlockByHeightError:        {-2000, "Get shard block by height error"},
+	GetShardBlockByHashError:          {-2001, "Get shard block by hash error"},
+	GetShardBestBlockError:            {-2002, "Get shard best block error"},
+	GetBeaconBlockByHashError:         {-2003, "Get beacon block by hash error"},
+	GetBeaconBlockByHeightError:       {-2004, "Get beacon block by height error"},
+	GetBeaconBestBlockHashError:       {-2004, "Get beacon best block hash error"},
+	GetBeaconBestBlockError:           {-2005, "Get beacon best block error"},
+	GetLatestFinalizedShardBlockError: {-2006, "Get Latest Finalized Shard Block Error"},
 
 	// best state -3xxx
 	GetClonedBeaconBestStateError: {-3000, "Get Cloned Beacon Best State Error"},
@@ -226,6 +245,21 @@ var ErrCodeMessage = map[int]struct {
 
 	// feature reward
 	GetRewardFeatureByFeatureNameError: {-11001, "Get feature reward by feature name error"},
+
+	// InitStateRootHash
+	InitStateRootHash: {-12000, "Init state root hash error"},
+
+	// Restore
+	RestoreBeaconCommittee:                        {-12001, "Restore beacon committee errror"},
+	RestoreShardCommittee:                         {-12002, "Restore shard committee error"},
+	RestoreBeaconPendingValidator:                 {-12003, "Restore beacon pending validator"},
+	RestoreShardPendingValidator:                  {-12004, "Restore shard pending validator"},
+	RestoreCandidateBeaconWaitingForCurrentRandom: {-12005, "Restore candidate beacon waiting for current random"},
+	RestoreCandidateBeaconWaitingForNextRandom:    {-12006, "Restore candidate beacon waiting for next random"},
+	RestoreCandidateShardWaitingForCurrentRandom:  {-12007, "Restore candidate shard waiting for current random"},
+	RestoreCandidateShardWaitingForNextRandom:     {-12008, "Restore candidate shard waiting for next random"},
+	GetAllBeaconViews:                             {-12009, "Get all beacon views"},
+	GetTotalStakerError:                           {-12010, "Get total staker return error"},
 }
 
 // RPCError represents an error that is used as a part of a JSON-RPC JsonResponse

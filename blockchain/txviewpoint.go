@@ -165,28 +165,27 @@ func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, blo
 	prvCoinID := &common.Hash{}
 	prvCoinID.SetBytes(common.PRVCoinID[:])
 	for indexTx, tx := range transactions {
-		serialNumbers, commitments, outCoins, snDs, err := view.processFetchTxViewPointFromProof(stateDB, block.Header.ShardID, tx.GetProof(), prvCoinID)
-		if err != nil {
-			return NewBlockChainError(UnExpectedError, err)
-		}
-		acceptedSerialNumbers = append(acceptedSerialNumbers, serialNumbers...)
-		for pubkey, data := range commitments {
-			if acceptedCommitments[pubkey] == nil {
-				acceptedCommitments[pubkey] = make([][]byte, 0)
-			}
-			acceptedCommitments[pubkey] = append(acceptedCommitments[pubkey], data...)
-			view.txByPubKey[pubkey+"_"+base58.Base58Check{}.Encode(tx.Hash().GetBytes(), 0x0)+"_"+strconv.Itoa(int(block.Header.ShardID))] = true
-		}
-		for pubkey, data := range outCoins {
-			if acceptedOutputcoins[pubkey] == nil {
-				acceptedOutputcoins[pubkey] = make([]coin.Coin, 0)
-			}
-			acceptedOutputcoins[pubkey] = append(acceptedOutputcoins[pubkey], data...)
-		}
-
 		switch tx.GetType() {
 		case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType, common.TxConversionType:
 			{
+				serialNumbers, commitments, outCoins, snDs, err := view.processFetchTxViewPointFromProof(stateDB, block.Header.ShardID, tx.GetProof(), prvCoinID)
+				if err != nil {
+					return NewBlockChainError(UnExpectedError, err)
+				}
+				acceptedSerialNumbers = append(acceptedSerialNumbers, serialNumbers...)
+				for pubkey, data := range commitments {
+					if acceptedCommitments[pubkey] == nil {
+						acceptedCommitments[pubkey] = make([][]byte, 0)
+					}
+					acceptedCommitments[pubkey] = append(acceptedCommitments[pubkey], data...)
+					view.txByPubKey[pubkey+"_"+base58.Base58Check{}.Encode(tx.Hash().GetBytes(), 0x0)+"_"+strconv.Itoa(int(block.Header.ShardID))] = true
+				}
+				for pubkey, data := range outCoins {
+					if acceptedOutputcoins[pubkey] == nil {
+						acceptedOutputcoins[pubkey] = make([]coin.Coin, 0)
+					}
+					acceptedOutputcoins[pubkey] = append(acceptedOutputcoins[pubkey], data...)
+				}
 				for pubkey, data := range snDs {
 					if acceptedSnD[pubkey] == nil {
 						acceptedSnD[pubkey] = make([][]byte, 0)
@@ -202,7 +201,29 @@ func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, blo
 			}
 		case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
 			{
-				tx := tx.(transaction.TransactionToken)
+				tx, ok := tx.(transaction.TransactionToken)
+				if !ok{
+					return NewBlockChainError(UnExpectedError, errors.New("Error casting to tx token"))
+				}
+				serialNumbers, commitments, outCoins, _, err := view.processFetchTxViewPointFromProof(stateDB, block.Header.ShardID, tx.GetTxBase().GetProof(), prvCoinID)
+				if err != nil {
+					return NewBlockChainError(UnExpectedError, err)
+				}
+				acceptedSerialNumbers = append(acceptedSerialNumbers, serialNumbers...)
+				for pubkey, data := range commitments {
+					if acceptedCommitments[pubkey] == nil {
+						acceptedCommitments[pubkey] = make([][]byte, 0)
+					}
+					acceptedCommitments[pubkey] = append(acceptedCommitments[pubkey], data...)
+					view.txByPubKey[pubkey+"_"+base58.Base58Check{}.Encode(tx.Hash().GetBytes(), 0x0)+"_"+strconv.Itoa(int(block.Header.ShardID))] = true
+				}
+				for pubkey, data := range outCoins {
+					if acceptedOutputcoins[pubkey] == nil {
+						acceptedOutputcoins[pubkey] = make([]coin.Coin, 0)
+					}
+					acceptedOutputcoins[pubkey] = append(acceptedOutputcoins[pubkey], data...)
+				}
+
 				tokenData := tx.GetTxTokenData()
 				subView := NewTxViewPoint(block.Header.ShardID, block.Header.Height)
 				subView.tokenID = &tokenData.PropertyID

@@ -63,8 +63,8 @@ func InitParamCreatePrivacyTx(args string) (*transaction.TxPrivacyInitParamsForA
 			return nil, errors.New("Invalid payment info param payment address string")
 		}
 
-		amount, ok := tmp["amount"].(float64)
-		if !ok {
+		amount, err := common.AssertAndConvertStrToNumber(tmp["amount"])
+		if err != nil {
 			println("Invalid payment info param amount")
 			return nil, errors.New("Invalid payment info param amount")
 		}
@@ -79,7 +79,7 @@ func InitParamCreatePrivacyTx(args string) (*transaction.TxPrivacyInitParamsForA
 
 			if msgB64Encode != "" {
 				msgBytes, err = base64.StdEncoding.DecodeString(msgB64Encode)
-				if err != nil{
+				if err != nil {
 					println("Can not decode msg string in payment info for ptoken")
 					return nil, errors.New("Can not decode msg string in payment info for ptoken")
 				}
@@ -93,15 +93,15 @@ func InitParamCreatePrivacyTx(args string) (*transaction.TxPrivacyInitParamsForA
 			return nil, err
 		}
 		paymentInfoTmp.PaymentAddress = keyWallet.KeySet.PaymentAddress
-		paymentInfoTmp.Amount = uint64(amount)
+		paymentInfoTmp.Amount = amount
 		paymentInfoTmp.Message = msgBytes
 		paymentInfo = append(paymentInfo, paymentInfoTmp)
 	}
 
 	//get fee
-	fee, ok := paramMaps["fee"].(float64)
-	if !ok {
-		println("Invalid fee param!")
+	fee, err := common.AssertAndConvertStrToNumber(paramMaps["fee"])
+	if err != nil {
+		println("Invalid fee param")
 		return nil, errors.New("Invalid fee param")
 	}
 	println("fee: ", fee)
@@ -304,8 +304,8 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 			return nil, errors.New("Invalid payment info param payment address string")
 		}
 
-		amount, ok := tmp["amount"].(float64)
-		if !ok {
+		amount, err := common.AssertAndConvertStrToNumber(tmp["amount"])
+		if err != nil {
 			println("Invalid payment info param amount")
 			return nil, errors.New("Invalid payment info param amount")
 		}
@@ -320,7 +320,7 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 
 			if msgB64Encode != "" {
 				msgBytes, err = base64.StdEncoding.DecodeString(msgB64Encode)
-				if err != nil{
+				if err != nil {
 					println("Can not decode msg string in payment info for ptoken")
 					return nil, errors.New("Can not decode msg string in payment info for ptoken")
 				}
@@ -334,15 +334,15 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 			return nil, err
 		}
 		paymentInfoTmp.PaymentAddress = keyWallet.KeySet.PaymentAddress
-		paymentInfoTmp.Amount = uint64(amount)
+		paymentInfoTmp.Amount = amount
 		paymentInfoTmp.Message = msgBytes
 		paymentInfo = append(paymentInfo, paymentInfoTmp)
 	}
 
 	//get fee
-	fee, ok := paramMaps["fee"].(float64)
-	if !ok {
-		println("Invalid fee param!")
+	fee, err := common.AssertAndConvertStrToNumber(paramMaps["fee"])
+	if err != nil {
+		println("Invalid fee param")
 		return nil, errors.New("Invalid fee param")
 	}
 	println("fee: ", fee)
@@ -579,24 +579,25 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 		println("Invalid token symbol param")
 		return nil, errors.New("Invalid token symbol param")
 	}
-	tmpAmount, ok := pTokenParam["amount"].(float64)
-	if !ok {
+
+	tmpAmount, err := common.AssertAndConvertStrToNumber(pTokenParam["amount"])
+	if err != nil {
 		println("Invalid amount param")
 		return nil, errors.New("Invalid amount param")
 	}
-	privacyTokenParam.Amount = uint64(tmpAmount)
+	privacyTokenParam.Amount = tmpAmount
 	tmpTokenTxType, ok := pTokenParam["tokenTxType"].(float64)
 	if !ok {
 		println("Invalid token tx type param")
 		return nil, errors.New("Invalid token tx type param")
 	}
 	privacyTokenParam.TokenTxType = int(tmpTokenTxType)
-	tmpFeePToken, ok := pTokenParam["fee"].(float64)
-	if !ok {
+	tmpFeePToken, err := common.AssertAndConvertStrToNumber(pTokenParam["fee"])
+	if err != nil {
 		println("Invalid fee token param")
 		return nil, errors.New("Invalid fee token param")
 	}
-	privacyTokenParam.Fee = uint64(tmpFeePToken)
+	privacyTokenParam.Fee = tmpFeePToken
 	paymentInfoForPTokenParam, ok := pTokenParam["paymentInfoForPToken"].([]interface{})
 	if !ok {
 		println("Invalid payment info params!")
@@ -615,13 +616,11 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 			println("Invalid payment info for ptoken param payment address string")
 			return nil, errors.New("Invalid payment info for ptoken param payment address string")
 		}
-
-		amount, ok := tmp["amount"].(float64)
-		if !ok {
+		amount, err := common.AssertAndConvertStrToNumber(tmp["amount"])
+		if err != nil {
 			println("Invalid payment info for ptoken param amount")
 			return nil, errors.New("Invalid payment info for ptoken param amount")
 		}
-
 		msgBytes := []byte{}
 		if tmp["message"] != nil {
 			msgB64Encode, ok := tmp["message"].(string)
@@ -632,7 +631,7 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 
 			if msgB64Encode != "" {
 				msgBytes, err = base64.StdEncoding.DecodeString(msgB64Encode)
-				if err != nil{
+				if err != nil {
 					println("Can not decode msg string in payment info for ptoken")
 					return nil, errors.New("Can not decode msg string in payment info for ptoken")
 				}
@@ -647,7 +646,7 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 		}
 		paymentInfoTmp.PaymentAddress = keyWallet.KeySet.PaymentAddress
 		println("PK receiver token: ", paymentInfoTmp.PaymentAddress.Pk)
-		paymentInfoTmp.Amount = uint64(amount)
+		paymentInfoTmp.Amount = amount
 		paymentInfoTmp.Message = msgBytes
 		paymentInfoForPToken = append(paymentInfoForPToken, paymentInfoTmp)
 	}
@@ -721,7 +720,7 @@ func InitParamCreatePrivacyTokenTx(args string) (*transaction.TxPrivacyTokenInit
 	//println("privacyTokenParam.PropertySymbol: ", len(privacyTokenParam.PropertySymbol))
 
 	paramCreateTx := transaction.NewTxPrivacyTokenInitParamsForASM(
-		&senderSK, paymentInfo, inputCoins, uint64(fee), privacyTokenParam, nil, hasPrivacy, hasPrivacyForPToken, shardID, infoBytes,
+		&senderSK, paymentInfo, inputCoins, fee, privacyTokenParam, nil, hasPrivacy, hasPrivacyForPToken, shardID, infoBytes,
 		commitmentIndicesForNativeToken, commitmentBytesForNativeToken, myCommitmentIndicesForNativeToken, sndOutputsForNativeToken,
 		commitmentIndicesForPToken, commitmentBytesForPToken, myCommitmentIndicesForPToken, sndOutputsForPToken)
 	println("paramCreateTx: ", paramCreateTx)

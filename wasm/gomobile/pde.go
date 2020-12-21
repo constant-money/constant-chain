@@ -27,8 +27,8 @@ func InitPEDContributionMetadataFromParam(metaDataParam map[string]interface{}) 
 		println("Invalid meta data contributor payment address param")
 		return nil, errors.New("Invalid meta data contributor payment address param")
 	}
-	contributedAmount, ok := metaDataParam["ContributedAmount"].(float64)
-	if !ok {
+	contributedAmount, err := common.AssertAndConvertStrToNumber(metaDataParam["ContributedAmount"])
+	if err != nil {
 		println("Invalid meta data contribute amount param")
 		return nil, errors.New("Invalid meta data contribute amount param")
 	}
@@ -175,18 +175,20 @@ func InitPEDTradeRequestMetadataFromParam(metaDataParam map[string]interface{}) 
 		println("Invalid meta data token id to sell param")
 		return nil, errors.New("Invalid meta data token id to sell param")
 	}
-	sellAmount, ok := metaDataParam["SellAmount"].(float64)
-	if !ok {
+	sellAmount, err := common.AssertAndConvertStrToNumber(metaDataParam["SellAmount"])
+	if err != nil {
 		println("Invalid meta data sell amount param")
 		return nil, errors.New("Invalid meta data sell amount param")
 	}
-	minAcceptableAmount, ok := metaDataParam["MinAcceptableAmount"].(float64)
-	if !ok {
+
+	minAcceptableAmount, err := common.AssertAndConvertStrToNumber(metaDataParam["MinAcceptableAmount"])
+	if err != nil {
 		println("Invalid meta data min acceptable amount param")
 		return nil, errors.New("Invalid meta data min acceptable amount param")
 	}
-	tradingFee, ok := metaDataParam["TradingFee"].(float64)
-	if !ok {
+
+	tradingFee, err := common.AssertAndConvertStrToNumber(metaDataParam["TradingFee"])
+	if err != nil {
 		println("Invalid meta data trading fee param")
 		return nil, errors.New("Invalid meta data trading fee param")
 	}
@@ -357,12 +359,11 @@ func WithdrawDexTx(args string, serverTime int64) (string, error) {
 		println("Invalid meta data withdrawalToken2IDStr param")
 		return "", errors.New("Invalid meta data withdrawalToken2IDStr param")
 	}
-	withdrawalShareAmt, ok := metaDataParam["WithdrawalShareAmt"].(float64)
-	if !ok {
+	withdrawalShareAmt, err := common.AssertAndConvertStrToNumber(metaDataParam["WithdrawalShareAmt"])
+	if err != nil {
 		println("Invalid meta data withdrawalShareAmt param")
 		return "", errors.New("Invalid meta data withdrawalShareAmt param")
 	}
-
 	metaData, err := metadata.NewPDEWithdrawalRequest(
 		withdrawerAddressStr, withdrawalToken1IDStr,
 		withdrawalToken2IDStr, uint64(withdrawalShareAmt), int(metaDataType),

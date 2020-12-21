@@ -24,6 +24,8 @@ type WsServer struct {
 	limitAuthSHA []byte
 	// channel
 	cRequestProcessShutdown chan struct{}
+
+	blockService *rpcservice.BlockService
 }
 type RpcSubResult struct {
 	Result interface{}
@@ -45,6 +47,13 @@ var upgrader = websocket.Upgrader{
 
 func (wsServer *WsServer) Init(config *RpcServerConfig) {
 	wsServer.config = *config
+
+	// init service
+	wsServer.blockService = &rpcservice.BlockService{
+		BlockChain: wsServer.config.BlockChain,
+		DB:         wsServer.config.Database,
+		MemCache:   wsServer.config.MemCache,
+	}
 }
 
 func NewSubscriptionManager(ws *websocket.Conn) *SubcriptionManager {

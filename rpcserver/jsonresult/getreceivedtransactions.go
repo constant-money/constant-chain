@@ -1,18 +1,9 @@
 package jsonresult
 
-import (
-	"github.com/incognitochain/incognito-chain/common"
-)
-
 type ReceivedTransaction struct {
-	TransactionDetail
-	ReceivedAmounts map[common.Hash]ReceivedInfo `json:"ReceivedAmounts"`
-	FromShardID     byte                         `json:"FromShardID"`
-}
-
-type ReceivedInfo struct {
-	CoinDetails          ReceivedCoin `json:"CoinDetails"`
-	CoinDetailsEncrypted string       `json:"CoinDetailsEncrypted"`
+	TxDetail        *TransactionDetail	   `json:"TransactionDetail"`
+	ReceivedAmounts map[string]interface{} `json:"ReceivedAmounts"`
+	FromShardID     byte                   `json:"FromShardID"`
 }
 
 type ReceivedCoin struct {
@@ -23,4 +14,19 @@ type ReceivedCoin struct {
 
 type ListReceivedTransaction struct {
 	ReceivedTransactions []ReceivedTransaction `json:"ReceivedTransactions"`
+}
+
+type ReceivedTransactionV2 struct {
+	TxDetail           *TransactionDetail
+	ReceivedAmounts    map[string]interface{} `json:"ReceivedAmounts"`
+	InputSerialNumbers map[string][]string    `json:"InputSerialNumbers"`
+	FromShardID        byte                   `json:"FromShardID"`
+}
+
+type ListReceivedTransactionV2 struct {
+	ReceivedTransactions []ReceivedTransactionV2 `json:"ReceivedTransactions"`
+}
+
+type Temp struct {
+
 }

@@ -54,11 +54,11 @@ func EstimateTxSize(estimateTxSizeParam *tx_generic.EstimateTxSizeParam) uint64 
 	return tx_generic.EstimateTxSize(estimateTxSizeParam)
 }
 
-func NewEstimateTxSizeParam(numInputCoins, numPayments int,
+func NewEstimateTxSizeParam(version, numInputCoins, numPayments int,
 	hasPrivacy bool, metadata metadata.Metadata,
 	privacyCustomTokenParams *TokenParam,
 	limitFee uint64) *EstimateTxSizeParam{
-	return tx_generic.NewEstimateTxSizeParam(numInputCoins, numPayments, hasPrivacy, metadata, privacyCustomTokenParams, limitFee)
+	return tx_generic.NewEstimateTxSizeParam(version, numInputCoins, numPayments, hasPrivacy, metadata, privacyCustomTokenParams, limitFee)
 }
 
 func NewTxConvertVer1ToVer2InitParams(senderSK *privacy.PrivateKey,
@@ -84,7 +84,7 @@ func NewTxTokenConvertVer1ToVer2InitParams(senderSK *privacy.PrivateKey,
 	tokenID *common.Hash, // tokenID of the conversion coin
 	metaData metadata.Metadata,
 	info []byte) *TxTokenConvertVer1ToVer2InitParams {
-	return NewTxTokenConvertVer1ToVer2InitParams(senderSK, feeInputs, feePayments, tokenInputs,	tokenPayments, fee,	stateDB, bridgeStateDB,	tokenID, metaData, info)
+	return tx_ver2.NewTxTokenConvertVer1ToVer2InitParams(senderSK, feeInputs, feePayments, tokenInputs,	tokenPayments, fee,	stateDB, bridgeStateDB,	tokenID, metaData, info)
 }
 
 func InitConversion(tx *TxVersion2, params *TxConvertVer1ToVer2InitParams) error {
@@ -109,4 +109,8 @@ func NewTxPrivacyInitParams(senderSK *privacy.PrivateKey,
 
 func CreateCustomTokenPrivacyReceiverArrayV2(dataReceiver interface{}) ([]*privacy.PaymentInfo, int64, error) {
 	return tx_ver1.CreateCustomTokenPrivacyReceiverArray(dataReceiver)
+}
+
+func GetTxVersionFromCoins(coins []privacy.PlainCoin) (int8, error){
+	return tx_generic.GetTxVersionFromCoins(coins)
 }

@@ -102,3 +102,20 @@ func ParseTxFromData(data []byte) (*bnbtx.StdTx, *BNBRelayingError) {
 	stdTx := tx.(bnbtx.StdTx)
 	return &stdTx, nil
 }
+
+func BuildProof(txIndex int, blockHeight int64, url string) (string, error) {
+	bnbProof := new(BNBProof)
+	err := bnbProof.Build(txIndex, blockHeight, url)
+	if err != nil {
+		return "", err
+	}
+
+	bnbProofBytes, err2 := json.Marshal(bnbProof)
+	if err2 != nil {
+		return "", err2
+	}
+
+	bnbProofStr := base64.StdEncoding.EncodeToString(bnbProofBytes)
+
+	return bnbProofStr, nil
+}

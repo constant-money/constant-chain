@@ -16,10 +16,10 @@ import (
 // - receive coin with payment address
 // - read tx data with readonly key
 type KeySet struct {
-	PrivateKey     key.PrivateKey
-	PaymentAddress key.PaymentAddress
-	ReadonlyKey    key.ViewingKey
-	OTAKey 		   key.OTAKey
+	PrivateKey     key.PrivateKey //Master Private key
+	PaymentAddress key.PaymentAddress //Payment address for sending coins
+	ReadonlyKey    key.ViewingKey	//ViewingKey for retrieving the amount of coin (both V1 + V2) as well as the asset tag (V2 ONLY)
+	OTAKey 		   key.OTAKey  //OTAKey is for recovering one time addresses: ONLY in V2
 }
 
 func (keySet *KeySet) GetPrivateKey() key.PrivateKey{
@@ -124,7 +124,7 @@ func (keySet KeySet) GetReadOnlyKeyInBase58CheckEncode() string {
 }
 
 func (keySet KeySet) GetOTASecretKeyInBase58CheckEncode() string {
-	return base58.Base58Check{}.Encode(keySet.OTAKey.OTASecret, common.ZeroByte)
+	return base58.Base58Check{}.Encode(keySet.OTAKey.GetOTASecretKey().ToBytesS(), common.ZeroByte)
 }
 
 // SignDataInBase58CheckEncode receives data and

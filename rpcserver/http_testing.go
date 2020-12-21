@@ -3,6 +3,11 @@ package rpcserver
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/incognitokey"
+	"io/ioutil"
+	"time"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -12,8 +17,6 @@ import (
 	"github.com/incognitochain/incognito-chain/transaction"
 	"github.com/incognitochain/incognito-chain/wire"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"time"
 )
 
 type txs struct {
@@ -40,22 +43,92 @@ func (httpServer *HttpServer) handleUnlockMempool(params interface{}, closeChan 
 func (httpServer *HttpServer) handleGetAutoStakingByHeight(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	height := int(arrayParams[0].(float64))
-	beaconConsensusStateRootHash, err := httpServer.blockService.BlockChain.GetBeaconConsensusRootHash(httpServer.blockService.BlockChain.GetBeaconChainDatabase(), uint64(height))
+	beaconConsensusStateRootHash, err := httpServer.blockService.BlockChain.GetBeaconConsensusRootHash(httpServer.blockService.BlockChain.GetBeaconBestState(), uint64(height))
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
-	beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusStateRootHash, statedb.NewDatabaseAccessWarper(httpServer.blockService.BlockChain.GetBeaconChainDatabase()))
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
-	}
-	_, newAutoStaking := statedb.GetRewardReceiverAndAutoStaking(beaconConsensusStateDB, httpServer.blockService.BlockChain.GetShardIDs())
+	// beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusStateRootHash, statedb.NewDatabaseAccessWarper(httpServer.blockService.BlockChain.GetBeaconChainDatabase()))
+	// if err != nil {
+	// 	return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	// }
+	// _, newAutoStaking := statedb.GetRewardReceiverAndAutoStaking(beaconConsensusStateDB, httpServer.blockService.BlockChain.GetShardIDs())
+	newAutoStaking := map[string]bool{}
 	return []interface{}{beaconConsensusStateRootHash, newAutoStaking}, nil
+}
+
+func (httpServer *HttpServer) handleGetCommitteeState(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	height := uint64(arrayParams[0].(float64))
+	tempHash := arrayParams[1].(string)
+
+	var beaconConsensusStateRootHash = &blockchain.BeaconRootHash{}
+	var err1 error = nil
+
+	if height == 0 || tempHash != "" {
+		hash, err := common.Hash{}.NewHashFromStr(tempHash)
+		if err != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+		}
+		beaconConsensusStateRootHash, err1 = blockchain.GetBeaconRootsHashByBlockHash(
+			httpServer.config.BlockChain.GetBeaconChainDatabase(),
+			*hash,
+		)
+		if err1 != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err1)
+		}
+	} else {
+		beaconConsensusStateRootHash, err1 = httpServer.config.BlockChain.GetBeaconRootsHashFromBlockHeight(
+			height,
+		)
+		if err1 != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err1)
+		}
+	}
+	shardIDs := []int{-1}
+	shardIDs = append(shardIDs, httpServer.config.BlockChain.GetShardIDs()...)
+	stateDB, err2 := statedb.NewWithPrefixTrie(beaconConsensusStateRootHash.ConsensusStateDBRootHash,
+		statedb.NewDatabaseAccessWarper(httpServer.config.BlockChain.GetBeaconChainDatabase()))
+	if err2 != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err2)
+	}
+
+	currentValidator, substituteValidator, nextEpochShardCandidate, currentEpochShardCandidate, _, _ := statedb.GetAllCandidateSubstituteCommittee(stateDB, shardIDs)
+	currentValidatorStr := make(map[int][]string)
+	for shardID, v := range currentValidator {
+		tempV, _ := incognitokey.CommitteeKeyListToString(v)
+		currentValidatorStr[shardID] = tempV
+	}
+	substituteValidatorStr := make(map[int][]string)
+	for shardID, v := range substituteValidator {
+		tempV, _ := incognitokey.CommitteeKeyListToString(v)
+		substituteValidatorStr[shardID] = tempV
+	}
+	nextEpochShardCandidateStr, _ := incognitokey.CommitteeKeyListToString(nextEpochShardCandidate)
+	currentEpochShardCandidateStr, _ := incognitokey.CommitteeKeyListToString(currentEpochShardCandidate)
+	return map[string]interface{}{
+		"root":             beaconConsensusStateRootHash.ConsensusStateDBRootHash,
+		"committee":        currentValidatorStr,
+		"substitute":       substituteValidatorStr,
+		"nextCandidate":    nextEpochShardCandidateStr,
+		"currentCandidate": currentEpochShardCandidateStr,
+	}, nil
 }
 
 func (httpServer *HttpServer) handleGetRewardAmountByEpoch(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
-	shardID := byte(arrayParams[0].(float64))
-	epoch := uint64(arrayParams[1].(float64))
+	if len(arrayParams) != 2 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, fmt.Errorf("want length %+v but got %+v", 2, len(arrayParams)))
+	}
+	tempShardID, ok := arrayParams[0].(float64)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, fmt.Errorf("Invalid ShardID Value"))
+	}
+	tempEpoch, ok := arrayParams[1].(float64)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, fmt.Errorf("Invalid Epoch Value"))
+	}
+	shardID := byte(tempShardID)
+	epoch := uint64(tempEpoch)
 	rewardStateDB := httpServer.config.BlockChain.GetBeaconBestState().GetBeaconRewardStateDB()
 	amount, err := statedb.GetRewardOfShardByEpoch(rewardStateDB, epoch, shardID, common.PRVCoinID)
 	return amount, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)

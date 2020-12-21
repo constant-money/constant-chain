@@ -28,18 +28,37 @@ func getHardcodedMainNetGenesisBlock() (*wire.MsgBlock, *chainhash.Hash) {
 }
 
 func getHardcodedTestNet3GenesisBlock() (*wire.MsgBlock, *chainhash.Hash) {
-	// Block 1764110 from bitcoin testnet3
-	genesisHash, _ := chainhash.NewHashFromStr("0000000000004791be42e055e8fe33e89d404723380da9434ee565ad9d89a235")
-	prevBlkHash, _ := chainhash.NewHashFromStr("00000000a0107ee1b423f7ba814b6ceeeaa3e9a49767ec4582c57f270759f20b")
-	merkleRoot, _ := chainhash.NewHashFromStr("0ed8b4025e655cf635ff4203d7dfb628527daa6ef91a12d587f7c3fb6ec8ff51")
+	// Block 1861700 from bitcoin testnet3
+	genesisHash, _ := chainhash.NewHashFromStr("0000000000000242af61914b2f14774dbcb5c1fa1742dde2114a3166115c9a15")
+	prevBlkHash, _ := chainhash.NewHashFromStr("000000000000004dede4052d636fcc863d68472a9dab2f9b715feb66c318b136")
+	merkleRoot, _ := chainhash.NewHashFromStr("bb727b9816915a59c3bd882fd5f5fbac26b421c3146cdb3800d77c60700f4fc5")
 	var genesisBlock = wire.MsgBlock{
 		Header: wire.BlockHeader{
 			Version:    int32(536870912),
 			PrevBlock:  *prevBlkHash,
 			MerkleRoot: *merkleRoot,
-			Timestamp:  time.Unix(1591668850, 0),
-			Bits:       uint32(453050367),
-			Nonce:      uint32(2572181929),
+			Timestamp:  time.Unix(1602389268, 0),
+			Bits:       uint32(436376740),
+			Nonce:      uint32(3910009057),
+		},
+		Transactions: []*wire.MsgTx{},
+	}
+	return &genesisBlock, genesisHash
+}
+
+func getHardcodedTestNet3GenesisBlockForInc2() (*wire.MsgBlock, *chainhash.Hash) {
+	// Block 1863675 from bitcoin testnet3
+	genesisHash, _ := chainhash.NewHashFromStr("0000000000000087badd69a52c3f2afa787d7d073081041ccf12ae172e4432de")
+	prevBlkHash, _ := chainhash.NewHashFromStr("00000000000000156ca9adbfe1873c5aada796fe31c8b3de32bdf9538a6ff4e6")
+	merkleRoot, _ := chainhash.NewHashFromStr("8cf9e50d1c4f88e1b000e67e8d9b1405a3aa39a64cae93b913957d05c31468e1")
+	var genesisBlock = wire.MsgBlock{
+		Header: wire.BlockHeader{
+			Version:    int32(536870912),
+			PrevBlock:  *prevBlkHash,
+			MerkleRoot: *merkleRoot,
+			Timestamp:  time.Unix(1603172228, 0),
+			Bits:       uint32(436259028),
+			Nonce:      uint32(857120045),
 		},
 		Transactions: []*wire.MsgTx{},
 	}
@@ -49,19 +68,24 @@ func getHardcodedTestNet3GenesisBlock() (*wire.MsgBlock, *chainhash.Hash) {
 func putGenesisBlockIntoChainParams(
 	genesisHash *chainhash.Hash,
 	msgBlk *wire.MsgBlock,
-	chainParams *chaincfg.Params,
+	chainParams chaincfg.Params,
 ) *chaincfg.Params {
 	chainParams.GenesisBlock = msgBlk
 	chainParams.GenesisHash = genesisHash
-	return chainParams
+	return &chainParams
 }
 
 func GetMainNetParams() *chaincfg.Params {
 	genesisBlock, genesisHash := getHardcodedMainNetGenesisBlock()
-	return putGenesisBlockIntoChainParams(genesisHash, genesisBlock, &chaincfg.MainNetParams)
+	return putGenesisBlockIntoChainParams(genesisHash, genesisBlock, chaincfg.MainNetParams)
 }
 
 func GetTestNet3Params() *chaincfg.Params {
 	genesisBlock, genesisHash := getHardcodedTestNet3GenesisBlock()
-	return putGenesisBlockIntoChainParams(genesisHash, genesisBlock, &chaincfg.TestNet3Params)
+	return putGenesisBlockIntoChainParams(genesisHash, genesisBlock, chaincfg.TestNet3Params)
+}
+
+func GetTestNet3ParamsForInc2() *chaincfg.Params {
+	genesisBlock, genesisHash := getHardcodedTestNet3GenesisBlockForInc2()
+	return putGenesisBlockIntoChainParams(genesisHash, genesisBlock, chaincfg.TestNet3Params)
 }

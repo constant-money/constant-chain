@@ -1,8 +1,12 @@
 package statedb
 
 import (
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	"testing"
+
+	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/incognitochain/incognito-chain/wallet"
 )
 
 func TestStoreAndGetBeaconCommittee(t *testing.T) {
@@ -18,7 +22,7 @@ func TestStoreAndGetBeaconCommittee(t *testing.T) {
 		autoStaking[beaconCommittees[index]] = true
 	}
 	sDB, _ := NewWithPrefixTrie(emptyRoot, wrarperDB)
-	err := StoreBeaconCommittee(sDB, beaconCommitteesStruct, rewardReceiver, autoStaking)
+	err := StoreBeaconCommittee(sDB, beaconCommitteesStruct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,7 +56,7 @@ func TestStoreAndGetShardCommittee(t *testing.T) {
 		autoStaking[shardCommittees[index]] = true
 	}
 	sDB, _ := NewWithPrefixTrie(emptyRoot, wrarperDB)
-	err := StoreOneShardCommittee(sDB, shardID, shardCommitteesStruct, rewardReceiver, autoStaking)
+	err := StoreOneShardCommittee(sDB, shardID, shardCommitteesStruct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -87,7 +91,7 @@ func TestDeleteOneShardCommittee(t *testing.T) {
 		autoStaking[shardCommittees[index]] = true
 	}
 	sDB, _ := NewWithPrefixTrie(emptyRoot, wrarperDB)
-	err := StoreOneShardCommittee(sDB, shardID, shardCommitteesStruct, rewardReceiver, autoStaking)
+	err := StoreOneShardCommittee(sDB, shardID, shardCommitteesStruct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +143,7 @@ func TestDeleteBeaconCommittee(t *testing.T) {
 		autoStaking[beaconCommittees[index]] = true
 	}
 	sDB, _ := NewWithPrefixTrie(emptyRoot, wrarperDB)
-	err := StoreBeaconCommittee(sDB, beaconCommitteesStruct, rewardReceiver, autoStaking)
+	err := StoreBeaconCommittee(sDB, beaconCommitteesStruct)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -173,6 +177,61 @@ func TestDeleteBeaconCommittee(t *testing.T) {
 			if wantC.IsEqual(gotC) {
 				t.Fatalf("want %+v, got %+v", wantC, gotC)
 			}
+		}
+	}
+}
+
+func TestStoreAndGetStakerInfo(t *testing.T) {
+	number := 20
+	shardID := byte(0)
+	shardCommittees := committeePublicKeys[:number]
+	shardCommitteesStruct, _ := incognitokey.CommitteeBase58KeyListToStruct(shardCommittees)
+	rewardReceiver := make(map[string]privacy.PaymentAddress)
+	autoStaking := make(map[string]bool)
+	stakingTx := make(map[string]common.Hash)
+	for index, beaconCommittee := range shardCommitteesStruct {
+		incPublicKey := beaconCommittee.GetIncKeyBase58()
+		paymentAddress := receiverPaymentAddress[index]
+		wl, err := wallet.Base58CheckDeserialize(paymentAddress)
+		if err != nil {
+			t.Fatal(err)
+		}
+		rewardReceiver[incPublicKey] = wl.KeySet.PaymentAddress
+		autoStaking[shardCommittees[index]] = true
+		stakingTx[shardCommittees[index]] = common.HashH([]byte{0})
+	}
+	sDB, _ := NewWithPrefixTrie(emptyRoot, wrarperDB)
+	err := StoreOneShardCommittee(sDB, shardID, shardCommitteesStruct)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = StoreStakerInfo(sDB, shardCommitteesStruct, rewardReceiver, autoStaking, stakingTx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rootHash, _ := sDB.Commit(true)
+	err1 := sDB.Database().TrieDB().Commit(rootHash, false)
+	if err1 != nil {
+		t.Fatal(err1)
+	}
+	gotShardCommitteeStruct := GetOneShardCommittee(sDB, shardID)
+	if len(gotShardCommitteeStruct) != number {
+		t.Fatalf("expect number of committee %+v, but got %+v", len(gotShardCommitteeStruct), number)
+	}
+	for index, wantC := range shardCommitteesStruct {
+		if !wantC.IsEqual(gotShardCommitteeStruct[index]) {
+			t.Fatalf("want %+v, got %+v", wantC, gotShardCommitteeStruct[index])
+		}
+		cString, _ := wantC.ToBase58()
+		s, ok, err := GetStakerInfo(sDB, cString)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !ok {
+			t.Fatal("Can not get committee info")
+		}
+		if s == nil {
+			t.Fatal("wtf")
 		}
 	}
 }

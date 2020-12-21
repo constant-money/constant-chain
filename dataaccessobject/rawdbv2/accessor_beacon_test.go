@@ -62,16 +62,16 @@ func resetDatabase() {
 func storeBeaconBlock() error {
 	resetDatabase()
 	for i := 0; i < max; i++ {
-		err := rawdbv2.StoreBeaconBlock(db, uint64(i), beaconBlocks[i].Header.Hash(), beaconBlocks[i])
+		err := rawdbv2.StoreBeaconBlockByHash(db, uint64(i), beaconBlocks[i].Header.Hash(), beaconBlocks[i])
 		if err != nil {
 			return err
 		}
 	}
-	err := rawdbv2.StoreBeaconBlock(db, forkedBeaconBlock1.Header.Height, forkedBeaconBlock1.Header.Hash(), forkedBeaconBlock1)
+	err := rawdbv2.StoreBeaconBlockByHash(db, forkedBeaconBlock1.Header.Height, forkedBeaconBlock1.Header.Hash(), forkedBeaconBlock1)
 	if err != nil {
 		return err
 	}
-	err1 := rawdbv2.StoreBeaconBlock(db, forkedBeaconBlock2.Header.Height, forkedBeaconBlock2.Header.Hash(), forkedBeaconBlock2)
+	err1 := rawdbv2.StoreBeaconBlockByHash(db, forkedBeaconBlock2.Header.Height, forkedBeaconBlock2.Header.Hash(), forkedBeaconBlock2)
 	if err1 != nil {
 		return err1
 	}
@@ -95,16 +95,16 @@ func storeBeaconBlock() error {
 func TestStoreBeaconBlock(t *testing.T) {
 	resetDatabase()
 	for i := 0; i < max; i++ {
-		err := rawdbv2.StoreBeaconBlock(db, uint64(i), beaconBlocks[i].Header.Hash(), beaconBlocks[i])
+		err := rawdbv2.StoreBeaconBlockByHash(db, uint64(i), beaconBlocks[i].Header.Hash(), beaconBlocks[i])
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
-	err := rawdbv2.StoreBeaconBlock(db, forkedBeaconBlock1.Header.Height, forkedBeaconBlock1.Header.Hash(), forkedBeaconBlock1)
+	err := rawdbv2.StoreBeaconBlockByHash(db, forkedBeaconBlock1.Header.Height, forkedBeaconBlock1.Header.Hash(), forkedBeaconBlock1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err1 := rawdbv2.StoreBeaconBlock(db, forkedBeaconBlock2.Header.Height, forkedBeaconBlock2.Header.Hash(), forkedBeaconBlock2)
+	err1 := rawdbv2.StoreBeaconBlockByHash(db, forkedBeaconBlock2.Header.Height, forkedBeaconBlock2.Header.Hash(), forkedBeaconBlock2)
 	if err1 != nil {
 		t.Fatal(err1)
 	}

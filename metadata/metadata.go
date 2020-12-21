@@ -4,11 +4,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/incognitochain/incognito-chain/privacy/coin"
 	"github.com/incognitochain/incognito-chain/privacy"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"github.com/incognitochain/incognito-chain/privacy/coin"
 	"github.com/incognitochain/incognito-chain/relaying/bnb"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -58,19 +57,22 @@ type TxDesc struct {
 type MempoolRetriever interface {
 	GetSerialNumbersHashH() map[common.Hash][]common.Hash
 	GetTxsInMem() map[common.Hash]TxDesc
+	GetOTAHashH() map[common.Hash][]common.Hash
 }
 
 type ChainRetriever interface {
+	GetETHRemoveBridgeSigEpoch() uint64
 	GetStakingAmountShard() uint64
 	GetCentralizedWebsitePaymentAddress(uint64) string
 	GetBeaconHeightBreakPointBurnAddr() uint64
 	GetBurningAddress(blockHeight uint64) string
-	GetTransactionByHash(common.Hash) (byte, common.Hash, int, Transaction, error)
+	GetTransactionByHash(common.Hash) (byte, common.Hash, uint64, int, Transaction, error)
 	ListPrivacyTokenAndBridgeTokenAndPRVByShardID(byte) ([]common.Hash, error)
 	GetBNBChainID() string
 	GetBTCChainID() string
 	GetBTCHeaderChain() *btcrelaying.BlockChain
 	GetPortalFeederAddress() string
+	IsAfterNewZKPCheckPoint(beaconHeight uint64) bool
 }
 
 type BeaconViewRetriever interface {
@@ -84,6 +86,7 @@ type BeaconViewRetriever interface {
 }
 
 type ShardViewRetriever interface {
+	GetEpoch() uint64
 	GetBeaconHeight() uint64
 	GetStakingTx() map[string]string
 	ListShardPrivacyTokenAndPRV() []common.Hash
@@ -122,11 +125,11 @@ type Transaction interface {
 	GetTxActualSize() uint64
 	GetReceivers() ([][]byte, []uint64)
 	GetTransferData() (bool, []byte, uint64, *common.Hash)
-
 	GetReceiverData() ([]coin.Coin, error)
 	GetTxMintData() (bool, coin.Coin, *common.Hash, error)
 	GetTxBurnData() (bool, coin.Coin, *common.Hash, error)
-
+	GetTxFullBurnData() (bool, coin.Coin, coin.Coin, *common.Hash, error)
+	ListOTAHashH() []common.Hash
 	ListSerialNumbersHashH() []common.Hash
 	String() string
 	Hash() *common.Hash
@@ -147,15 +150,15 @@ type Transaction interface {
 	ValidateSanityData(ChainRetriever, ShardViewRetriever, BeaconViewRetriever, uint64) (bool, error)
 	ValidateTxWithBlockChain(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error
 	ValidateDoubleSpendWithBlockchain(byte, *statedb.StateDB, *common.Hash) error
-	ValidateTxByItself(bool, *statedb.StateDB, *statedb.StateDB, ChainRetriever, byte, bool, ShardViewRetriever, BeaconViewRetriever) (bool, error)
+	ValidateTxByItself(map[string]bool, *statedb.StateDB, *statedb.StateDB, ChainRetriever, byte, ShardViewRetriever, BeaconViewRetriever) (bool, error)
 	ValidateType() bool
-	ValidateTransaction(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) (bool, error)
+	ValidateTransaction(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) (bool, []privacy.Proof, error)
 	VerifyMinerCreatedTxBeforeGettingInBlock(*MintData, byte, ChainRetriever, *AccumulatedValues, ShardViewRetriever, BeaconViewRetriever) (bool, error)
 
 	// Init Transaction, the input should be params such as: TxPrivacyInitParams
 	Init(interface{}) error
 	// Verify the init function above, which verify zero knowledge proof and signatures
-	Verify(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) (bool, error)
+	Verify(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) (bool, error)
 }
 
 type MintData struct {

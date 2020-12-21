@@ -354,7 +354,11 @@ func (wit OneOutOfManyWitness) Prove() (*OneOutOfManyProof, error) {
 	}
 
 	// Calculate x
-	x := new(operation.Scalar).FromUint64(0)
+	cmtsInBytes := make([][]byte, 0)
+	for _, cmts := range wit.stmt.Commitments{
+		cmtsInBytes = append(cmtsInBytes, cmts.ToBytesS())
+	}
+	x := utils.GenerateChallenge(cmtsInBytes)
 	for j := 0; j < n; j++ {
 		x = utils.GenerateChallenge([][]byte{
 			x.ToBytesS(),
@@ -414,8 +418,11 @@ func (proof OneOutOfManyProof) Verify() (bool, error) {
 	n := privacy_util.CommitmentRingSizeExp
 
 	//Calculate x
-	x := new(operation.Scalar).FromUint64(0)
-
+	cmtsInBytes := make([][]byte, 0)
+	for _, cmts := range proof.Statement.Commitments{
+		cmtsInBytes = append(cmtsInBytes, cmts.ToBytesS())
+	}
+	x := utils.GenerateChallenge(cmtsInBytes)
 	for j := 0; j < n; j++ {
 		x = utils.GenerateChallenge([][]byte{x.ToBytesS(), proof.cl[j].ToBytesS(), proof.ca[j].ToBytesS(), proof.cb[j].ToBytesS(), proof.cd[j].ToBytesS()})
 	}
@@ -480,6 +487,88 @@ func (proof OneOutOfManyProof) Verify() (bool, error) {
 	if !operation.IsPointEqual(leftPoint3, rightPoint3) {
 		Logger.Log.Errorf("verify one out of many proof statement 3 failed")
 		return false, errors.New("verify one out of many proof statement 3 failed")
+	}
+
+	return true, nil
+}
+
+// Verify verifies a proof output by Prove
+func (proof OneOutOfManyProof) VerifyOld() (bool, error) {
+	N := len(proof.Statement.Commitments)
+
+	// the number of Commitment list's elements must be equal to CMRingSize
+	if N != privacy_util.CommitmentRingSize {
+		return false, errors.New("Invalid length of commitments list in one out of many proof")
+	}
+	n := privacy_util.CommitmentRingSizeExp
+
+	//Calculate x
+	x := new(operation.Scalar).FromUint64(0)
+
+	for j := 0; j < n; j++ {
+		x = utils.GenerateChallenge([][]byte{x.ToBytesS(), proof.cl[j].ToBytesS(), proof.ca[j].ToBytesS(), proof.cb[j].ToBytesS(), proof.cd[j].ToBytesS()})
+	}
+
+	for i := 0; i < n; i++ {
+		//Check cl^x * ca = Com(f, za)
+		leftPoint1 := new(operation.Point).ScalarMult(proof.cl[i], x)
+		leftPoint1.Add(leftPoint1, proof.ca[i])
+
+		rightPoint1 := operation.PedCom.CommitAtIndex(proof.f[i], proof.za[i], operation.PedersenPrivateKeyIndex)
+
+		if !operation.IsPointEqual(leftPoint1, rightPoint1) {
+			Logger.Log.Errorf("verifyOld one out of many proof statement 1 failed")
+			return false, errors.New("verifyOld one out of many proof statement 1 failed")
+		}
+
+		//Check cl^(x-f) * cb = Com(0, zb)
+		xSubF := new(operation.Scalar).Sub(x, proof.f[i])
+
+		leftPoint2 := new(operation.Point).ScalarMult(proof.cl[i], xSubF)
+		leftPoint2.Add(leftPoint2, proof.cb[i])
+		rightPoint2 := operation.PedCom.CommitAtIndex(new(operation.Scalar).FromUint64(0), proof.zb[i], operation.PedersenPrivateKeyIndex)
+
+		if !operation.IsPointEqual(leftPoint2, rightPoint2) {
+			Logger.Log.Errorf("verifyOld one out of many proof statement 2 failed")
+			return false, errors.New("verifyOld one out of many proof statement 2 failed")
+		}
+	}
+
+	leftPoint3 := new(operation.Point).Identity()
+	leftPoint32 := new(operation.Point).Identity()
+
+	for i := 0; i < N; i++ {
+		iBinary := privacy_util.ConvertIntToBinary(i, n)
+
+		exp := new(operation.Scalar).FromUint64(1)
+		fji := new(operation.Scalar).FromUint64(1)
+		for j := 0; j < n; j++ {
+			if iBinary[j] == 1 {
+				fji.Set(proof.f[j])
+			} else {
+				fji.Sub(x, proof.f[j])
+			}
+
+			exp.Mul(exp, fji)
+		}
+
+		leftPoint3.Add(leftPoint3, new(operation.Point).ScalarMult(proof.Statement.Commitments[i], exp))
+	}
+
+	tmp2 := new(operation.Scalar).FromUint64(1)
+	for k := 0; k < n; k++ {
+		xk := new(operation.Scalar).Sub(new(operation.Scalar).FromUint64(0), tmp2)
+		leftPoint32.Add(leftPoint32, new(operation.Point).ScalarMult(proof.cd[k], xk))
+		tmp2.Mul(tmp2, x)
+	}
+
+	leftPoint3.Add(leftPoint3, leftPoint32)
+
+	rightPoint3 := operation.PedCom.CommitAtIndex(new(operation.Scalar).FromUint64(0), proof.zd, operation.PedersenPrivateKeyIndex)
+
+	if !operation.IsPointEqual(leftPoint3, rightPoint3) {
+		Logger.Log.Errorf("verifyOld one out of many proof statement 3 failed")
+		return false, errors.New("verifyOld one out of many proof statement 3 failed")
 	}
 
 	return true, nil

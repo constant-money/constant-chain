@@ -33,15 +33,17 @@ func (wsServer *WsServer) handleSubscribeShardBestState(params interface{}, subc
 		select {
 		case msg := <-subChan:
 			{
-				bestStateShard, ok := msg.Value.(*blockchain.ShardBestState)
+				_, ok := msg.Value.(*blockchain.ShardBestState)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.ShardBestState, have %+v", reflect.TypeOf(msg.Value))
 					continue
 				}
-				if bestStateShard.ShardID != shardID {
+				allShardBestStateResult := wsServer.blockService.GetShardBestStates()
+				if shardBestStateResult, ok := allShardBestStateResult[shardID]; !ok {
 					continue
+				} else {
+					cResult <- RpcSubResult{Result: shardBestStateResult, Error: nil}
 				}
-				cResult <- RpcSubResult{Result: *bestStateShard, Error: nil}
 			}
 		case <-closeChan:
 			{
@@ -75,12 +77,18 @@ func (wsServer *WsServer) handleSubscribeBeaconBestState(params interface{}, sub
 		select {
 		case msg := <-subChan:
 			{
-				bestStateBeacon, ok := msg.Value.(*blockchain.BeaconBestState)
+				_, ok := msg.Value.(*blockchain.BeaconBestState)
 				if !ok {
 					Logger.log.Errorf("Wrong Message Type from Pubsub Manager, wanted *blockchain.BeaconBestState, have %+v", reflect.TypeOf(msg.Value))
 					continue
 				}
-				cResult <- RpcSubResult{Result: *bestStateBeacon, Error: nil}
+				beaconBestStateResult, err := wsServer.blockService.GetBeaconBestState()
+				if err != nil {
+					err := rpcservice.NewRPCError(rpcservice.GetClonedBeaconBestStateError, err)
+					cResult <- RpcSubResult{Error: err}
+				} else {
+					cResult <- RpcSubResult{Result: jsonresult.NewGetBeaconBestState(beaconBestStateResult), Error: nil}
+				}
 			}
 		case <-closeChan:
 			{

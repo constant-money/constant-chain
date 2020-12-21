@@ -32,12 +32,6 @@ func (netSync *NetSync) GetBlockByHeight(
 			return nil, err
 		}
 		return blk.CreateCrossShardBlock(tocID)
-	case proto.BlkType_BlkS2B:
-		blk, err := bc.GetShardBlockByHeightV1(height, fromcID)
-		if err != nil {
-			return nil, err
-		}
-		return blk.CreateShardToBeaconBlock(bc), nil
 	default:
 		return nil, errors.Errorf("Invalid block type")
 	}
@@ -72,12 +66,6 @@ func (netSync *NetSync) GetBlockByHash(
 			return nil, err
 		}
 		return blk.CreateCrossShardBlock(tocID)
-	case proto.BlkType_BlkS2B:
-		blk, _, err := bc.GetShardBlockByHash(*hash)
-		if err != nil {
-			return nil, err
-		}
-		return blk.CreateShardToBeaconBlock(bc), nil
 	default:
 		return nil, errors.Errorf("Invalid block type")
 	}
@@ -193,29 +181,11 @@ func (netSync *NetSync) GetBlockShardByHeight(fromPool bool, blkType byte, speci
 		if fromPool {
 			switch blkType {
 			case crossShard:
-				// blkToSend := netSync.config.CrossShardPool[shardID].GetBlockByHeight(crossShardID, blkHeight)
-				// if blkToSend == nil {
-				// 	Logger.log.Error(err)
-				// 	continue
-				// }
 				blkMsg, err = wire.MakeEmptyMessage(wire.CmdCrossShard)
 				if err != nil {
 					Logger.log.Error(err)
 					continue
 				}
-				// blkMsg.(*wire.MessageCrossShard).Block = blkToSend
-			case shardToBeacon:
-				// blkToSend := netSync.config.ShardToBeaconPool.GetBlockByHeight(shardID, blkHeight)
-				// if blkToSend == nil {
-				// 	Logger.log.Error(err)
-				// 	continue
-				// }
-				blkMsg, err = wire.MakeEmptyMessage(wire.CmdBlkShardToBeacon)
-				if err != nil {
-					Logger.log.Error(err)
-					continue
-				}
-				// blkMsg.(*wire.MessageShardToBeacon).Block = blkToSend
 			}
 			blkMsgs = append(blkMsgs, blkMsg)
 		} else {
@@ -334,14 +304,6 @@ func (netSync *NetSync) createBlockShardMsgByType(block *blockchain.ShardBlock, 
 			return nil, err
 		}
 		blkMsg.(*wire.MessageCrossShard).Block = blkToSend
-	case shardToBeacon:
-		blkToSend := block.CreateShardToBeaconBlock(netSync.config.BlockChain)
-		blkMsg, err = wire.MakeEmptyMessage(wire.CmdBlkShardToBeacon)
-		if err != nil {
-			Logger.log.Error(err)
-			return nil, err
-		}
-		blkMsg.(*wire.MessageShardToBeacon).Block = blkToSend
 	}
 	return blkMsg, nil
 }
@@ -351,7 +313,7 @@ func (netSync *NetSync) StreamBlockByHeight(
 	req *proto.BlockByHeightRequest,
 ) chan interface{} {
 	// Logger.log.Infof("[stream] Netsync received request get block %v %v [%v...%v] len %v", fromPool, req.Specific, req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights))
-	Logger.log.Infof("[stream] Netsync received request stream block type %v, spec %v, height [%v..%v] len %v, from %v to %v", req.Type, req.Specific, req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights), req.From, req.To)
+	Logger.log.Infof("[stream] Netsync received request stream block type %v, spec %v, height [%v..%v] len %v, from %v to %v uuid %v", req.Type, req.Specific, req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights), req.From, req.To, req.UUID)
 	blkCh := make(chan interface{})
 	if !req.Specific {
 		if len(req.Heights) != 2 || req.Heights[1] < req.Heights[0] {
@@ -382,11 +344,10 @@ func (netSync *NetSync) streamBlkByHeight(
 		}
 		blk, err := netSync.GetBlockByHeight(req.Type, blkHeight, byte(req.From), byte(req.To))
 		if err != nil {
-			Logger.log.Errorf("[stream] Netsync cannot get block, return error %+v", err)
+			Logger.log.Errorf("[stream] Netsync cannot get block, return error %+v uuid %v", err, req.UUID)
 			break
 		}
 		blkCh <- blk
-		Logger.log.Infof("[stream] Netsync push block to channel")
 	}
 	close(blkCh)
 	return
@@ -396,7 +357,7 @@ func (netSync *NetSync) StreamBlockByHash(
 	fromPool bool,
 	req *proto.BlockByHashRequest,
 ) chan interface{} {
-	Logger.log.Infof("[stream] Netsync received request stream block type %v, hashes [%v..%v] len %v, from %v to %v", req.Type, req.Hashes[0], req.Hashes[len(req.Hashes)-1], len(req.Hashes), req.From, req.To)
+	Logger.log.Infof("[stream] Netsync received request stream block type %v, hashes [%v..%v] len %v, from %v to %v uuid %v", req.Type, req.Hashes[0], req.Hashes[len(req.Hashes)-1], len(req.Hashes), req.From, req.To, req.UUID)
 	blkCh := make(chan interface{})
 	go netSync.streamBlkByHash(req, blkCh)
 	return blkCh
@@ -411,11 +372,10 @@ func (netSync *NetSync) streamBlkByHash(
 		blkHash.SetBytes(blkHashByte)
 		blk, err := netSync.GetBlockByHash(req.Type, blkHash, byte(req.From), byte(req.To))
 		if err != nil {
-			Logger.log.Errorf("[stream] Netsync cannot get block, return error %+v", err)
+			Logger.log.Errorf("[stream] Netsync cannot get block, return error %+v, uuid %v", err, req.UUID)
 			break
 		}
 		blkCh <- blk
-		Logger.log.Infof("[stream] Netsync push block to channel")
 	}
 	close(blkCh)
 	return

@@ -113,7 +113,7 @@ func (httpServer *HttpServer) handleCreateAndSendContractingRequest(params inter
 
 func (httpServer *HttpServer) handleCreateRawTxWithBurningReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	return processBurningReq(
-		metadata.BurningRequestMeta,
+		metadata.BurningRequestMetaV2,
 		params,
 		closeChan,
 		httpServer,
@@ -300,7 +300,7 @@ func processBurningReq(
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("remote address is invalid"))
 	}
 
-	meta, err := rpcservice.NewBurningRequestMetadata(senderPrivateKeyParam, tokenReceivers, tokenID, tokenName, remoteAddress, burningMetaType)
+	meta, err := rpcservice.NewBurningRequestMetadata(senderPrivateKeyParam, tokenReceivers, tokenID, tokenName, remoteAddress, burningMetaType, httpServer.GetBlockchain(), httpServer.GetBlockchain().BeaconChain.CurrentHeight())
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +325,7 @@ func processBurningReq(
 
 func (httpServer *HttpServer) handleCreateRawTxWithBurningForDepositToSCReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	return processBurningReq(
-		metadata.BurningForDepositToSCRequestMeta,
+		metadata.BurningForDepositToSCRequestMetaV2,
 		params,
 		closeChan,
 		httpServer,

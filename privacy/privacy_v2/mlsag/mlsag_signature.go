@@ -103,6 +103,9 @@ func (this *MlsagSig) FromBytes(b []byte) (*MlsagSig, error) {
 		return nil, errors.New("Cannot parse value C, byte is too small")
 	}
 	C := new(operation.Scalar).FromBytesS(b[offset : offset+operation.Ed25519KeySize])
+	if !C.ScalarValid(){
+		return nil, errors.New("Cannot parse value C, invalid scalar")
+	}
 	offset += operation.Ed25519KeySize
 
 	if offset >= len(b) {
@@ -137,7 +140,11 @@ func (this *MlsagSig) FromBytes(b []byte) (*MlsagSig, error) {
 			if offset + operation.Ed25519KeySize > len(b) {
 				return nil, errors.New("Cannot parse R of mlsagSig, byte is too small")
 			}
-			R[i][j] = new(operation.Scalar).FromBytesS(b[offset : offset+operation.Ed25519KeySize])
+			sc := new(operation.Scalar).FromBytesS(b[offset : offset+operation.Ed25519KeySize])
+			if !sc.ScalarValid(){
+				return nil, errors.New("Cannot parse R of mlsagSig, invalid scalar")
+			}
+			R[i][j] = sc
 			offset += operation.Ed25519KeySize
 		}
 	}

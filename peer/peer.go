@@ -88,20 +88,18 @@ type Config struct {
 // result in a deadlock.
 */
 type MessageListeners struct {
-	OnTx               func(p *PeerConn, msg *wire.MessageTx)
-	OnTxPrivacyToken   func(p *PeerConn, msg *wire.MessageTxPrivacyToken)
-	OnBlockShard       func(p *PeerConn, msg *wire.MessageBlockShard)
-	OnBlockBeacon      func(p *PeerConn, msg *wire.MessageBlockBeacon)
-	OnCrossShard       func(p *PeerConn, msg *wire.MessageCrossShard)
-	OnShardToBeacon    func(p *PeerConn, msg *wire.MessageShardToBeacon)
-	OnGetBlockBeacon   func(p *PeerConn, msg *wire.MessageGetBlockBeacon)
-	OnGetBlockShard    func(p *PeerConn, msg *wire.MessageGetBlockShard)
-	OnGetCrossShard    func(p *PeerConn, msg *wire.MessageGetCrossShard)
-	OnGetShardToBeacon func(p *PeerConn, msg *wire.MessageGetShardToBeacon)
-	OnVersion          func(p *PeerConn, msg *wire.MessageVersion)
-	OnVerAck           func(p *PeerConn, msg *wire.MessageVerAck)
-	OnGetAddr          func(p *PeerConn, msg *wire.MessageGetAddr)
-	OnAddr             func(p *PeerConn, msg *wire.MessageAddr)
+	OnTx             func(p *PeerConn, msg *wire.MessageTx)
+	OnTxPrivacyToken func(p *PeerConn, msg *wire.MessageTxPrivacyToken)
+	OnBlockShard     func(p *PeerConn, msg *wire.MessageBlockShard)
+	OnBlockBeacon    func(p *PeerConn, msg *wire.MessageBlockBeacon)
+	OnCrossShard     func(p *PeerConn, msg *wire.MessageCrossShard)
+	OnGetBlockBeacon func(p *PeerConn, msg *wire.MessageGetBlockBeacon)
+	OnGetBlockShard  func(p *PeerConn, msg *wire.MessageGetBlockShard)
+	OnGetCrossShard  func(p *PeerConn, msg *wire.MessageGetCrossShard)
+	OnVersion        func(p *PeerConn, msg *wire.MessageVersion)
+	OnVerAck         func(p *PeerConn, msg *wire.MessageVerAck)
+	OnGetAddr        func(p *PeerConn, msg *wire.MessageGetAddr)
+	OnAddr           func(p *PeerConn, msg *wire.MessageAddr)
 
 	//PBFT
 	OnBFTMsg             func(p *PeerConn, msg wire.Message)

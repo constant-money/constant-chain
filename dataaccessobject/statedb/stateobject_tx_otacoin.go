@@ -160,6 +160,10 @@ func newOTACoinObjectWithValue(db *StateDB, key common.Hash, data interface{}) (
 }
 
 func GenerateOTACoinObjectKey(tokenID common.Hash, shardID byte, height []byte, outputCoin []byte) common.Hash {
+	// non-PRV coins will be indexed together
+	if tokenID != common.PRVCoinID {
+		tokenID = common.ConfidentialAssetID
+	}
 	prefixHash := GetOTACoinPrefix(tokenID, shardID, height)
 	valueHash := common.HashH(outputCoin)
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))

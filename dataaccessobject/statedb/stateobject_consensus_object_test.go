@@ -1,11 +1,11 @@
 package statedb
 
 import (
-	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/incognitokey"
-	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/incognitokey"
 )
 
 func storeCommitteeObjectOneShardForTestConsensus(role int, initRoot common.Hash, shardID, from, to int) (common.Hash, map[common.Hash]*CommitteeState) {
@@ -15,13 +15,10 @@ func storeCommitteeObjectOneShardForTestConsensus(role int, initRoot common.Hash
 		panic(err)
 	}
 	tempCommitteePublicKey = tempCommitteePublicKey[from:to]
-	for index, value := range tempCommitteePublicKey {
+	for _, value := range tempCommitteePublicKey {
 		key, _ := GenerateCommitteeObjectKeyWithRole(role, shardID, value)
-		autoStaking := false
-		if rand.Int()%2 == 0 {
-			autoStaking = true
-		}
-		committeeState := NewCommitteeStateWithValue(shardID, role, value, receiverPaymentAddress[index], autoStaking)
+
+		committeeState := NewCommitteeStateWithValue(shardID, role, value)
 		m[key] = committeeState
 	}
 	sDB, err := NewWithPrefixTrie(initRoot, wrarperDB)
@@ -48,8 +45,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	map[int][]incognitokey.CommitteePublicKey,
 	[]incognitokey.CommitteePublicKey,
 	[]incognitokey.CommitteePublicKey,
-	map[string]string,
-	map[string]bool,
 	map[string]map[common.Hash]uint64,
 	map[common.Hash]*RewardRequestState,
 	map[string]uint8,
@@ -60,8 +55,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	wantMSubstituteValidator := make(map[int][]incognitokey.CommitteePublicKey)
 	wantNextEpochCandidate := []incognitokey.CommitteePublicKey{}
 	wantCurrentEpochCandidate := []incognitokey.CommitteePublicKey{}
-	wantMRewardReceiver := make(map[string]string)
-	wantMAutoStaking := make(map[string]bool)
 	wantMCommitteeReward := make(map[string]map[common.Hash]uint64)
 	wantMRewardRequest := make(map[common.Hash]*RewardRequestState)
 	wantMBlackListProducer := make(map[string]uint8)
@@ -76,11 +69,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 		rootHashes = append(rootHashes, tempRootHash)
 		for _, v := range tempM {
 			wantCurrentValidatorM[id] = append(wantCurrentValidatorM[id], v.CommitteePublicKey())
-			tempString, _ := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-			committeePublicKey := v.CommitteePublicKey()
-			incPublicKey := committeePublicKey.GetIncKeyBase58()
-			wantMRewardReceiver[incPublicKey] = v.RewardReceiver()
-			wantMAutoStaking[tempString[0]] = v.AutoStaking()
 		}
 	}
 
@@ -94,11 +82,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 		rootHashes = append(rootHashes, tempRootHash)
 		for _, v := range tempM {
 			wantMSubstituteValidator[id] = append(wantMSubstituteValidator[id], v.CommitteePublicKey())
-			tempString, _ := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-			committeePublicKey := v.CommitteePublicKey()
-			incPublicKey := committeePublicKey.GetIncKeyBase58()
-			wantMRewardReceiver[incPublicKey] = v.RewardReceiver()
-			wantMAutoStaking[tempString[0]] = v.AutoStaking()
 		}
 	}
 	to = from + 80
@@ -106,11 +89,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	tempRootHash, tempM := storeCommitteeObjectOneShardForTestConsensus(NextEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
 	for _, v := range tempM {
 		wantNextEpochCandidate = append(wantNextEpochCandidate, v.CommitteePublicKey())
-		tempString, _ := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-		committeePublicKey := v.CommitteePublicKey()
-		incPublicKey := committeePublicKey.GetIncKeyBase58()
-		wantMRewardReceiver[incPublicKey] = v.RewardReceiver()
-		wantMAutoStaking[tempString[0]] = v.AutoStaking()
 	}
 
 	from += 80
@@ -118,11 +96,6 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	tempRootHash, tempM = storeCommitteeObjectOneShardForTestConsensus(CurrentEpochShardCandidate, tempRootHash, CandidateShardID, from, to)
 	for _, v := range tempM {
 		wantCurrentEpochCandidate = append(wantCurrentEpochCandidate, v.CommitteePublicKey())
-		tempString, _ := incognitokey.CommitteeKeyListToString([]incognitokey.CommitteePublicKey{v.CommitteePublicKey()})
-		committeePublicKey := v.CommitteePublicKey()
-		incPublicKey := committeePublicKey.GetIncKeyBase58()
-		wantMRewardReceiver[incPublicKey] = v.RewardReceiver()
-		wantMAutoStaking[tempString[0]] = v.AutoStaking()
 	}
 	tempStateDB, err := NewWithPrefixTrie(tempRootHash, wrarperDB)
 	if err != nil || tempStateDB == nil {
@@ -131,12 +104,12 @@ func storeAllConsensusStateObjectForTesting(initRoot common.Hash) (
 	tempRootHash, _, wantMCommitteeReward = storeCommitteeReward(tempRootHash, wrarperDB)
 	tempRootHash, wantMRewardRequest = storeRewardRequest(tempRootHash, wrarperDB, defaultMaxEpoch, shardIDs)
 	tempRootHash, _, wantMBlackListProducer = storeBlackListProducer(tempRootHash, wrarperDB, 1, 460, 500)
-	return tempRootHash, wantMCommittee, wantMSubstituteValidator, wantNextEpochCandidate, wantCurrentEpochCandidate, wantMRewardReceiver, wantMAutoStaking, wantMCommitteeReward, wantMRewardRequest, wantMBlackListProducer
+	return tempRootHash, wantMCommittee, wantMSubstituteValidator, wantNextEpochCandidate, wantCurrentEpochCandidate, wantMCommitteeReward, wantMRewardRequest, wantMBlackListProducer
 }
 
 func TestStateDB_GetAllConsensusStateObject(t *testing.T) {
 	ids := []int{0, 1, 2, 3, 4, 5, 6, 7}
-	rootHash, wantMCommittee, wantMSubstituteValidator, wantNextEpochCandidate, wantCurrentEpochCandidate, wantMRewardReceiver, wantMAutoStaking, wantMCommitteeReward, wantMRewardRequest, wantMBlackListProducer := storeAllConsensusStateObjectForTesting(emptyRoot)
+	rootHash, wantMCommittee, wantMSubstituteValidator, wantNextEpochCandidate, wantCurrentEpochCandidate, wantMCommitteeReward, wantMRewardRequest, wantMBlackListProducer := storeAllConsensusStateObjectForTesting(emptyRoot)
 	// GOT to verify
 	tempStateDB, err := NewWithPrefixTrie(rootHash, wrarperDB)
 	if err != nil || tempStateDB == nil {
@@ -226,25 +199,6 @@ func TestStateDB_GetAllConsensusStateObject(t *testing.T) {
 		}
 	}
 
-	_, _, _, _, _, _, gotMRewardReceiver, gotMAutoStaking := tempStateDB.getAllCommitteeState(ids)
-	for k, v1 := range gotMRewardReceiver {
-		if v2, ok := wantMRewardReceiver[k]; !ok {
-			t.Fatalf("want %+v but get nothing", k)
-		} else {
-			if !reflect.DeepEqual(v2, v1) {
-				t.Fatalf("want %+v but got %+v", v2, v1)
-			}
-		}
-	}
-	for k, v1 := range gotMAutoStaking {
-		if v2, ok := wantMAutoStaking[k]; !ok {
-			t.Fatalf("want %+v but get nothing", k)
-		} else {
-			if !reflect.DeepEqual(v2, v1) {
-				t.Fatalf("want %+v but got %+v", v2, v1)
-			}
-		}
-	}
 	gotMCommitteeReward := tempStateDB.getAllCommitteeReward()
 	for k1, v1 := range wantMCommitteeReward {
 		if v2, ok := gotMCommitteeReward[k1]; !ok {
@@ -284,7 +238,7 @@ func TestStateDB_GetAllConsensusStateObject(t *testing.T) {
 }
 
 func BenchmarkStateDB_GetAllCommitteeRewardInFullData(b *testing.B) {
-	rootHash, _, _, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
+	rootHash, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
 	// GOT to verify
 	tempStateDB, err := NewWithPrefixTrie(rootHash, wrarperDB)
 	if err != nil || tempStateDB == nil {
@@ -296,7 +250,7 @@ func BenchmarkStateDB_GetAllCommitteeRewardInFullData(b *testing.B) {
 }
 
 func BenchmarkStateDB_GetAllAutoStakingInFullData(b *testing.B) {
-	rootHash, _, _, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
+	rootHash, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
 	// GOT to verify
 	tempStateDB, err := NewWithPrefixTrie(rootHash, wrarperDB)
 	if err != nil || tempStateDB == nil {
@@ -308,7 +262,7 @@ func BenchmarkStateDB_GetAllAutoStakingInFullData(b *testing.B) {
 }
 func BenchmarkStateDB_GetAllCommitteeInFullData(b *testing.B) {
 	ids := []int{0, 1, 2, 3, 4, 5, 6, 7}
-	rootHash, _, _, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
+	rootHash, _, _, _, _, _, _, _ := storeAllConsensusStateObjectForTesting(emptyRoot)
 	// GOT to verify
 	tempStateDB, err := NewWithPrefixTrie(rootHash, wrarperDB)
 	if err != nil || tempStateDB == nil {

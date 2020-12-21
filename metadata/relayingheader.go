@@ -21,7 +21,6 @@ type RelayingHeader struct {
 }
 
 // RelayingHeaderAction - shard validator creates instruction that contain this action content
-// it will be append to ShardToBeaconBlock
 type RelayingHeaderAction struct {
 	Meta    RelayingHeader
 	TxReqID common.Hash

@@ -1,6 +1,17 @@
 package lvdb
 
 import (
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+
+	"github.com/incognitochain/incognito-chain/common"
+
 	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/incdb"
@@ -12,8 +23,10 @@ import (
 )
 
 type db struct {
-	fn   string // filename for reporting
-	lvdb *leveldb.DB
+	fn     string // filename for reporting
+	dbPath string
+	lvdb   *leveldb.DB
+	lock   sync.RWMutex
 }
 
 func init() {
@@ -52,13 +65,33 @@ func open(dbPath string) (incdb.Database, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "levelvdb.OpenFile %s", dbPath)
 	}
-	return &db{fn: dbPath, lvdb: lvdb}, nil
+	return &db{fn: dbPath, lvdb: lvdb, dbPath: dbPath}, nil
 }
 func (db *db) GetPath() string {
 	return db.fn
 }
+
 func (db *db) Close() error {
 	return errors.Wrap(db.lvdb.Close(), "db.lvdb.Close")
+}
+
+func (db *db) ReOpen() error {
+	handles := 256
+	cache := 8
+	lvdb, err := leveldb.OpenFile(db.dbPath, &opt.Options{
+		OpenFilesCacheCapacity: handles,
+		BlockCacheCapacity:     cache / 2 * opt.MiB,
+		WriteBuffer:            cache / 4 * opt.MiB, // Two of these are used internally
+		Filter:                 filter.NewBloomFilter(10),
+	})
+	if _, corrupted := err.(*lvdbErrors.ErrCorrupted); corrupted {
+		lvdb, err = leveldb.RecoverFile(db.dbPath, nil)
+	}
+	if err != nil {
+		return errors.Wrapf(err, "levelvdb.OpenFile %s", db.dbPath)
+	}
+	db.lvdb = lvdb
+	return err
 }
 
 func (db *db) Has(key []byte) (bool, error) {
@@ -70,6 +103,8 @@ func (db *db) Has(key []byte) (bool, error) {
 }
 
 func (db *db) Get(key []byte) ([]byte, error) {
+	db.lock.RLock()
+	defer db.lock.RUnlock()
 	value, err := db.lvdb.Get(key, nil)
 	if err != nil {
 		return nil, err
@@ -214,4 +249,177 @@ func (db *db) Batch(data []incdb.BatchData) leveldb.Batch {
 		batch.Put(v.Key, v.Value)
 	}
 	return *batch
+}
+
+func (db *db) PreloadBackup(backupFile string) error {
+	err := uncompress(backupFile, db.dbPath+"_")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("remove ", db.dbPath)
+	err = os.RemoveAll(db.dbPath)
+	if err != nil {
+		return err
+	}
+	fmt.Println("rename ", db.dbPath)
+	err = os.Rename(db.dbPath+"_", db.dbPath)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (db *db) LatestBackup(path string) (int, string) {
+	backupFolder := filepath.Join(db.dbPath, path)
+	//fmt.Println("backupFolder", backupFolder)
+	files, err := ioutil.ReadDir(backupFolder)
+	if err != nil {
+		return 0, ""
+	}
+	//fmt.Println("files", files)
+	if len(files) == 0 {
+		return 0, ""
+	}
+	latestBackupEpoch := 0
+	//Get max epoch
+	for _, file := range files {
+		//fmt.Println("file", file.Name())
+		epoch, err := strconv.Atoi(file.Name())
+		if err != nil {
+			return 0, ""
+		}
+		if epoch > latestBackupEpoch {
+			latestBackupEpoch = epoch
+		}
+	}
+
+	return latestBackupEpoch, fmt.Sprintf("%v/%v", backupFolder, latestBackupEpoch)
+}
+
+func (db *db) RemoveBackup(backupFile string) {
+	backupFile = filepath.Join(db.dbPath, backupFile)
+	os.Remove(backupFile)
+}
+
+func (db *db) Backup(backupFile string) error {
+	db.lock.Lock()
+	defer db.lock.Unlock()
+
+	backupFile = filepath.Join(db.dbPath, backupFile)
+	fmt.Println("backupFile", backupFile)
+
+	if err := os.MkdirAll(filepath.Dir(backupFile), 0700); err != nil {
+		panic(err)
+	}
+
+	if err := db.Close(); err != nil {
+		return err
+	}
+
+	err := common.CompressDatabase(db.dbPath, backupFile)
+	if err != nil {
+		return err
+	}
+
+	if err := db.ReOpen(); err != nil {
+		panic(err)
+	}
+
+	if err := removeUnusedBackupDatabase(backupFile); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func (db *db) Clear() error {
+	files, err := filepath.Glob(filepath.Join(db.dbPath, "*"))
+	if err != nil {
+		return err
+	}
+	for _, file := range files {
+		err = os.RemoveAll(file)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+//removeUnusedBackupDatabase ...
+// for remove unused databases in backup folder
+func removeUnusedBackupDatabase(filePath string) error {
+	strs := strings.Split(filePath, "/")
+
+	//Get latest epoch
+	latestEpoch, err := strconv.Atoi(strs[len(strs)-1])
+	if err != nil {
+		return err
+	}
+
+	//Get path directory of this file
+	path := filePath
+	for i := len(path) - 1; i > -1; i-- {
+		if path[i] != '/' {
+			path = path[:len(path)-1]
+		} else {
+			log.Println(1)
+			break
+		}
+	}
+
+	//Get needed epoch to download
+	files, err := ioutil.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	if len(files) == 0 {
+		return err
+	}
+
+	//Get file name and compare with latest epoch
+	for _, file := range files {
+
+		epoch, err := strconv.Atoi(file.Name())
+		if err != nil {
+			return err
+		}
+
+		if epoch != latestEpoch && epoch != latestEpoch-1 {
+			name := path + "/" + file.Name()
+			err = os.Remove(name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+//Uncompress file from zip file
+func uncompress(srcPath, desPath string) error {
+
+	//uncompress write
+	//Remove all old data
+	// if err := os.RemoveAll(srcPath); err != nil {
+	// 	panic(err)
+	// }
+	fmt.Println("start decompress", srcPath)
+	if err := os.RemoveAll(desPath); err != nil {
+		panic(err)
+	}
+	//Create new data
+	if err := os.MkdirAll(desPath, 0700); err != nil {
+		panic(err)
+	}
+
+	err := common.DecompressDatabaseBackup(srcPath, desPath)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println("done decompress", desPath)
+	return nil
 }

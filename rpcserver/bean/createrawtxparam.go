@@ -118,7 +118,6 @@ func NewCreateRawTxParam(params interface{}) (*CreateRawTxParam, error) {
 			}
 			info = []byte(infoStr)
 		}
-
 	}
 
 	return &CreateRawTxParam{

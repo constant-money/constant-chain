@@ -41,6 +41,7 @@ const (
 	PDEWithdrawalRequestFromMapError
 	CouldNotGetExchangeRateError
 	RejectInvalidFee
+	PDEFeeWithdrawalRequestFromMapError
 
 	// portal
 	PortalRequestPTokenParamError

@@ -3,6 +3,7 @@ package syncker
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -28,7 +29,8 @@ type ShardSyncProcess struct {
 	shardPeerState        map[string]ShardPeerState //peerid -> state
 	shardPeerStateCh      chan *wire.MessagePeerState
 	crossShardSyncProcess *CrossShardSyncProcess
-	Server                Server
+	blockchain            *blockchain.BlockChain
+	Network               Network
 	Chain                 ShardChainInterface
 	beaconChain           Chain
 	shardPool             *BlkPool
@@ -36,7 +38,7 @@ type ShardSyncProcess struct {
 	lock                  *sync.RWMutex
 }
 
-func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInterface, chain ShardChainInterface) *ShardSyncProcess {
+func NewShardSyncProcess(shardID int, network Network, bc *blockchain.BlockChain, beaconChain BeaconChainInterface, chain ShardChainInterface) *ShardSyncProcess {
 	var isOutdatedBlock = func(blk interface{}) bool {
 		if blk.(*blockchain.ShardBlock).GetHeight() < chain.GetFinalViewHeight() {
 			return true
@@ -47,7 +49,8 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 	s := &ShardSyncProcess{
 		shardID:          shardID,
 		status:           STOP_SYNC,
-		Server:           server,
+		blockchain:       bc,
+		Network:          network,
 		Chain:            chain,
 		beaconChain:      beaconChain,
 		shardPool:        NewBlkPool("ShardPool-"+string(shardID), isOutdatedBlock),
@@ -56,7 +59,7 @@ func NewShardSyncProcess(shardID int, server Server, beaconChain BeaconChainInte
 
 		actionCh: make(chan func()),
 	}
-	s.crossShardSyncProcess = NewCrossShardSyncProcess(server, s, beaconChain)
+	s.crossShardSyncProcess = NewCrossShardSyncProcess(network, bc, s, beaconChain)
 
 	go s.syncShardProcess()
 	go s.insertShardBlockFromPool()
@@ -149,14 +152,20 @@ func (s *ShardSyncProcess) insertShardBlockFromPool() {
 				continue
 			}
 
-			fmt.Println("Syncker: Insert shard", s.shardID, "from pool", blk.(common.BlockInterface).GetHeight())
-			if err := s.Chain.ValidateBlockSignatures(blk.(common.BlockInterface), s.Chain.GetCommittee()); err != nil {
-				return
+			//fullnode delay 1 block (make sure insert final block)
+			if os.Getenv("FULLNODE") != "" {
+				preBlk := s.shardPool.GetBlockByPrevHash(*blk.Hash())
+				if len(preBlk) == 0 {
+					continue
+				}
 			}
+
 			insertShardTimeCache.Add(viewHash.String(), time.Now())
 			insertCnt++
+			//must validate this block when insert
 			if err := s.Chain.InsertBlk(blk.(common.BlockInterface), true); err != nil {
-				return
+				Logger.Error("Insert shard block from pool fail", blk.GetHeight(), blk.Hash(), err)
+				continue
 			}
 			s.shardPool.RemoveBlock(blk.Hash())
 		}
@@ -206,13 +215,20 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 	if pState.processed {
 		return
 	}
+	toHeight := pState.BestViewHeight
 
-	if pState.BestViewHeight <= s.Chain.GetBestViewHeight() {
+	//fullnode delay 1 block (make sure insert final block)
+	if os.Getenv("FULLNODE") != "" {
+		toHeight = pState.BestViewHeight - 1
+	}
+
+	if toHeight <= s.Chain.GetBestViewHeight() {
 		return
 	}
 
 	//fmt.Println("SYNCKER Request Shard Block", peerID, s.ShardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
-	ch, err := s.Server.RequestShardBlocksViaStream(ctx, peerID, s.shardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
+	ch, err := s.Network.RequestShardBlocksViaStream(ctx, peerID, s.shardID, s.Chain.GetFinalViewHeight()+1, toHeight)
+	// ch, err := s.Server.RequestShardBlocksViaStream(ctx, "", s.shardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
 	if err != nil {
 		fmt.Println("Syncker: create channel fail")
 		return
@@ -225,13 +241,14 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		case blk := <-ch:
 			if !isNil(blk) {
 				blockBuffer = append(blockBuffer, blk)
-				Logger.Infof("Syncker beacon receive block %v", blk.GetHeight())
+
 				if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
-					time.Sleep(5 * time.Second)
+					time.Sleep(30 * time.Second)
 				}
-				if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
-					return
-				}
+				// if blk.(*blockchain.ShardBlock).Header.BeaconHeight > s.beaconChain.GetBestViewHeight() {
+				// 	Logger.Infof("Cannot find beacon for inserting shard block")
+				// 	return
+				// }
 			}
 
 			if uint64(len(blockBuffer)) >= 500 || (len(blockBuffer) > 0 && (isNil(blk) || time.Since(insertTime) > time.Millisecond*2000)) {
@@ -243,7 +260,7 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 					} else {
 						insertBlkCnt += successBlk
 						fmt.Printf("Syncker Insert %d shard %d block(from %d to %d) elaspse %f \n", successBlk, s.shardID, blockBuffer[0].GetHeight(), blockBuffer[len(blockBuffer)-1].GetHeight(), time.Since(time1).Seconds())
-						if successBlk >= len(blockBuffer) {
+						if successBlk >= len(blockBuffer) || successBlk == 0 {
 							break
 						}
 						blockBuffer = blockBuffer[successBlk:]

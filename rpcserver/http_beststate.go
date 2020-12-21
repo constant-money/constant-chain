@@ -12,13 +12,7 @@ import (
 handleGetBeaconBestState - RPC get beacon best state
 */
 func (httpServer *HttpServer) handleGetBeaconBestState(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
-
-	beaconBestState, err := httpServer.blockService.GetBeaconBestState()
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.GetClonedBeaconBestStateError, err)
-	}
-
-	result := jsonresult.NewGetBeaconBestState(beaconBestState)
+	result := jsonresult.NewGetBeaconBestState(httpServer.blockService.BlockChain.GetBeaconBestState())
 	return result, nil
 }
 
@@ -35,13 +29,7 @@ func (httpServer *HttpServer) handleGetShardBestState(params interface{}, closeC
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Shard ID component invalid"))
 	}
 	shardID := byte(shardIdParam)
-
-	shardBestState, err := httpServer.blockService.GetShardBestStateByShardID(shardID)
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.GetClonedShardBestStateError, err)
-	}
-
-	result := jsonresult.NewGetShardBestState(shardBestState)
+	result := jsonresult.NewGetShardBestState(httpServer.blockService.BlockChain.GetBestStateShard(shardID))
 	return result, nil
 }
 
@@ -163,5 +151,14 @@ func (httpServer *HttpServer) handleGetShardBestStateDetail(params interface{}, 
 	}
 
 	result := jsonresult.NewGetShardBestStateDetail(shardBestState)
+	return result, nil
+}
+
+func (httpServer *HttpServer) handleGetTotalStaker(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	total, err := httpServer.config.BlockChain.GetTotalStaker()
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetTotalStakerError, err)
+	}
+	result := jsonresult.NewGetTotalStaker(total)
 	return result, nil
 }

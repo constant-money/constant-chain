@@ -100,7 +100,6 @@ func fullBLSSignFlow(wantErr, rewriteKey bool, committeeSign []int) (float64, fl
 	start = time.Now()
 	cSig, err := combine(sigs)
 	// fmt.Println("sigs:", sigs)
-	cSig2, err := combine(sigs)
 	// fmt.Println("sigs:", sigs)
 	// fmt.Println("CSig:", cSig, cSig2)
 	t2 := time.Since(start)
@@ -110,8 +109,6 @@ func fullBLSSignFlow(wantErr, rewriteKey bool, committeeSign []int) (float64, fl
 	// fmt.Println("Combine sigs", cSig)
 	start = time.Now()
 	result, err := verify(data, cSig, committeeSign)
-	result2, err := verify(data, cSig2, committeeSign)
-	fmt.Println(result, result2)
 	t3 := time.Since(start)
 	if err != nil {
 		return 0, 0, 0, true, err
@@ -184,32 +181,58 @@ func Test_fullBLSSignFlow(t *testing.T) {
 			want3:   true,
 			wantErr: false,
 		},
-		// {
-		// 	name: "Test 20 of 20 committee sign",
-		// 	args: args{
-		// 		wantErr:       false,
-		// 		rewriteKey:    true,
-		// 		committeeSign: genSubset4Test(20, 20),
-		// 	},
-		// 	want:    2,
-		// 	want1:   0.01,
-		// 	want2:   2,
-		// 	want3:   true,
-		// 	wantErr: false,
-		// },
-		// {
-		// 	name: "Test 10 of 20 committee sign",
-		// 	args: args{
-		// 		wantErr:       false,
-		// 		rewriteKey:    true,
-		// 		committeeSign: genSubset4Test(10, 20),
-		// 	},
-		// 	want:    1,
-		// 	want1:   0.01,
-		// 	want2:   1,
-		// 	want3:   true,
-		// 	wantErr: false,
-		// },
+		{
+			name: "Test 20 of 20 committee sign",
+			args: args{
+				wantErr:       false,
+				rewriteKey:    true,
+				committeeSign: genSubset4Test(20, 20),
+			},
+			want:    0.05,
+			want1:   0.01,
+			want2:   2,
+			want3:   true,
+			wantErr: false,
+		},
+		{
+			name: "Test 10 of 20 committee sign",
+			args: args{
+				wantErr:       false,
+				rewriteKey:    true,
+				committeeSign: genSubset4Test(10, 20),
+			},
+			want:    0.05,
+			want1:   0.01,
+			want2:   1,
+			want3:   true,
+			wantErr: false,
+		},
+		{
+			name: "Test 23 of 32 committee sign",
+			args: args{
+				wantErr:       false,
+				rewriteKey:    true,
+				committeeSign: genSubset4Test(23, 32),
+			},
+			want:    0.05,
+			want1:   0.01,
+			want2:   1,
+			want3:   true,
+			wantErr: false,
+		},
+		{
+			name: "Test 200 of 200 committee sign",
+			args: args{
+				wantErr:       false,
+				rewriteKey:    true,
+				committeeSign: genSubset4Test(200, 200),
+			},
+			want:    0.5,
+			want1:   0.02,
+			want2:   1,
+			want3:   true,
+			wantErr: false,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

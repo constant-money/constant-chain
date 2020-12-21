@@ -31,7 +31,7 @@ func (wsServer *WsServer) handleSubscribePendingTransaction(params interface{}, 
 		return
 	}
 	// try to get transaction in database
-	_, blockHash, index, tx, err := wsServer.config.BlockChain.GetTransactionByHash(*txHash)
+	_, blockHash, _, index, tx, err := wsServer.config.BlockChain.GetTransactionByHash(*txHash)
 	if err == nil {
 		shardBlock, _, err := wsServer.config.BlockChain.GetShardBlockByHash(blockHash)
 		if err == nil {

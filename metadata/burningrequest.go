@@ -6,12 +6,12 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	"github.com/incognitochain/incognito-chain/privacy"
 	"reflect"
 	"strconv"
-
-	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/privacy"
 )
 
 // whoever can send this type of tx
@@ -46,6 +46,9 @@ func NewBurningRequest(
 	return burningReq, nil
 }
 
+
+func (bReq *BurningRequest) ShouldSignMetaData() bool { return true }
+
 func (bReq BurningRequest) ValidateTxWithBlockChain(tx Transaction, chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, transactionStateDB *statedb.StateDB) (bool, error) {
 	bridgeTokenExisted, err := statedb.IsBridgeTokenExistedByType(beaconViewRetriever.GetBeaconFeatureStateDB(), bReq.TokenID, false)
 	if err != nil {
@@ -67,31 +70,58 @@ func (bReq BurningRequest) ValidateSanityData(chainRetriever ChainRetriever, sha
 		return false, false, err
 	}
 	if len(bReq.BurnerAddress.Pk) == 0 {
-		return false, false, errors.New("Wrong request info's burner address")
+		return false, false, errors.New("wrong request info's burner address")
 	}
 	if bReq.BurningAmount == 0 {
-		return false, false, errors.New("Wrong request info's burned amount")
+		return false, false, errors.New("wrong request info's burned amount")
 	}
-	if !tx.IsCoinsBurning(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight) {
-		return false, false, errors.New("Must send coin to burning address")
+
+	isBurned, burnCoin, burnedTokenID, err := tx.GetTxBurnData()
+	if err != nil || !isBurned {
+		return false, false, fmt.Errorf("it is not transaction burn. Error %v", err)
 	}
-	if bReq.BurningAmount != tx.CalculateTxValue() {
-		return false, false, errors.New("BurningAmount incorrect")
+	if !bytes.Equal(burnedTokenID[:], bReq.TokenID[:]) {
+		return false, false, fmt.Errorf("wrong request info's token id and token burned")
 	}
-	if !bytes.Equal(tx.GetSigPubKey()[:], bReq.BurnerAddress.Pk[:]) {
-		return false, false, errors.New("BurnerAddress incorrect")
+	burnAmount := burnCoin.GetValue()
+	if burnAmount != bReq.BurningAmount || burnAmount == 0 {
+		return false, false, fmt.Errorf("burn amount is incorrect %v", burnAmount)
 	}
-	if !bytes.Equal(tx.GetTokenID()[:], bReq.TokenID[:]) {
-		return false, false, errors.New("Wrong request info's token id, it should be equal to tx's token id.")
+
+	if ok, err := tx.CheckAuthorizedSender(bReq.BurnerAddress.Pk); err != nil || !ok {
+		fmt.Println("Check authorized sender fail:", ok, err)
+		return false, false, fmt.Errorf("burner address unauthorized. Error %v", err)
+	}
+
+	if shardViewRetriever.GetEpoch() >= chainRetriever.GetETHRemoveBridgeSigEpoch() && (bReq.Type == BurningRequestMeta || bReq.Type == BurningForDepositToSCRequestMeta) {
+		return false, false, fmt.Errorf("metadata type %d is deprecated", bReq.Type)
+	}
+	if shardViewRetriever.GetEpoch() < chainRetriever.GetETHRemoveBridgeSigEpoch() && (bReq.Type == BurningRequestMetaV2 || bReq.Type == BurningForDepositToSCRequestMetaV2) {
+		return false, false, fmt.Errorf("metadata type %d is not supported", bReq.Type)
 	}
 	return true, true, nil
 }
 
 func (bReq BurningRequest) ValidateMetadataByItself() bool {
-	return bReq.Type == BurningRequestMeta || bReq.Type == BurningForDepositToSCRequestMeta
+	return bReq.Type == BurningRequestMeta || bReq.Type == BurningForDepositToSCRequestMeta || bReq.Type == BurningRequestMetaV2 || bReq.Type == BurningForDepositToSCRequestMetaV2
 }
 
 func (bReq BurningRequest) Hash() *common.Hash {
+	record := bReq.MetadataBase.Hash().String()
+	record += bReq.BurnerAddress.String()
+	record += bReq.TokenID.String()
+	record += strconv.FormatUint(bReq.BurningAmount, 10)
+	record += bReq.TokenName
+	record += bReq.RemoteAddress
+	if bReq.Sig != nil && len(bReq.Sig) != 0 {
+		record += string(bReq.Sig)
+	}
+	// final hash
+	hash := common.HashH([]byte(record))
+	return &hash
+}
+
+func (bReq BurningRequest) HashWithoutSig() *common.Hash {
 	record := bReq.MetadataBase.Hash().String()
 	record += bReq.BurnerAddress.String()
 	record += bReq.TokenID.String()

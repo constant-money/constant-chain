@@ -282,6 +282,11 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 			}
 		}
 		if jsonErr == nil {
+			if request.Method == "downloadbackup" {
+				httpServer.handleDownloadBackup(conn, request.Params)
+				return
+			}
+
 			// Attempt to parse the JSON-RPC request into a known concrete
 			// command.
 			command := HttpHandler[request.Method]
@@ -300,6 +305,7 @@ func (httpServer *HttpServer) ProcessRpcRequest(w http.ResponseWriter, r *http.R
 			}
 		}
 	}
+
 	if jsonErr.(*rpcservice.RPCError) != nil && r.Method != "OPTIONS" {
 		if jsonErr.(*rpcservice.RPCError).Code == rpcservice.ErrCodeMessage[rpcservice.RPCParseError].Code {
 			Logger.log.Errorf("RPC function process with err \n %+v", jsonErr)

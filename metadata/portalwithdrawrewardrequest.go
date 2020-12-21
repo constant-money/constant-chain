@@ -19,7 +19,6 @@ type PortalRequestWithdrawReward struct {
 }
 
 // PortalRequestWithdrawRewardAction - shard validator creates instruction that contain this action content
-// it will be append to ShardToBeaconBlock
 type PortalRequestWithdrawRewardAction struct {
 	Meta    PortalRequestWithdrawReward
 	TxReqID common.Hash

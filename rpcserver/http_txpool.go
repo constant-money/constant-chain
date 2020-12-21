@@ -2,6 +2,7 @@ package rpcserver
 
 import (
 	"errors"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
@@ -20,7 +21,7 @@ handleGetRawMempool - RPC returns all transaction ids in memory pool as a json a
 Hint: use getmempoolentry to fetch a specific transaction from the mempool.
 */
 func (httpServer *HttpServer) handleGetRawMempool(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
-	result := jsonresult.NewGetRawMempoolResult(*httpServer.config.TxMemPool)
+	result := jsonresult.NewGetRawMempoolResult(httpServer.config.TxMemPool)
 	return result, nil
 }
 
@@ -28,7 +29,7 @@ func (httpServer *HttpServer) handleGetRawMempool(params interface{}, closeChan 
 handleGetPendingTxsInBlockgen - RPC returns all transaction ids in blockgen
 */
 func (httpServer *HttpServer) handleGetPendingTxsInBlockgen(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
-	result := jsonresult.NewGetPendingTxsInBlockgenResult(httpServer.config.Blockgen.GetPendingTxsV2())
+	result := jsonresult.NewGetPendingTxsInBlockgenResult(httpServer.config.Blockgen.GetPendingTxsV2(255))
 	return result, nil
 }
 

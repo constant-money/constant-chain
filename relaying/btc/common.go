@@ -170,6 +170,7 @@ func chainSetup(dbName string, params *chaincfg.Params) (*BlockChain, func(), er
 	// Create the main chain instance.
 	chain, err := New(&Config{
 		DB:          db,
+		dbPath:      filepath.Join(testDbRoot, dbName),
 		ChainParams: &paramsCopy,
 		Checkpoints: nil,
 		TimeSource:  NewMedianTime(),
@@ -215,6 +216,7 @@ func GetChainV2(dbPath string, params *chaincfg.Params, genesisBlkHeight int32) 
 	// Create the main chain instance.
 	chain, err := New(&Config{
 		DB:          db,
+		dbPath:      dbPath,
 		ChainParams: &paramsCopy,
 		Checkpoints: nil,
 		TimeSource:  NewMedianTime(),

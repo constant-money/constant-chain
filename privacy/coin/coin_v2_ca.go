@@ -32,26 +32,55 @@ func ComputeCommitmentCA(assetTag *operation.Point, r, v *operation.Scalar) (*op
 	return commitment,nil
 }
 
-func ComputeAssetTagBlinder(sharedSecret *operation.Point, indexForShard uint32) (*operation.Scalar,error){
+func ComputeAssetTagBlinder(sharedSecret *operation.Point) (*operation.Scalar,error){
 	if sharedSecret==nil{
-		return nil, errors.New("missing arguments for asset tag blinder")
+		return nil, errors.New("Missing arguments for asset tag blinder")
 	}
-	blinder := operation.HashToScalar(append(sharedSecret.ToBytesS(), append([]byte("assettag"), common.Uint32ToBytes(indexForShard)...)...))
+	blinder := operation.HashToScalar(append(sharedSecret.ToBytesS(), []byte("assettag")...))
 	return blinder, nil
 }
 
 // this should be an input coin
 func (coin *CoinV2) RecomputeSharedSecret(privateKey []byte) (*operation.Point,error){
 	// sk := new(operation.Scalar).FromBytesS(privateKey)
-	var privViewKey []byte = key.GenerateReceivingKey(privateKey)[:]
-	sk := new(operation.Scalar).FromBytesS(privViewKey)
+	var privOTA []byte = key.GeneratePrivateOTAKey(privateKey)[:]
+	sk := new(operation.Scalar).FromBytesS(privOTA)
 	// this is g^SharedRandom, previously created by sender of the coin
-	sharedRanPoint, _, err := coin.GetTxRandomDetail()
+	sharedOTARandomPoint, err := coin.GetTxRandom().GetTxOTARandomPoint()
 	if err != nil {
-		return nil, errors.New("cannot retrieve tx random detail")
+		return nil, errors.New("Cannot retrieve tx random detail")
 	}
-	sharedSecret := new(operation.Point).ScalarMult(sharedRanPoint, sk)
+	sharedSecret := new(operation.Point).ScalarMult(sharedOTARandomPoint, sk)
 	return sharedSecret, nil
+}
+
+func (coin *CoinV2) ValidateAssetTag(sharedSecret *operation.Point, tokenID *common.Hash) (bool, error){
+	if coin.GetAssetTag()==nil{
+		if tokenID==nil || *tokenID==common.PRVCoinID{
+			// a valid PRV coin
+			return true, nil
+		}
+		return false, errors.New("CA coin must have asset tag")
+	}
+	if tokenID==nil || *tokenID==common.PRVCoinID{
+		// invalid
+		return false, errors.New("PRV coin cannot have asset tag")
+	}
+	recomputedAssetTag := operation.HashToPoint(tokenID[:])
+	if operation.IsPointEqual(recomputedAssetTag, coin.GetAssetTag()){
+		return true, nil
+	}
+
+	blinder, err := ComputeAssetTagBlinder(sharedSecret)
+	if err != nil {
+		return false, err
+	}
+	
+	recomputedAssetTag.Add(recomputedAssetTag, new(operation.Point).ScalarMult(operation.PedCom.G[PedersenRandomnessIndex], blinder))
+	if operation.IsPointEqual(recomputedAssetTag, coin.GetAssetTag()){
+		return true, nil
+	}
+	return false, nil
 }
 
 func (coin *CoinV2) SetPlainTokenID(tokenID *common.Hash) error{
@@ -80,14 +109,14 @@ func NewCoinCA(info *key.PaymentInfo, tokenID *common.Hash) (*CoinV2, *operation
 	c.SetAmount(new(operation.Scalar).FromUint64(info.Amount))
 	c.SetRandomness(operation.RandomScalar())
 	c.SetSharedRandom(operation.RandomScalar()) // r
+	c.SetSharedConcealRandom(operation.RandomScalar())
 	c.SetInfo(info.Message)
-	// c.SetCommitment(operation.PedCom.CommitAtIndex(c.GetAmount(), c.GetRandomness(), operation.PedersenValueIndex))
 
 	// If this is going to burning address then dont need to create ota
 	if wallet.IsPublicKeyBurningAddress(info.PaymentAddress.Pk) {
 		publicKey, err := new(operation.Point).FromBytesS(info.PaymentAddress.Pk)
 		if err != nil {
-			panic("Something is wrong with info.paymentAddress.Pk, burning address should be a valid point")
+			panic("Something is wrong with info.paymentAddress.pk, burning address should be a valid point")
 		}
 		c.SetPublicKey(publicKey)
 		err = c.SetPlainTokenID(tokenID)
@@ -99,9 +128,11 @@ func NewCoinCA(info *key.PaymentInfo, tokenID *common.Hash) (*CoinV2, *operation
 
 	// Increase index until have the right shardID
 	index := uint32(0)
-	publicView := info.PaymentAddress.GetPublicView()
-	publicSpend := info.PaymentAddress.GetPublicSpend()
-	rK := new(operation.Point).ScalarMult(publicView, c.GetSharedRandom())
+	publicOTA := info.PaymentAddress.GetOTAPublicKey() //For generating one-time-address
+	publicSpend := info.PaymentAddress.GetPublicSpend() //General public key
+	//publicView := info.PaymentAddress.GetPublicView() //For generating asset tag and concealing output coin
+
+	rK := new(operation.Point).ScalarMult(publicOTA, c.GetSharedRandom())
 	for i:=MAX_TRIES_OTA;i>0;i--{
 		index += 1
 
@@ -116,8 +147,12 @@ func NewCoinCA(info *key.PaymentInfo, tokenID *common.Hash) (*CoinV2, *operation
 			return nil, nil, err
 		}
 		if currentShardID == targetShardID {
-			c.SetTxRandomDetail(new(operation.Point).ScalarMultBase(c.GetSharedRandom()), index)
-			blinder,_ := ComputeAssetTagBlinder(rK,index)
+			otaSharedRandomPoint := new(operation.Point).ScalarMultBase(c.GetSharedRandom())
+			concealSharedRandomPoint := new(operation.Point).ScalarMultBase(c.GetSharedConcealRandom())
+			c.SetTxRandomDetail(concealSharedRandomPoint, otaSharedRandomPoint, index)
+
+			rAsset := new(operation.Point).ScalarMult(publicOTA, c.GetSharedRandom())
+			blinder,_ := ComputeAssetTagBlinder(rAsset)
 			if tokenID == nil {
 				return nil, nil, errors.New("Cannot create coin without tokenID")
 			}
@@ -133,7 +168,7 @@ func NewCoinCA(info *key.PaymentInfo, tokenID *common.Hash) (*CoinV2, *operation
 			}
 			c.SetCommitment(com)
 			
-			return c, rK, nil
+			return c, rAsset, nil
 		}
 	}
 	// MAX_TRIES_OTA could be exceeded if the OS's RNG or the statedb is corrupted

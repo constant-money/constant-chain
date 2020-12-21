@@ -213,17 +213,18 @@ func pickUpCustodians(
 				},
 			)
 
-			//update custodian state
-			err = UpdateCustodianStateAfterMatchingPortingRequest(currentPortalState, custodianItem.Key, metadata.PTokenId, neededCollaterals)
-			if err != nil {
-				return nil, err
-			}
-			if pTokenCustodianCanHold == remainPTokens {
+			remainPTokens = remainPTokens - pTokenCustodianCanHold
+			if remainPTokens == 0 {
 				break
 			}
-			remainPTokens = remainPTokens - pTokenCustodianCanHold
 		}
 	}
+
+	if remainPTokens  > 0 {
+		Logger.log.Errorf("Not enough custodians for porting amount %v", metadata.RegisterAmount)
+		return nil, fmt.Errorf("Not enough custodians for porting amount %v", metadata.RegisterAmount)
+	}
+
 	return custodians, nil
 }
 
@@ -328,8 +329,14 @@ func calTotalLiquidationByExchangeRates(RedeemAmount uint64, liquidateExchangeRa
 		return 0, errors.New("Can not divide 0")
 	}
 
-	tmp := new(big.Int).Mul(big.NewInt(int64(liquidateExchangeRates.CollateralAmount)), big.NewInt(int64(RedeemAmount)))
-	totalPrv := new(big.Int).Div(tmp, big.NewInt(int64(liquidateExchangeRates.PubTokenAmount)))
+	tmp := new(big.Int).Mul(
+		new(big.Int).SetUint64(liquidateExchangeRates.CollateralAmount),
+		new(big.Int).SetUint64(RedeemAmount),
+	)
+	totalPrv := new(big.Int).Div(
+		tmp,
+		new(big.Int).SetUint64(liquidateExchangeRates.PubTokenAmount),
+	)
 	return totalPrv.Uint64(), nil
 }
 

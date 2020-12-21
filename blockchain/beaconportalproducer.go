@@ -17,7 +17,7 @@ import (
 	"strconv"
 )
 
-// beacon build new instruction from instruction received from ShardToBeaconBlock
+// beacon build new instruction from instruction received from Shard Block
 func buildCustodianDepositInst(
 	custodianAddressStr string,
 	depositedAmount uint64,
@@ -252,10 +252,8 @@ func (blockchain *BlockChain) buildInstructionsForPortingRequest(
 
 	//check unique id from record from db
 	portingRequestKeyExist, err := statedb.IsPortingRequestIdExist(stateDB, []byte(actionData.Meta.UniqueRegisterId))
-
 	if err != nil {
 		Logger.log.Errorf("Porting request: Get item portal by prefix error: %+v", err)
-
 		inst := buildRequestPortingInst(
 			actionData.Meta.Type,
 			shardID,
@@ -396,12 +394,11 @@ func (blockchain *BlockChain) buildInstructionsForPortingRequest(
 		return [][]string{inst}, nil
 	}
 
+	// pick-up custodians
 	pickedCustodians, err := pickUpCustodians(actionData.Meta, exchangeRatesState, sortCustodianStateByFreeCollateral, currentPortalState, portalParams)
-	if err != nil {
+	if err != nil || len(pickedCustodians) == 0 {
 		Logger.log.Errorf("Porting request: an error occurred while picking up custodians for the porting request: %+v", err)
-	}
-	if len(pickedCustodians) == 0 || err != nil {
-		Logger.log.Errorf("Porting request, custodian not found")
+
 		inst := buildRequestPortingInst(
 			actionData.Meta.Type,
 			shardID,
@@ -417,30 +414,14 @@ func (blockchain *BlockChain) buildInstructionsForPortingRequest(
 		return [][]string{inst}, nil
 	}
 
-	//verify total amount
-	var totalPToken uint64 = 0
-	for _, eachCustodian := range pickedCustodians {
-		totalPToken = totalPToken + eachCustodian.Amount
-	}
-
-	if totalPToken < actionData.Meta.RegisterAmount {
-		Logger.log.Errorf("Porting request, total matching amount of picked custodians is less than porting amount %v != %v", totalPToken, actionData.Meta.RegisterAmount)
-
-		Logger.log.Errorf("Porting request, custodian not found")
-		inst := buildRequestPortingInst(
-			actionData.Meta.Type,
-			shardID,
-			common.PortalPortingRequestRejectedChainStatus,
-			actionData.Meta.UniqueRegisterId,
-			actionData.Meta.IncogAddressStr,
-			actionData.Meta.PTokenId,
-			actionData.Meta.RegisterAmount,
-			actionData.Meta.PortingFee,
-			nil,
-			actionData.TxReqID,
-		)
-
-		return [][]string{inst}, nil
+	// Update custodian state after finishing choosing enough custodians for the porting request
+	for _, cus := range pickedCustodians {
+		cusKey := statedb.GenerateCustodianStateObjectKey(cus.IncAddress).String()
+		//update custodian state
+		err := UpdateCustodianStateAfterMatchingPortingRequest(currentPortalState, cusKey, actionData.Meta.PTokenId, cus.LockedAmountCollateral)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	inst := buildRequestPortingInst(

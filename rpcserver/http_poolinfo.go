@@ -17,13 +17,6 @@ func (httpServer *HttpServer) hanldeGetBeaconPoolInfo(params interface{}, closeC
 	return result, nil
 }
 
-func (httpServer *HttpServer) handleGetShardToBeaconPoolInfo(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
-	Logger.log.Debugf("handleGetShardToBeaconPoolInfo params: %+v", params)
-	blks := httpServer.synkerService.GetShardToBeaconPoolInfo()
-	result := jsonresult.NewPoolInfo(blks)
-	Logger.log.Debugf("handleGetShardToBeaconPoolInfo result: %+v", result)
-	return result, nil
-}
 func (httpServer *HttpServer) hanldeGetShardPoolInfo(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if arrayParams == nil || len(arrayParams) != 1 {

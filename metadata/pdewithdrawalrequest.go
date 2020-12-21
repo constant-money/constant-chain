@@ -135,7 +135,7 @@ func (pc *PDEWithdrawalRequest) BuildReqActions(tx Transaction, chainRetriever C
 		return [][]string{}, err
 	}
 	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
-	action := []string{strconv.Itoa(PDEWithdrawalRequestMeta), actionContentBase64Str}
+	action := []string{strconv.Itoa(pc.Type), actionContentBase64Str}
 	return [][]string{action}, nil
 }
 

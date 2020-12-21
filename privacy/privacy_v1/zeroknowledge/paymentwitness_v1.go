@@ -2,7 +2,6 @@ package zkp
 
 import (
 	"errors"
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
@@ -100,7 +99,7 @@ func (wit *PaymentWitness) Init(PaymentWitnessParam PaymentWitnessParam) *errhan
 	cmInputSK := operation.PedCom.CommitAtIndex(wit.privateKey, randInputSK, operation.PedersenPrivateKeyIndex)
 	wit.comInputSecretKey = new(operation.Point).Set(cmInputSK)
 
-	randInputShardID := operation.RandomScalar()
+	randInputShardID := FixedRandomnessShardID
 	senderShardID := common.GetShardIDFromLastByte(PaymentWitnessParam.PublicKeyLastByteSender)
 	wit.comInputShardID = operation.PedCom.CommitAtIndex(new(operation.Scalar).FromUint64(uint64(senderShardID)), randInputShardID, operation.PedersenShardIDIndex)
 

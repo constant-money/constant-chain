@@ -153,6 +153,7 @@ func (*IssuingRequest) ShouldSignMetaData() bool { return true }
 func (iReq IssuingRequest) Hash() *common.Hash {
 	record := iReq.ReceiverAddress.String()
 	record += iReq.TokenID.String()
+	// TODO: @hung change to record += fmt.Sprint(iReq.DepositedAmount)
 	record += string(iReq.DepositedAmount)
 	record += iReq.TokenName
 	record += iReq.MetadataBase.Hash().String()

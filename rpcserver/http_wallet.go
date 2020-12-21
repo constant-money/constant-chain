@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -21,6 +22,30 @@ Result—a list of accounts and their balances
 */
 func (httpServer *HttpServer) handleListAccounts(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	result, err := httpServer.walletService.ListAccounts()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+/*
+this submits a chain-facing `OTA key` to view its balances later
+
+Parameter #1—the OTA key that will be submitted
+Result—success or error
+
+*/
+func (httpServer *HttpServer) handleSubmitKey(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	if arrayParams==nil || len(arrayParams)!=1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array with 1 element"))
+	}
+	key, ok := arrayParams[0].(string)
+	if !ok{
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("OTA key is invalid"))
+	}
+	result, err := httpServer.walletService.SubmitKey(key)
 	if err != nil {
 		return nil, err
 	}
@@ -296,7 +321,7 @@ func (httpServer *HttpServer) handleListPrivacyCustomToken(params interface{}, c
 	arrayParams := common.InterfaceSlice(params)
 	getCountTxs := false
 	if len(arrayParams) == 1 {
-		getCountTxs = true
+		getCountTxs = false //not use anymore
 	}
 	listPrivacyToken := make(map[common.Hash]*statedb.TokenState)
 	var err error
@@ -466,10 +491,7 @@ func (httpServer *HttpServer) handleGetPublicKeyFromPaymentAddress(params interf
 
 // ------------------------------------ Defragment output coin of account by combine many input coin in to 1 output coin --------------------
 /*
-handleImportAccount - import a new account by private-key
-- Param #1: private-key string
-- Param #2: account name
-- Param #3: passPhrase of wallet
+handleDefragmentAccount
 */
 func (httpServer *HttpServer) handleDefragmentAccount(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	var err error
@@ -512,6 +534,54 @@ func (httpServer *HttpServer) createRawDefragmentAccountTransaction(params inter
 		TxID:            tx.Hash().String(),
 		Base58CheckData: base58.Base58Check{}.Encode(byteArrays, 0x00),
 		ShardID:         txShardID,
+	}
+	return result, nil
+}
+
+// defragment for token
+func (httpServer *HttpServer) handleDefragmentAccountToken(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	var err error
+	data, err := httpServer.createRawDefragmentAccountTokenTransaction(params, closeChan)
+	if err.(*rpcservice.RPCError) != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.CreateTxDataError, err)
+	}
+	tx := data.(jsonresult.CreateTransactionTokenResult)
+	base58CheckData := tx.Base58CheckData
+	newParam := make([]interface{}, 0)
+	newParam = append(newParam, base58CheckData)
+	sendResult, err := httpServer.handleSendRawPrivacyCustomTokenTransaction(newParam, closeChan)
+	if err.(*rpcservice.RPCError) != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.SendTxDataError, err)
+	}
+	result := jsonresult.CreateTransactionResult{
+		TxID:    sendResult.(jsonresult.CreateTransactionTokenResult).TxID,
+		ShardID: tx.ShardID,
+	}
+	return result, nil
+}
+
+// createRawDefragmentAccountTokenTransaction
+func (httpServer *HttpServer) createRawDefragmentAccountTokenTransaction(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	var err error
+	tx, err := httpServer.txService.BuildRawDefragmentPrivacyCustomTokenTransaction(params, nil)
+	if err.(*rpcservice.RPCError) != nil {
+		Logger.log.Error(err)
+		return nil, rpcservice.NewRPCError(rpcservice.CreateTxDataError, err)
+	}
+
+	byteArrays, err := json.Marshal(tx)
+	if err != nil {
+		Logger.log.Error(err)
+		return nil, rpcservice.NewRPCError(rpcservice.CreateTxDataError, err)
+	}
+
+	result := jsonresult.CreateTransactionTokenResult{
+		ShardID:         common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte()),
+		TxID:            tx.Hash().String(),
+		TokenID:         tx.GetTxTokenData().PropertyID.String(),
+		TokenName:       tx.GetTxTokenData().PropertyName,
+		TokenAmount:     tx.GetTxTokenData().Amount,
+		Base58CheckData: base58.Base58Check{}.Encode(byteArrays, 0x00),
 	}
 	return result, nil
 }

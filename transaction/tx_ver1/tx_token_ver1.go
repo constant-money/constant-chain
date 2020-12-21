@@ -45,7 +45,7 @@ func (txToken *TxToken) Init(paramsInterface interface{}) error {
 
 	// check tx size
 	limitFee := uint64(0)
-	estimateTxSizeParam := tx_generic.NewEstimateTxSizeParam(len(params.InputCoin), len(params.PaymentInfo),
+	estimateTxSizeParam := tx_generic.NewEstimateTxSizeParam(1, len(params.InputCoin), len(params.PaymentInfo),
 		params.HasPrivacyCoin, nil, params.TokenParams, limitFee)
 	if txSize := tx_generic.EstimateTxSize(estimateTxSizeParam); txSize > common.MaxTxSize {
 		return utils.NewTransactionErr(utils.ExceedSizeTx, nil, strconv.Itoa(int(txSize)))
@@ -191,57 +191,65 @@ func (txToken *TxToken) Init(paramsInterface interface{}) error {
 	return nil
 }
 
-func (txToken TxToken) ValidateTxByItself(hasPrivacyCoin bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, chainRetriever metadata.ChainRetriever, shardID byte, isNewTransaction bool, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever) (bool, error) {
+func (txToken TxToken) ValidateTxByItself(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, chainRetriever metadata.ChainRetriever, shardID byte, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever) (bool, error) {
 	// check for proof, signature ...
-	if ok, err := txToken.ValidateTransaction(hasPrivacyCoin, transactionStateDB, bridgeStateDB, shardID, nil, false, isNewTransaction); !ok {
+	hasPrivacyCoin, ok := boolParams["hasPrivacy"]
+	if !ok {
+		hasPrivacyCoin = false
+	}
+	valid, _, err := txToken.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, nil)
+	if !valid {
 		return false, err
 	}
 	// check for metadata
-	meta := txToken.GetMetadata()
-	if meta != nil {
-		validateMetadata := meta.ValidateMetadataByItself()
-		if !validateMetadata {
-			return validateMetadata, utils.NewTransactionErr(utils.UnexpectedError, errors.New("Metadata is invalid"))
-		}
-		return validateMetadata, nil
+	valid, err = tx_generic.MdValidate(&txToken, hasPrivacyCoin, transactionStateDB, bridgeStateDB, shardID)
+	if !valid {
+		return false, err
 	}
 	return true, nil
 }
 
-func (txToken TxToken) ValidateTransaction(hasPrivacyCoin bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash, isBatch bool, isNewTransaction bool) (bool, error) {
+func (txToken TxToken) ValidateTransaction(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, []privacy.Proof, error) {
 	// validate for PRV
-	ok, err := txToken.Tx.ValidateTransaction(hasPrivacyCoin, transactionStateDB, bridgeStateDB, shardID, nil, isBatch, isNewTransaction)
+	ok, batchedProof, err := txToken.Tx.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, nil)
 	if ok {
 		// validate for pToken
 		tokenID := txToken.TxTokenData.PropertyID
 		if txToken.TxTokenData.Type == utils.CustomTokenInit {
 			if txToken.TxTokenData.Mintable {
 				// mintable type will be handled elsewhere, here we return true
-				return true, nil
+				return true, batchedProof, nil
 			} else {
 				// check exist token
 				if statedb.PrivacyTokenIDExisted(transactionStateDB, tokenID) {
-					return false, nil
+					return false, nil, nil
 				}
 
-				return true, nil
+				return true, batchedProof, nil
 			}
 		} else {
 			if err != nil {
 				utils.Logger.Log.Errorf("Cannot create txPrivacyFromVersionNumber from TxPrivacyTokenDataVersion1, err %v", err)
-				return false, err
+				return false, nil, err
 			}
-			return txToken.TxTokenData.TxNormal.ValidateTransaction(
-				txToken.TxTokenData.TxNormal.IsPrivacy(),
-				transactionStateDB, bridgeStateDB, shardID, &tokenID, isBatch, isNewTransaction)
+			boolParams["hasPrivacy"] = txToken.TxTokenData.TxNormal.IsPrivacy()
+			valid, batchedTokenProof, err := txToken.TxTokenData.TxNormal.ValidateTransaction(boolParams,
+				transactionStateDB, bridgeStateDB, shardID, &tokenID)
+			return valid, append(batchedProof, batchedTokenProof...), err
 		}
 	}
-	return false, err
+	return false, nil, err
 }
 
 func (txToken TxToken) ValidateSanityData(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) (bool, error) {
+	if txToken.GetType() != common.TxCustomTokenPrivacyType{
+		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, errors.New("txCustomTokenPrivacy.Tx should have type tp"))
+	}
+	if txToken.TxTokenData.TxNormal.GetType() != common.TxNormalType{
+		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, errors.New("txCustomTokenPrivacy.TxNormal should have type n"))
+	}
 	// validate metadata
-	check, err := tx_generic.ValidateSanityMetadata(&txToken, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
+	check, err := tx_generic.MdValidateSanity(&txToken, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
 	if !check || err != nil {
 		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, err)
 	}
@@ -249,12 +257,12 @@ func (txToken TxToken) ValidateSanityData(chainRetriever metadata.ChainRetriever
 		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, errors.New("cannot transfer PRV via txtoken"))
 	}
 	// validate sanity for tx pToken + metadata
-	check, err = tx_generic.ValidateSanityTxWithoutMetadata(txToken.TxTokenData.TxNormal, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
+	check, err = tx_generic.ValidateSanity(txToken.TxTokenData.TxNormal, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
 	if !check || err != nil {
 		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, err)
 	}
 	// validate sanity for tx pToken + without metadata
-	check1, err1 := tx_generic.ValidateSanityTxWithoutMetadata(txToken.Tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
+	check1, err1 := tx_generic.ValidateSanity(txToken.Tx, chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight)
 	if !check1 || err1 != nil {
 		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, err1)
 	}
@@ -299,4 +307,8 @@ func (txToken *TxToken) UnmarshalJSON(data []byte) error {
 		}
 	}
 	return nil
+}
+
+func (txToken TxToken) ListOTAHashH() []common.Hash {
+	return []common.Hash{}
 }

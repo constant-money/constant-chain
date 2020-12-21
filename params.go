@@ -28,6 +28,12 @@ var testNetParams = params{
 	wsPort:  TestnetWsServerPort,
 }
 
+var testNet2Params = params{
+	Params:  &blockchain.ChainTest2Param,
+	rpcPort: Testnet2RpcServerPort,
+	wsPort:  Testnet2WsServerPort,
+}
+
 // netName returns the name used when referring to a coin network.
 func netName(chainParams *params) string {
 	return chainParams.Name

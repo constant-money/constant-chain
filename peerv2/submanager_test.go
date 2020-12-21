@@ -130,18 +130,6 @@ func TestGetMessage(t *testing.T) {
 		out     []string
 	}{
 		{
-			desc:  "Nodemode auto, shard role",
-			mode:  common.NodeModeAuto,
-			layer: common.ShardRole,
-			out:   []string{wire.CmdBlockBeacon, wire.CmdBlockShard, wire.CmdBlkShardToBeacon, wire.CmdCrossShard, wire.CmdTx, wire.CmdPrivacyCustomToken, wire.CmdBFT, wire.CmdPeerState},
-		},
-		{
-			desc:  "Nodemode auto, beacon role",
-			mode:  common.NodeModeAuto,
-			layer: common.BeaconRole,
-			out:   []string{wire.CmdBlockBeacon, wire.CmdBlkShardToBeacon, wire.CmdBFT, wire.CmdPeerState},
-		},
-		{
 			desc:  "Nodemode auto, normal role",
 			mode:  common.NodeModeAuto,
 			layer: "",

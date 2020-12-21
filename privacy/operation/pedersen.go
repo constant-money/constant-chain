@@ -35,9 +35,8 @@ func NewPedersenParams() PedersenCommitment {
 	for i := 1; i < len(pcm.G); i++ {
 		pcm.G[i] = HashToPointFromIndex(int64(i), CStringBulletProof)
 	}
-	GBase = new(Point).Set(pcm.G[0])
-	HBase = new(Point).Set(pcm.G[1])
-	RandomBase = new(Point).Set(pcm.G[4])
+	GBase = new(Point).Set(pcm.G[1])
+	HBase = new(Point).Set(pcm.G[4])
 	return pcm
 }
 

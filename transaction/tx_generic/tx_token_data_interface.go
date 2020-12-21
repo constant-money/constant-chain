@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
-	"github.com/incognitochain/incognito-chain/common"
 )
 
 // Interface for Transaction Transfer Token
@@ -38,9 +38,11 @@ type TransactionToken interface {
 	SetMetadata(metadata.Metadata)
 
 	GetTxTokenData() TxTokenData
-	SetTxTokenData(TxTokenData)
+	SetTxTokenData(TxTokenData) error
 	GetTxBase() metadata.Transaction
-	SetTxBase(metadata.Transaction)
+	SetTxBase(metadata.Transaction) error
+	GetTxNormal() metadata.Transaction
+	SetTxNormal(metadata.Transaction) error
 
 	// =================== FUNCTIONS THAT GET STUFF AND REQUIRE SOME CODING ===================
 	GetTxActualSize() uint64
@@ -50,7 +52,8 @@ type TransactionToken interface {
 	GetReceiverData() ([]privacy.Coin, error)
 	GetTxMintData() (bool, privacy.Coin, *common.Hash, error)
 	GetTxBurnData() (bool, privacy.Coin, *common.Hash, error)
-
+	ListOTAHashH() []common.Hash
+	GetTxFullBurnData() (bool, privacy.Coin, privacy.Coin, *common.Hash, error)
 	ListSerialNumbersHashH() []common.Hash
 	String() string
 	Hash() *common.Hash
@@ -71,15 +74,15 @@ type TransactionToken interface {
 	ValidateSanityData(metadata.ChainRetriever, metadata.ShardViewRetriever, metadata.BeaconViewRetriever, uint64) (bool, error)
 	ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error
 	ValidateDoubleSpendWithBlockchain(byte, *statedb.StateDB, *common.Hash) error
-	ValidateTxByItself(bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, bool, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) (bool, error)
+	ValidateTxByItself(map[string]bool, *statedb.StateDB, *statedb.StateDB, metadata.ChainRetriever, byte, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) (bool, error)
 	ValidateType() bool
-	ValidateTransaction(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) (bool, error)
+	ValidateTransaction(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) (bool, []privacy.Proof, error)
 	VerifyMinerCreatedTxBeforeGettingInBlock(*metadata.MintData, byte, metadata.ChainRetriever, *metadata.AccumulatedValues, metadata.ShardViewRetriever, metadata.BeaconViewRetriever) (bool, error)
 
 	// Init Transaction, the input should be params such as: TxPrivacyInitParams
 	Init(interface{}) error
 	// Verify the init function above, which verify zero knowledge proof and signatures
-	Verify(bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash, bool, bool) (bool, error)
+	Verify(map[string]bool, *statedb.StateDB, *statedb.StateDB, byte, *common.Hash) (bool, error)
 }
 
 

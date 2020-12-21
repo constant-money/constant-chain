@@ -21,8 +21,6 @@ type BlockRequester struct {
 	prtc    GRPCDialer
 	stop    chan int
 	sync.RWMutex
-
-	HandleResponseBlock func([]byte)
 }
 
 type GRPCDialer interface {

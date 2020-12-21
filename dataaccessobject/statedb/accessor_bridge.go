@@ -3,10 +3,11 @@ package statedb
 import (
 	"bytes"
 	"encoding/json"
+	"log"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"log"
 )
 
 func InsertETHTxHashIssued(stateDB *StateDB, uniqueEthTx []byte) error {
@@ -204,4 +205,18 @@ func GetBridgeReqWithStatus(stateDB *StateDB, txReqID common.Hash) (byte, error)
 		panic("same key wrong value")
 	}
 	return bridgeStatusState.Status(), nil
+}
+
+func IsBridgeToken(stateDB *StateDB, tokenID common.Hash) (
+	isBridgeTokens bool,
+	err error,
+) {
+	isBridgeTokens, err = IsBridgeTokenExistedByType(stateDB, tokenID, true)
+	if err != nil {
+		return false, err
+	}
+	if !isBridgeTokens {
+		return IsBridgeTokenExistedByType(stateDB, tokenID, false)
+	}
+	return isBridgeTokens, err
 }

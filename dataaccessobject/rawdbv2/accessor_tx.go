@@ -89,3 +89,86 @@ func GetTxByPublicKey(db incdb.Database, publicKey []byte) (map[byte][]common.Ha
 	}
 	return result, nil
 }
+
+// GetTxByPublicKeyV2 returns list of all tx IDs in paging fashion for a given public key
+func GetTxByPublicKeyV2(
+	db incdb.Database, publicKey []byte,
+	skip, limit uint,
+) (map[byte][]common.Hash, uint, uint, error) {
+	iterator := db.NewIteratorWithPrefix(GetStoreTxByPublicPrefix(publicKey))
+	result := make(map[byte][]common.Hash)
+	for iterator.Next() {
+		if skip > 0 {
+			skip--
+			continue
+		}
+		if limit == 0 {
+			return result, skip, limit, nil
+		}
+		key := iterator.Key()
+		tempKey := make([]byte, len(key))
+		copy(tempKey, key)
+		shardID := tempKey[len(tempKey)-1]
+		if result[shardID] == nil {
+			result[shardID] = make([]common.Hash, 0)
+		}
+		txID := common.Hash{}
+		start := len(txByPublicKeyPrefix) + common.PublicKeySize
+		end := len(txByPublicKeyPrefix) + common.PublicKeySize + common.HashSize
+		err := txID.SetBytes(tempKey[start:end])
+		if err != nil {
+			return nil, skip, limit, NewRawdbError(GetTxByPublicKeyError, err, publicKey)
+		}
+		result[shardID] = append(result[shardID], txID)
+		limit--
+	}
+	return result, skip, limit, nil
+}
+
+
+func StoreReindexedOutputCoins(db incdb.Database, tokenID common.Hash, publicKey []byte, outputCoins [][]byte, shardID byte) error {
+	for _, outputCoin := range outputCoins {
+		key := generateReindexedOutputCoinObjectKey(tokenID, shardID, publicKey, outputCoin)
+		value := outputCoin
+		err := db.Put(key, value)
+		if err != nil {
+			return NewRawdbError(StoreOutcoinByOTAKeyError, err)
+		}
+	}
+	return nil
+}
+
+func StoreReindexedOTAkey(db incdb.Database, theKey []byte) error {
+	key := generateReindexedOTAKeyObjectKey(theKey)
+	// only care about `PublicKey` field
+	value := theKey
+	err := db.Put(key, value)
+	if err != nil {
+		return NewRawdbError(StoreOutcoinByOTAKeyError, err)
+	}
+	return nil
+}
+
+func GetOutcoinsByReindexedOTAKey(db incdb.Database, tokenID common.Hash, shardID byte, publicKey []byte) ([][]byte, error) {
+	it := db.NewIteratorWithPrefix(getReindexedOutputCoinPrefix(tokenID, shardID, publicKey))
+	var outputCoins [][]byte
+	for it.Next() {
+		value := it.Value()
+		newValue := make([]byte, len(value))
+		copy(newValue, value)
+		outputCoins = append(outputCoins, newValue)
+	}
+	return outputCoins, nil
+}
+
+func GetReindexedOTAkeys(db incdb.Database) ([][]byte,error) {
+	it := db.NewIteratorWithPrefix(getReindexedKeysPrefix())
+	var otaKeys [][]byte
+	for it.Next() {
+		value := it.Value()
+		newValue := make([]byte, len(value))
+		copy(newValue, value)
+		otaKeys = append(otaKeys, newValue)
+	}
+	return otaKeys, nil
+}

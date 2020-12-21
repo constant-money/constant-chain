@@ -7,11 +7,14 @@ func (blockchain *BlockChain) GetStakingAmountShard() uint64 {
 }
 
 func (blockchain *BlockChain) GetCentralizedWebsitePaymentAddress(beaconHeight uint64) string {
-	if blockchain.config.ChainParams.Net == Testnet {
+	if blockchain.config.ChainParams.Net == Testnet || blockchain.config.ChainParams.Net == Testnet2 {
 		return blockchain.config.ChainParams.CentralizedWebsitePaymentAddress
 	}
 	if blockchain.config.ChainParams.Net == Mainnet {
-		if beaconHeight >= 243500 {
+		if beaconHeight >= 677000 {
+			// use new address
+			return "12RwAheAvvMqrpxviWCV5r6JLS2puiMom3fy6GUCAmPNN1BXnEW4DXpueqMfV66zyAMpurEuegWPGV6U4HR6Mi9KzUiDL4K3uyv1xxF"
+		} else if beaconHeight >= 243500 {
 			// use new address
 			return "12S6jZ6sjJaqsuMJKS6jG7gvE9eHUXGWa2B2dNC7PwyEYJkL6cE53Uzk926HrQMEv2i2oBvKP2GDTC6tzU9dYSVH5X3w9P58VWqux4F"
 		} else {
@@ -24,6 +27,10 @@ func (blockchain *BlockChain) GetCentralizedWebsitePaymentAddress(beaconHeight u
 
 func (blockchain *BlockChain) GetBeaconHeightBreakPointBurnAddr() uint64 {
 	return blockchain.config.ChainParams.BeaconHeightBreakPointBurnAddr
+}
+
+func (blockchain *BlockChain) GetETHRemoveBridgeSigEpoch() uint64 {
+	return blockchain.config.ChainParams.ETHRemoveBridgeSigEpoch
 }
 
 func (blockchain *BlockChain) GetBurningAddress(beaconHeight uint64) string {

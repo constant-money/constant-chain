@@ -2,6 +2,7 @@ package rpcservice
 
 import (
 	"encoding/json"
+
 	"github.com/incognitochain/incognito-chain/blockchain"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"

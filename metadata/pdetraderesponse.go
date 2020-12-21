@@ -172,7 +172,7 @@ func (iRes PDETradeResponse) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *
 		break
 	}
 	if idx == -1 { // not found the issuance request tx for this response
-		return false, fmt.Errorf(fmt.Sprintf("no PDETradeRequest tx found for PDETradeResponse tx %s", tx.Hash().String()))
+		return false, fmt.Errorf(fmt.Sprintf("no PDETradeRequest or PDECrossPoolTradeRequestMeta tx found for PDETradeResponse tx %s", tx.Hash().String()))
 	}
 	mintData.InstsUsed[idx] = 1
 	return true, nil

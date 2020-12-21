@@ -22,7 +22,6 @@ type PortalRequestUnlockCollateral struct {
 }
 
 // PortalRequestUnlockCollateralAction - shard validator creates instruction that contain this action content
-// it will be append to ShardToBeaconBlock
 type PortalRequestUnlockCollateralAction struct {
 	Meta    PortalRequestUnlockCollateral
 	TxReqID common.Hash

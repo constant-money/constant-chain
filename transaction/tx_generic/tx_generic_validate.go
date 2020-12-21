@@ -3,6 +3,7 @@ package tx_generic
 import (
 	"errors"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/privacy/operation"
 	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -34,6 +35,16 @@ func VerifyTxCreatedByMiner(tx metadata.Transaction, mintdata *metadata.MintData
 			return false, nil
 		}
 	}
+
+	//if type is reward and not have metadata
+	if tx.GetType() == common.TxRewardType && meta == nil  {
+		return false, nil
+	}
+	//if type is return staking and not have metadata
+	if tx.GetType() == common.TxReturnStakingType && (meta == nil || (meta.GetType() != metadata.ReturnStakingMeta)) {
+		return false, nil
+	}
+
 	if meta != nil {
 		ok, err := meta.VerifyMinerCreatedTxBeforeGettingInBlock(mintdata, shardID, tx, bcr, accumulatedValues, retriever, viewRetriever)
 		if err != nil {
@@ -66,10 +77,11 @@ func GetTxBurnData(tx metadata.Transaction) (bool, privacy.Coin, *common.Hash, e
 		utils.Logger.Log.Errorf("Cannot get receiver data, error %v", err)
 		return false, nil, nil, err
 	}
-	if len(outputCoins) > 2 {
-		utils.Logger.Log.Error("GetAndCheckBurning receiver: More than 2 receivers")
-		return false, nil, nil, err
-	}
+	// remove rule only accept maximum 2 outputs in tx burn
+	//if len(outputCoins) > 2 {
+	//	utils.Logger.Log.Error("GetAndCheckBurning receiver: More than 2 receivers")
+	//	return false, nil, nil, err
+	//}
 	for _, coin := range outputCoins {
 		if wallet.IsPublicKeyBurningAddress(coin.GetPublicKey().ToBytesS()) {
 			return true, coin, &common.PRVCoinID, nil
@@ -78,7 +90,7 @@ func GetTxBurnData(tx metadata.Transaction) (bool, privacy.Coin, *common.Hash, e
 	return false, nil, nil, nil
 }
 
-func ValidateTxWithBlockChain(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error {
+func MdValidateWithBlockChain(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error {
 	if tx.GetType() == common.TxRewardType || tx.GetType() == common.TxReturnStakingType {
 		return nil
 	}
@@ -94,23 +106,14 @@ func ValidateTxWithBlockChain(tx metadata.Transaction, chainRetriever metadata.C
 			return nil
 		}
 	}
-	return tx.ValidateDoubleSpendWithBlockchain(shardID, stateDB, nil)
+	return nil
 }
 
-func ValidateTxByItself(tx metadata.Transaction, hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, isNewTransaction bool) (bool, error) {
-	prvCoinID := &common.Hash{}
-	err := prvCoinID.SetBytes(common.PRVCoinID[:])
-	if err != nil {
-		return false, err
-	}
-	ok, err := tx.ValidateTransaction(hasPrivacy, transactionStateDB, bridgeStateDB, shardID, prvCoinID, false, isNewTransaction)
-	if !ok {
-		return false, err
-	}
+func MdValidate(tx metadata.Transaction, hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte) (bool, error) {
 	meta := tx.GetMetadata()
 	if meta != nil {
-		if hasPrivacy && tx.GetVersion() == 1{
-			return false, errors.New("Metadata can not exist in not privacy tx")
+		if hasPrivacy && tx.GetVersion() <= 1{
+			return false, errors.New("Metadata can only exist in non-privacy tx")
 		}
 		validateMetadata := meta.ValidateMetadataByItself()
 		if validateMetadata {
@@ -135,7 +138,7 @@ func ValidateTxByItself(tx metadata.Transaction, hasPrivacy bool, transactionSta
 // 	return tx.Verify(hasPrivacy, transactionStateDB, bridgeStateDB, shardID, tokenID, isBatch, isNewTransaction)
 // }
 
-func ValidateSanityMetadata(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) ( bool, error) {
+func MdValidateSanity(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) ( bool, error) {
 	meta := tx.GetMetadata()
 	if meta != nil {
 		isValid, ok, err := meta.ValidateSanityData(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight, tx )
@@ -146,7 +149,7 @@ func ValidateSanityMetadata(tx metadata.Transaction, chainRetriever metadata.Cha
 	return true, nil
 }
 
-func ValidateSanityTxWithoutMetadata(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) (bool, error) {
+func ValidateSanity(tx metadata.Transaction, chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) (bool, error) {
 	//check version
 	if tx.GetVersion() > utils.TxVersion2Number {
 		return false, utils.NewTransactionErr(utils.RejectTxVersion, fmt.Errorf("tx version is %d. Wrong version tx. Only support for version <= %d", tx.GetVersion(), utils.CurrentTxVersion))
@@ -164,7 +167,23 @@ func ValidateSanityTxWithoutMetadata(tx metadata.Transaction, chainRetriever met
 
 	// check sanity of Proof
 	if tx.GetProof() != nil {
-		ok, err := tx.GetProof().ValidateSanity()
+		shardID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
+		additionalData := make(map[string]interface{})
+
+		if tx.GetVersion() <= 1{
+			if chainRetriever != nil {
+				additionalData["isNewZKP"] = chainRetriever.IsAfterNewZKPCheckPoint(beaconHeight)
+			}
+			sigPubKey, err :=  new(operation.Point).FromBytesS(tx.GetSigPubKey())
+			if err != nil {
+				return false, errors.New("SigPubKey is invalid")
+			}
+			additionalData["sigPubKey"] = sigPubKey
+		}
+
+		additionalData["shardID"] = shardID
+
+		ok, err := tx.GetProof().ValidateSanity(additionalData)
 		if !ok || err != nil {
 			s := ""
 			if !ok {
@@ -196,7 +215,7 @@ func GetTxActualSizeInBytes(tx metadata.Transaction) uint64{
 		return uint64(0)
 	}
 	var sizeTx = uint64(0)
-	txTokenBase, ok := tx.(TxTokenBase)
+	txTokenBase, ok := tx.(*TxTokenBase)
 	if ok { //TxTokenBase
 		sizeTx += GetTxActualSizeInBytes(txTokenBase.Tx)
 

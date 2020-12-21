@@ -3,8 +3,8 @@ package wire
 import (
 	"encoding/json"
 
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/incognitokey"
 	peer "github.com/libp2p/go-libp2p-peer"
 )
 
@@ -29,7 +29,7 @@ func (msg *MessageGetCrossShard) Hash() string {
 }
 
 func (msg *MessageGetCrossShard) MessageType() string {
-	return CmdGetShardToBeacon
+	return CmdGetCrossShard
 }
 
 func (msg *MessageGetCrossShard) MaxPayloadLength(pver int) int {

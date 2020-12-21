@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
-	"github.com/incognitochain/incognito-chain/privacy/coin"
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
+	"github.com/incognitochain/incognito-chain/privacy/coin"
+	"github.com/incognitochain/incognito-chain/transaction"
+	"sort"
 )
 
 type ShardBlock struct {
@@ -18,44 +17,43 @@ type ShardBlock struct {
 	Header         ShardHeader
 }
 
-func (shardBlock *ShardBlock) GetProposer() string {
-	return shardBlock.Header.Proposer
+type ShardHeader struct {
+	Producer              string                 `json:"Producer"`
+	ProducerPubKeyStr     string                 `json:"ProducerPubKeyStr"`
+	ShardID               byte                   `json:"ShardID"`               // shard ID which block belong to
+	Version               int                    `json:"Version"`               // version of block structure
+	PreviousBlockHash     common.Hash            `json:"PreviousBlockHash"`     // previous block hash or Parent block hash
+	Height                uint64                 `json:"Height"`                // block height
+	Round                 int                    `json:"Round"`                 // bpft consensus round
+	Epoch                 uint64                 `json:"Epoch"`                 // epoch of block (according to current beacon height)
+	CrossShardBitMap      []byte                 `json:"CrossShardBitMap"`      // crossShards bitmap for beacon
+	BeaconHeight          uint64                 `json:"BeaconHeight"`          // beacon check point height
+	BeaconHash            common.Hash            `json:"BeaconHash"`            // beacon check point hash
+	TotalTxsFee           map[common.Hash]uint64 `json:"TotalTxsFee"`           // fee of all txs in block
+	ConsensusType         string                 `json:"ConsensusType"`         // consensus type, by which this block is produced
+	Timestamp             int64                  `json:"Timestamp"`             // timestamp of block
+	TxRoot                common.Hash            `json:"TxRoot"`                // Transaction root created from transaction in shard
+	ShardTxRoot           common.Hash            `json:"ShardTxRoot"`           // output root created for other shard
+	CrossTransactionRoot  common.Hash            `json:"CrossTransactionRoot"`  // transaction root created from transaction of micro shard to shard block (from other shard)
+	InstructionsRoot      common.Hash            `json:"InstructionsRoot"`      // actions root created from Instructions and Metadata of transaction
+	CommitteeRoot         common.Hash            `json:"CommitteeRoot"`         // hash from public key list of all committees designated to create this block
+	PendingValidatorRoot  common.Hash            `json:"PendingValidatorRoot"`  // hash from public key list of all pending validators designated to this ShardID
+	StakingTxRoot         common.Hash            `json:"StakingTxRoot"`         // hash from staking transaction map in shard best state
+	InstructionMerkleRoot common.Hash            `json:"InstructionMerkleRoot"` // Merkle root of all instructions (using Keccak256 hash func) to relay to Ethreum
+	// This obsoletes InstructionMerkleRoot but for simplicity, we keep it for now
+
+	//for version 2
+	Proposer    string
+	ProposeTime int64
 }
 
-func (shardBlock *ShardBlock) GetProposeTime() int64 {
-	return shardBlock.Header.ProposeTime
-}
-
-func (shardBlock *ShardBlock) GetProduceTime() int64 {
-	return shardBlock.Header.Timestamp
-}
-
-func (shardBlock *ShardBlock) GetShardID() int {
-	return int(shardBlock.Header.ShardID)
-}
-func (shardBlock *ShardBlock) GetPrevHash() common.Hash {
-	return shardBlock.Header.PreviousBlockHash
-}
-
-type ShardToBeaconBlock struct {
-	ValidationData string `json:"ValidationData"`
-	Instructions   [][]string
-	Header         ShardHeader
-}
-
-func (shardToBeaconBlock *ShardToBeaconBlock) GetPrevHash() common.Hash {
-	return shardToBeaconBlock.Header.PreviousBlockHash
-}
-
-func (shardToBeaconBlock *ShardToBeaconBlock) GetShardID() int {
-	return int(shardToBeaconBlock.Header.ShardID)
+type ShardBody struct {
+	Instructions      [][]string
+	CrossTransactions map[byte][]CrossTransaction //CrossOutputCoin from all other shard
+	Transactions      []metadata.Transaction
 }
 
 type CrossShardBlock struct {
-	// AggregatedSig   string  `json:"AggregatedSig"`
-	// R               string  `json:"R"`
-	// ValidatorsIdx   [][]int `json:"ValidatorsIdx"` //[0]: R | [1]:AggregatedSig
-	// ProducerSig     string  `json:"ProducerSig"`
 	ValidationData  string `json:"ValidationData"`
 	Header          ShardHeader
 	ToShardID       byte
@@ -97,6 +95,26 @@ func NewShardBlockFull(header ShardHeader, body ShardBody) *ShardBlock {
 		Header: header,
 		Body:   body,
 	}
+}
+
+func (shardBlock *ShardBlock) GetProposer() string {
+	return shardBlock.Header.Proposer
+}
+
+func (shardBlock *ShardBlock) GetProposeTime() int64 {
+	return shardBlock.Header.ProposeTime
+}
+
+func (shardBlock *ShardBlock) GetProduceTime() int64 {
+	return shardBlock.Header.Timestamp
+}
+
+func (shardBlock *ShardBlock) GetShardID() int {
+	return int(shardBlock.Header.ShardID)
+}
+
+func (shardBlock *ShardBlock) GetPrevHash() common.Hash {
+	return shardBlock.Header.PreviousBlockHash
 }
 
 func (shardBlock *ShardBlock) BuildShardBlockBody(instructions [][]string, crossTransaction map[byte][]CrossTransaction, transactions []metadata.Transaction) {
@@ -153,15 +171,6 @@ func (crossShardBlock CrossShardBlock) GetPrevHash() common.Hash {
 
 func (crossShardBlock *CrossShardBlock) Hash() *common.Hash {
 	hash := crossShardBlock.Header.Hash()
-	return &hash
-}
-
-func (shardToBeaconBlock ShardToBeaconBlock) GetCurrentEpoch() uint64 {
-	return shardToBeaconBlock.Header.Epoch
-}
-
-func (shardToBeaconBlock *ShardToBeaconBlock) Hash() *common.Hash {
-	hash := shardToBeaconBlock.Header.Hash()
 	return &hash
 }
 
@@ -310,10 +319,6 @@ func (shardBlock *ShardBlock) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// /*
-// AddTransaction adds a new transaction into block
-// */
-// // #1 - tx
 func (shardBlock *ShardBlock) AddTransaction(tx metadata.Transaction) error {
 	if shardBlock.Body.Transactions == nil {
 		return NewBlockChainError(UnExpectedError, errors.New("not init tx arrays"))
@@ -322,33 +327,181 @@ func (shardBlock *ShardBlock) AddTransaction(tx metadata.Transaction) error {
 	return nil
 }
 
-func (shardBlock *ShardBlock) CreateShardToBeaconBlock(bc *BlockChain) *ShardToBeaconBlock {
-	if bc.IsTest {
-		return &ShardToBeaconBlock{}
+func (shardHeader *ShardHeader) String() string {
+	res := common.EmptyString
+	// res += shardHeader.ProducerAddress.String()
+	res += string(shardHeader.ShardID)
+	res += fmt.Sprintf("%v", shardHeader.Version)
+	res += shardHeader.PreviousBlockHash.String()
+	res += fmt.Sprintf("%v", shardHeader.Height)
+	res += fmt.Sprintf("%v", shardHeader.Round)
+	res += fmt.Sprintf("%v", shardHeader.Epoch)
+	res += fmt.Sprintf("%v", shardHeader.Timestamp)
+	res += shardHeader.TxRoot.String()
+	res += shardHeader.ShardTxRoot.String()
+	res += shardHeader.CrossTransactionRoot.String()
+	res += shardHeader.InstructionsRoot.String()
+	res += shardHeader.CommitteeRoot.String()
+	res += shardHeader.PendingValidatorRoot.String()
+	res += shardHeader.BeaconHash.String()
+	res += shardHeader.StakingTxRoot.String()
+	res += fmt.Sprintf("%v", shardHeader.BeaconHeight)
+	tokenIDs := make([]common.Hash, 0)
+	for tokenID, _ := range shardHeader.TotalTxsFee {
+		tokenIDs = append(tokenIDs, tokenID)
 	}
-	block := ShardToBeaconBlock{}
-	block.ValidationData = shardBlock.ValidationData
-	block.Header = shardBlock.Header
-	blockInstructions := shardBlock.Body.Instructions
-	previousShardBlockByte, err := rawdbv2.GetShardBlockByHash(bc.GetShardChainDatabase(shardBlock.Header.ShardID), shardBlock.Header.PreviousBlockHash)
-	if err != nil {
-		Logger.log.Errorf("[S2B] CreateShardToBeaconBlock return err:", err)
-		return nil
+	sort.Slice(tokenIDs, func(i int, j int) bool {
+		res, _ := tokenIDs[i].Cmp(&tokenIDs[j])
+		return res == -1
+	})
+
+	for _, tokenID := range tokenIDs {
+		res += fmt.Sprintf("%v~%v", tokenID.String(), shardHeader.TotalTxsFee[tokenID])
 	}
-	previousShardBlock := ShardBlock{}
-	err = json.Unmarshal(previousShardBlockByte, &previousShardBlock)
-	if err != nil {
-		Logger.log.Errorf("[S2B] CreateShardToBeaconBlock return err:", err)
-		return nil
-	}
-	instructions, err := CreateShardInstructionsFromTransactionAndInstruction(shardBlock.Body.Transactions, bc, shardBlock.Header.ShardID)
-	if err != nil {
-		Logger.log.Errorf("[S2B] CreateShardToBeaconBlock return err:", err)
-		return nil
+	for _, value := range shardHeader.CrossShardBitMap {
+		res += string(value)
 	}
 
-	block.Instructions = append(instructions, blockInstructions...)
-	return &block
+	if shardHeader.Version == 2 {
+		res += shardHeader.Proposer
+		res += fmt.Sprintf("%v", shardHeader.ProposeTime)
+	}
+	return res
+}
+
+func (shardHeader *ShardHeader) MetaHash() common.Hash {
+	return common.Keccak256([]byte(shardHeader.String()))
+}
+
+func (shardHeader *ShardHeader) Hash() common.Hash {
+	// Block header of bridge uses Keccak256 as a hash func to check on Ethereum when relaying blocks
+	blkMetaHash := shardHeader.MetaHash()
+	blkInstHash := shardHeader.InstructionMerkleRoot
+	combined := append(blkMetaHash[:], blkInstHash[:]...)
+	return common.Keccak256(combined)
+}
+
+/*
+Customize UnmarshalJSON to parse list TxNormal
+because we have many types of block, so we can need to customize data from marshal from json string to build a block
+*/
+func (shardBody *ShardBody) UnmarshalJSON(data []byte) error {
+	type Alias ShardBody
+	temp := &struct {
+		Transactions []json.RawMessage
+		*Alias
+	}{
+		Alias: (*Alias)(shardBody),
+	}
+
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+	}
+
+	// process tx from tx interface of temp
+	for _, txTemp := range temp.Transactions {
+		// txTempJson, _ := json.MarshalIndent(txTemp, "", "\t")
+		var tx metadata.Transaction
+		var parseErr error
+		var txChoice *transaction.TxChoice
+		txChoice, parseErr = transaction.DeserializeTransactionJSON(txTemp)
+		tx = txChoice.ToTx()
+		if tx==nil{
+			return NewBlockChainError(UnmashallJsonShardBlockError, errors.New("corrupted TX"))
+		}
+		// txType := ""
+
+		// if txTemp["Type"] != nil {
+		// 	if err = json.Unmarshal(*txTemp["Type"], &txType); err != nil {
+		// 		panic(fmt.Sprintf("Cannot parse Tx Type from Shard Body: %v", txTemp))
+		// 		return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		// 	}
+		// } else {
+		// 	panic(fmt.Sprintf("Cannot parse Shard Body from data : %v", txTemp))
+		// 	return NewBlockChainError(UnmashallJsonShardBlockError, err)
+		// }
+
+		// switch txType {
+		// case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType, common.TxConversionType:
+		// 	{
+		// 		tx, parseErr = transaction.NewTransactionFromJsonBytes(txTempJson)
+		// 	}
+		// case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+		// 	{
+		// 		tx, parseErr = transaction.NewTransactionTokenFromJsonBytes(txTempJson)
+		// 	}
+		// default:
+		// 	{
+		// 		return NewBlockChainError(UnmashallJsonShardBlockError, errors.New("Cannot parse a wrong tx "))
+		// 	}
+		// }
+		if parseErr != nil {
+			return NewBlockChainError(UnmashallJsonShardBlockError, parseErr)
+		}
+		shardBody.Transactions = append(shardBody.Transactions, tx)
+	}
+	return nil
+}
+
+func (shardBody ShardBody) Hash() common.Hash {
+	res := []byte{}
+
+	for _, item := range shardBody.Instructions {
+		for _, l := range item {
+			res = append(res, []byte(l)...)
+		}
+	}
+	keys := []int{}
+	for k := range shardBody.CrossTransactions {
+		keys = append(keys, int(k))
+	}
+	sort.Ints(keys)
+	for _, shardID := range keys {
+		for _, value := range shardBody.CrossTransactions[byte(shardID)] {
+			res = append(res, []byte(fmt.Sprintf("%v", value.BlockHeight))...)
+			res = append(res, value.BlockHash.GetBytes()...)
+			for _, coins := range value.OutputCoin {
+				res = append(res, coins.Bytes()...)
+			}
+			for _, coins := range value.TokenPrivacyData {
+				res = append(res, coins.Bytes()...)
+			}
+		}
+	}
+	for _, tx := range shardBody.Transactions {
+		res = append(res, tx.Hash().GetBytes()...)
+	}
+	return common.HashH(res)
+}
+
+/*
+- Concatenate all transaction in one shard as a string
+- Then each shard producer a string value include all transactions within this block
+- For each string value: Convert string value to hash value
+- So if we have 256 shard, we will have 256 leaf value for merkle tree
+- Make merkle root from these value
+*/
+
+func (shardBody ShardBody) CalcMerkleRootTx() *common.Hash {
+	merkleRoots := Merkle{}.BuildMerkleTreeStore(shardBody.Transactions)
+	merkleRoot := merkleRoots[len(merkleRoots)-1]
+	return merkleRoot
+}
+
+func (shardBody ShardBody) ExtractIncomingCrossShardMap() (map[byte][]common.Hash, error) {
+	crossShardMap := make(map[byte][]common.Hash)
+	for shardID, crossblocks := range shardBody.CrossTransactions {
+		for _, crossblock := range crossblocks {
+			crossShardMap[shardID] = append(crossShardMap[shardID], crossblock.BlockHash)
+		}
+	}
+	return crossShardMap, nil
+}
+
+func (shardBody ShardBody) ExtractOutgoingCrossShardMap() (map[byte][]common.Hash, error) {
+	crossShardMap := make(map[byte][]common.Hash)
+	return crossShardMap, nil
 }
 
 func (shardBlock *ShardBlock) CreateAllCrossShardBlock(activeShards int) map[byte]*CrossShardBlock {
@@ -467,52 +620,10 @@ func (block CrossShardBlock) GetInstructions() [][]string {
 	return [][]string{}
 }
 
-func (block ShardToBeaconBlock) GetValidationField() string {
-	return block.ValidationData
-}
-
-func (block ShardToBeaconBlock) GetVersion() int {
-	return block.Header.Version
-}
-
-func (block ShardToBeaconBlock) GetHeight() uint64 {
-	return block.Header.Height
-}
-
-func (block ShardToBeaconBlock) GetRound() int {
-	return block.Header.Round
-}
-
-func (block ShardToBeaconBlock) GetRoundKey() string {
-	return fmt.Sprint(block.Header.Height, "_", block.Header.Round)
-}
-func (block ShardToBeaconBlock) GetInstructions() [][]string {
-	return block.Instructions
-}
-
-func (block ShardToBeaconBlock) GetProposer() string {
-	return block.Header.Proposer
-}
-
-func (block ShardToBeaconBlock) GetProposeTime() int64 {
-	return block.Header.ProposeTime
-}
-
-func (block ShardToBeaconBlock) GetProduceTime() int64 {
-	return block.Header.Timestamp
-}
-func (block ShardToBeaconBlock) GetProducer() string {
-	return block.Header.Producer
-}
-
 func (block ShardBlock) GetConsensusType() string {
 	return block.Header.ConsensusType
 }
 
 func (block CrossShardBlock) GetConsensusType() string {
-	return block.Header.ConsensusType
-}
-
-func (block ShardToBeaconBlock) GetConsensusType() string {
 	return block.Header.ConsensusType
 }

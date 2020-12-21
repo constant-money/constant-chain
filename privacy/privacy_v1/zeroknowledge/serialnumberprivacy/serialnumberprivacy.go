@@ -2,7 +2,6 @@ package serialnumberprivacy
 
 import (
 	"errors"
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
 	"github.com/incognitochain/incognito-chain/privacy/privacy_v1/zeroknowledge/utils"
@@ -288,6 +287,8 @@ func (wit SNPrivacyWitness) Prove(mess []byte) (*SNPrivacyProof, error) {
 	x := new(operation.Scalar)
 	if mess == nil {
 		x = utils.GenerateChallenge([][]byte{
+			wit.stmt.sn.ToBytesS(),
+			wit.stmt.comSK.ToBytesS(),
 			tSeed.ToBytesS(),
 			tInput.ToBytesS(),
 			tOutput.ToBytesS()})
@@ -325,6 +326,8 @@ func (proof SNPrivacyProof) Verify(mess []byte) (bool, error) {
 	x := new(operation.Scalar)
 	if mess == nil {
 		x = utils.GenerateChallenge([][]byte{
+			proof.stmt.sn.ToBytesS(),
+			proof.stmt.comSK.ToBytesS(),
 			proof.tSK.ToBytesS(),
 			proof.tInput.ToBytesS(),
 			proof.tSN.ToBytesS()})
@@ -367,6 +370,55 @@ func (proof SNPrivacyProof) Verify(mess []byte) (bool, error) {
 
 	return true, nil
 }
+
+func (proof SNPrivacyProof) VerifyOld(mess []byte) (bool, error) {
+	// re-calculate x = hash(tSeed || tInput || tSND2 || tOutput)
+	x := new(operation.Scalar)
+	if mess == nil {
+		x = utils.GenerateChallenge([][]byte{
+			proof.tSK.ToBytesS(),
+			proof.tInput.ToBytesS(),
+			proof.tSN.ToBytesS()})
+	} else {
+		x.FromBytesS(mess)
+	}
+
+	// Check gSND^zInput * h^zRInput = input^x * tInput
+	leftPoint1 := operation.PedCom.CommitAtIndex(proof.zInput, proof.zRInput, operation.PedersenSndIndex)
+
+	rightPoint1 := new(operation.Point).ScalarMult(proof.stmt.comInput, x)
+	rightPoint1.Add(rightPoint1, proof.tInput)
+
+	if !operation.IsPointEqual(leftPoint1, rightPoint1) {
+		//Logger.Log.Errorf("verify serial number privacy proof statement 1 failed")
+		return false, errors.New("verifyOld serial number privacy proof statement 1 failed")
+	}
+
+	// Check gSK^zSeed * h^zRSeed = vKey^x * tSeed
+	leftPoint2 := operation.PedCom.CommitAtIndex(proof.zSK, proof.zRSK, operation.PedersenPrivateKeyIndex)
+
+	rightPoint2 := new(operation.Point).ScalarMult(proof.stmt.comSK, x)
+	rightPoint2.Add(rightPoint2, proof.tSK)
+
+	if !operation.IsPointEqual(leftPoint2, rightPoint2) {
+		Logger.Log.Errorf("verifyOld serial number privacy proof statement 2 failed")
+		return false, errors.New("verifyOld serial number privacy proof statement 2 failed")
+	}
+
+	// Check sn^(zSeed + zInput) = gSK^x * tOutput
+	leftPoint3 := new(operation.Point).ScalarMult(proof.stmt.sn, new(operation.Scalar).Add(proof.zSK, proof.zInput))
+
+	rightPoint3 := new(operation.Point).ScalarMult(operation.PedCom.G[operation.PedersenPrivateKeyIndex], x)
+	rightPoint3.Add(rightPoint3, proof.tSN)
+
+	if !operation.IsPointEqual(leftPoint3, rightPoint3) {
+		//privacy.Logger.Log.Errorf("verify serial number privacy proof statement 3 failed")
+		return false, errors.New("verifyOld serial number privacy proof statement 3 failed")
+	}
+
+	return true, nil
+}
+
 
 func Copy(proof SNPrivacyProof) *SNPrivacyProof{
 	tmpProof := new(SNPrivacyProof)

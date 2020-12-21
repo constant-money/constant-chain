@@ -1,13 +1,16 @@
 package rpcservice
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	rCommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/transaction"
 	"github.com/incognitochain/incognito-chain/wallet"
 )
@@ -42,6 +45,48 @@ func NewContractingRequestMetadata(senderPrivateKeyStr string, tokenReceivers in
 	return meta, nil
 }
 
+func CreateCustomTokenPrivacyBurningReceiverArray(dataReceiver interface{}, bcr metadata.ChainRetriever, beaconHeight uint64) ([]*privacy.PaymentInfo, int64, error) {
+	if dataReceiver == nil {
+		return nil, 0, fmt.Errorf("data receiver is in valid")
+	}
+	var result []*privacy.PaymentInfo
+	voutsAmount := int64(0)
+	receivers, ok := dataReceiver.(map[string]interface{})
+	if !ok {
+		return nil, 0, fmt.Errorf("data receiver is in valid")
+	}
+
+	burningAddress := bcr.GetBurningAddress(beaconHeight)
+	keyWalletBurningAccount, err := wallet.Base58CheckDeserialize(burningAddress)
+	if err != nil {
+		return nil, 0, fmt.Errorf("data receiver is in valid")
+	}
+	keysetBurningAccount := keyWalletBurningAccount.KeySet
+	paymentAddressBurningAccount := keysetBurningAccount.PaymentAddress
+
+	for key, value := range receivers {
+
+		keyWallet, err := wallet.Base58CheckDeserialize(key)
+		if err != nil {
+			Logger.log.Errorf("Invalid key in CreateCustomTokenPrivacyReceiverArray %+v", key)
+			return nil, 0, err
+		}
+
+		if !bytes.Equal(keyWallet.KeySet.PaymentAddress.Pk[:], paymentAddressBurningAccount.Pk[:]) {
+			continue
+		}
+
+		keySet := keyWallet.KeySet
+		temp := &privacy.PaymentInfo{
+			PaymentAddress: keySet.PaymentAddress,
+			Amount:         uint64(value.(float64)),
+		}
+		result = append(result, temp)
+		voutsAmount += int64(temp.Amount)
+	}
+	return result, voutsAmount, nil
+}
+
 func NewBurningRequestMetadata(
 	senderPrivateKeyStr string,
 	tokenReceivers interface{},
@@ -49,6 +94,8 @@ func NewBurningRequestMetadata(
 	tokenName string,
 	remoteAddress string,
 	burningMetaType int,
+	bcr metadata.ChainRetriever,
+	beaconHeight uint64,
 ) (*metadata.BurningRequest, *RPCError) {
 	senderKey, err := wallet.Base58CheckDeserialize(senderPrivateKeyStr)
 	if err != nil {
@@ -60,7 +107,7 @@ func NewBurningRequestMetadata(
 	}
 	paymentAddr := senderKey.KeySet.PaymentAddress
 
-	_, voutsAmount, err := transaction.CreateCustomTokenPrivacyReceiverArray(tokenReceivers)
+	_, voutsAmount, err := CreateCustomTokenPrivacyBurningReceiverArray(tokenReceivers, bcr, beaconHeight)
 	if err != nil {
 		return nil, NewRPCError(RPCInvalidParamsError, err)
 	}
@@ -189,4 +236,16 @@ func GenerateTokenID(network string, name string) (common.Hash, error) {
 		return common.Hash{}, err
 	}
 	return *hash, nil
+}
+
+func GetInputSerialnumber(inputCoins []privacy.PlainCoin) ([]string, error) {
+
+	if inputCoins == nil || len(inputCoins) == 0 {
+		return nil, errors.New("list of input coins is empty")
+	}
+	tmp := make([]string, len(inputCoins))
+	for i, input := range inputCoins {
+		tmp[i] = jsonresult.OperationPointPtrToBase58(input.GetKeyImage())
+	}
+	return tmp, nil
 }

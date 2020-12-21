@@ -5,6 +5,7 @@ import (
 	"errors"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/incdb"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -27,23 +28,6 @@ import (
 	"fmt"
 )
 
-/*Common functions*/
-// RandIntInterval returns a random int in range [L; R]
-func RandIntInterval(L, R int) int {
-	length := R - L + 1
-	r := common.RandInt() % length
-	return L + r
-}
-
-func ParseResponse(respondInBytes []byte) (*rpcserver.JsonResponse, error) {
-	var respond rpcserver.JsonResponse
-	err := json.Unmarshal(respondInBytes, &respond)
-	if err != nil {
-		return nil, err
-	}
-
-	return &respond, nil
-}
 
 //To be refactored later
 func CreateTxPrivacyInitParams(db *statedb.StateDB, keySet *incognitokey.KeySet, paymentAddress privacy.PaymentAddress, inputCoins []coin.PlainCoin, hasPrivacy bool, fee, amount uint64, tokenID common.Hash) ([]*privacy.PaymentInfo, *transaction.TxPrivacyInitParams, error) {
@@ -763,9 +747,17 @@ func (this *DebugTool) GetRandomCommitment(tokenID, paymentAddress string, input
 
 	coins := []jsonresult.OutCoin{}
 	for _, outCoin := range input {
-		coin := jsonresult.NewOutCoin(outCoin)
-		coin.Info = "18WDn5zYiHy8kdFEtiVXsEGqhjeKJToeKoeNkh8ZZnRBagFG1b"
-		coins = append(coins, coin)
+		var tmpCoin jsonresult.OutCoin
+		if outCoinV1, ok := outCoin.(*coin.PlainCoinV1); ok {
+			tmpOutCoin := new(coin.CoinV1).Init()
+			tmpOutCoin.CoinDetails = outCoinV1
+			tmpCoin = jsonresult.NewOutCoin(tmpOutCoin)
+		}else if outCoinV2, ok := outCoin.(*coin.CoinV2); ok {
+			tmpCoin = jsonresult.NewOutCoin(outCoinV2)
+		}
+
+		tmpCoin.Info = base58.Base58Check{}.Encode([]byte(""), common.ZeroByte)
+		coins = append(coins, tmpCoin)
 	}
 
 	r := new(rpcserver.JsonRequest)
@@ -852,7 +844,7 @@ func (tool *DebugTool) SignTransactionV2(tx *transaction.TxVersion2, tokenIDStri
 		for _, keyImage := range keys{
 			fmt.Println("BUGLOG2", keyImage.ToBytesS())
 		}
-		fmt.Println("BUGLOG2\n")
+		fmt.Println("BUGLOG2")
 	}
 
 	fmt.Println("BUGLOG2 indices in Prove", indices)

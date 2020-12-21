@@ -17,7 +17,15 @@ func (httpServer *HttpServer) handleGetBurnProof(
 	params interface{},
 	closeChan <-chan struct{},
 ) (interface{}, *rpcservice.RPCError) {
-	return retrieveBurnProof(params, closeChan, metadata.BurningConfirmMeta, httpServer)
+	onBeacon, height, txID, err := parseGetBurnProofParams(params, httpServer)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+	}
+	confirmMeta := metadata.BurningConfirmMeta
+	if onBeacon {
+		confirmMeta = metadata.BurningConfirmMetaV2
+	}
+	return retrieveBurnProof(confirmMeta, onBeacon, height, txID, httpServer)
 }
 
 // handleGetBurnProof returns a proof of a tx burning pETH
@@ -25,35 +33,79 @@ func (httpServer *HttpServer) handleGetBurnProofForDepositToSC(
 	params interface{},
 	closeChan <-chan struct{},
 ) (interface{}, *rpcservice.RPCError) {
-	return retrieveBurnProof(params, closeChan, metadata.BurningConfirmForDepositToSCMeta, httpServer)
+	onBeacon, height, txID, err := parseGetBurnProofParams(params, httpServer)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+	}
+	confirmMeta := metadata.BurningConfirmForDepositToSCMeta
+	if onBeacon {
+		confirmMeta = metadata.BurningConfirmForDepositToSCMetaV2
+	}
+	return retrieveBurnProof(confirmMeta, onBeacon, height, txID, httpServer)
 }
 
-func retrieveBurnProof(
-	params interface{},
-	closeChan <-chan struct{},
-	burningMetaType int,
-	httpServer *HttpServer,
-) (interface{}, *rpcservice.RPCError) {
+func parseGetBurnProofParams(params interface{}, httpServer *HttpServer) (bool, uint64, *common.Hash, error) {
 	listParams, ok := params.([]interface{})
 	if !ok || len(listParams) < 1 {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 1 element"))
+		return false, 0, nil, errors.New("param must be an array at least 1 element")
 	}
 
 	txIDParam, ok := listParams[0].(string)
 	if !ok {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Tx id invalid"))
+		return false, 0, nil, errors.New("Tx id invalid")
 	}
 
 	txID, err := common.Hash{}.NewHashFromStr(txIDParam)
 	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+		return false, 0, nil, err
 	}
 	// Get block height from txID
-	height, err := httpServer.blockService.GetBurningConfirm(*txID)
+	height, onBeacon, err := httpServer.blockService.GetBurningConfirm(*txID)
 	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, fmt.Errorf("proof of tx not found"))
+		return false, 0, nil, fmt.Errorf("proof of tx not found")
 	}
-	return getBurnProofByHeight(burningMetaType, httpServer, height, txID)
+	return onBeacon, height, txID, nil
+}
+
+func retrieveBurnProof(
+	confirmMeta int,
+	onBeacon bool,
+	height uint64,
+	txID *common.Hash,
+	httpServer *HttpServer,
+) (interface{}, *rpcservice.RPCError) {
+	if !onBeacon {
+		return getBurnProofByHeight(confirmMeta, httpServer, height, txID)
+	}
+	return getBurnProofByHeightV2(confirmMeta, httpServer, height, txID)
+}
+
+func getBurnProofByHeightV2(
+	burningMetaType int,
+	httpServer *HttpServer,
+	height uint64,
+	txID *common.Hash,
+) (interface{}, *rpcservice.RPCError) {
+	// Get beacon block
+	beaconBlock, err := getSingleBeaconBlockByHeight(httpServer.GetBlockchain(), height)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	}
+
+	// Get proof of instruction on beacon
+	inst, instID := findBurnConfirmInst(burningMetaType, beaconBlock.Body.Instructions, txID)
+	if instID == -1 {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, fmt.Errorf("cannot find inst %s in beacon block %d", txID.String(), height))
+	}
+
+	beaconInstProof, err := getBurnProofOnBeacon(inst, []*blockchain.BeaconBlock{beaconBlock}, httpServer.config.ConsensusEngine)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	}
+
+	// Decode instruction to send to Ethereum without having to decode on client
+	decodedInst, beaconHeight := splitAndDecodeInstV2(beaconInstProof.inst)
+	return buildProofResult(decodedInst, beaconInstProof, nil, beaconHeight, ""), nil
 }
 
 func getBurnProofByHeight(
@@ -68,21 +120,23 @@ func getBurnProofByHeight(
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
-
 	// Get proof of instruction on bridge
 	bridgeInstProof, err := getBurnProofOnBridge(burningMetaType, txID, bridgeBlock, httpServer.config.ConsensusEngine)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
-
+	fmt.Println("bridgeInstProof", bridgeInstProof)
 	// Get proof of instruction on beacon
 	beaconInstProof, err := getBurnProofOnBeacon(bridgeInstProof.inst, beaconBlocks, httpServer.config.ConsensusEngine)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
-
+	fmt.Println("beaconInstProof", beaconInstProof)
 	// Decode instruction to send to Ethereum without having to decode on client
 	decodedInst, bridgeHeight, beaconHeight := splitAndDecodeInst(bridgeInstProof.inst, beaconInstProof.inst)
+	fmt.Println("decodedInst", decodedInst)
+	fmt.Println("bridgeHeight", bridgeHeight)
+	fmt.Println("beaconHeight", beaconHeight)
 	//decodedInst := hex.EncodeToString(blockchain.DecodeInstruction(bridgeInstProof.inst))
 
 	return buildProofResult(decodedInst, beaconInstProof, bridgeInstProof, beaconHeight, bridgeHeight), nil
@@ -184,6 +238,18 @@ func splitAndDecodeInst(bridgeInst, beaconInst []string) (string, string, string
 	return decodedInst, bridgeHeight, beaconHeight
 }
 
+// splitAndDecodeInst splits BurningConfirm insts (on beacon and bridge) into 2 parts: the inst itself and beaconHeight that contains the inst
+func splitAndDecodeInstV2(beaconInst []string) (string, string) {
+	// Decode instructions
+	beaconInstFlat, _ := blockchain.DecodeInstruction(beaconInst)
+
+	// Split of last 32 bytes (block height)
+	beaconHeight := hex.EncodeToString(beaconInstFlat[len(beaconInstFlat)-32:])
+
+	decodedInst := hex.EncodeToString(beaconInstFlat[:len(beaconInstFlat)-32])
+	return decodedInst, beaconHeight
+}
+
 // handleGetBurnProof returns a proof of a tx burning pETH
 func (httpServer *HttpServer) handleGetBurningAddress(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	listParams, ok := params.([]interface{})
@@ -202,4 +268,12 @@ func (httpServer *HttpServer) handleGetBurningAddress(params interface{}, closeC
 	burningAddress := httpServer.blockService.GetBurningAddress(uint64(beaconHeightParam))
 
 	return burningAddress, nil
+}
+
+func getSingleBeaconBlockByHeight(bc *blockchain.BlockChain, height uint64) (*blockchain.BeaconBlock, error) {
+	beaconBlock, err := bc.GetBeaconBlockByView(bc.BeaconChain.GetFinalView(), height)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find beacon block with height %d %w", height, err)
+	}
+	return beaconBlock, nil
 }

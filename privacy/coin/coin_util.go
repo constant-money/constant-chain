@@ -15,7 +15,7 @@ const (
 	JsonMarshalFlag   = 34
 	CoinVersion1      = 1
 	CoinVersion2      = 2
-	TxRandomGroupSize = 36
+	TxRandomGroupSize = 68
 )
 
 const (
@@ -131,10 +131,11 @@ func NewCoinFromPaymentInfo(info *key.PaymentInfo) (*CoinV2, error) {
 	targetShardID := common.GetShardIDFromLastByte(receiverPublicKeyBytes[len(receiverPublicKeyBytes)-1])
 
 	c := new(CoinV2).Init()
-	// Amount, Randomness, SharedRandom is transparency until we call concealData
+	// Amount, Randomness, SharedRandom are transparency until we call concealData
 	c.SetAmount(new(operation.Scalar).FromUint64(info.Amount))
 	c.SetRandomness(operation.RandomScalar())
-	c.SetSharedRandom(operation.RandomScalar()) // r
+	c.SetSharedRandom(operation.RandomScalar()) // shared randomness for creating one-time-address
+	c.SetSharedConcealRandom(operation.RandomScalar()) //shared randomness for concealing amount and blinding asset tag
 	c.SetInfo(info.Message)
 	c.SetCommitment(operation.PedCom.CommitAtIndex(c.GetAmount(), c.GetRandomness(), operation.PedersenValueIndex))
 
@@ -142,7 +143,7 @@ func NewCoinFromPaymentInfo(info *key.PaymentInfo) (*CoinV2, error) {
 	if wallet.IsPublicKeyBurningAddress(info.PaymentAddress.Pk) {
 		publicKey, err := new(operation.Point).FromBytesS(info.PaymentAddress.Pk)
 		if err != nil {
-			panic("Something is wrong with info.paymentAddress.Pk, burning address should be a valid point")
+			panic("Something is wrong with info.paymentAddress.pk, burning address should be a valid point")
 		}
 		c.SetPublicKey(publicKey)
 		return c, nil
@@ -150,9 +151,9 @@ func NewCoinFromPaymentInfo(info *key.PaymentInfo) (*CoinV2, error) {
 
 	// Increase index until have the right shardID
 	index := uint32(0)
-	publicView := info.PaymentAddress.GetPublicView()
+	publicOTA := info.PaymentAddress.GetOTAPublicKey()
 	publicSpend := info.PaymentAddress.GetPublicSpend()
-	rK := new(operation.Point).ScalarMult(publicView, c.GetSharedRandom())
+	rK := new(operation.Point).ScalarMult(publicOTA, c.GetSharedRandom())
 	for {
 		index += 1
 
@@ -167,7 +168,9 @@ func NewCoinFromPaymentInfo(info *key.PaymentInfo) (*CoinV2, error) {
 			return nil, err
 		}
 		if currentShardID == targetShardID {
-			c.SetTxRandomDetail(new(operation.Point).ScalarMultBase(c.GetSharedRandom()), index)
+			otaRandomPoint := new(operation.Point).ScalarMultBase(c.GetSharedRandom())
+			concealRandomPoint := new(operation.Point).ScalarMultBase(c.GetSharedConcealRandom())
+			c.SetTxRandomDetail(concealRandomPoint, otaRandomPoint, index)
 			break
 		}
 	}

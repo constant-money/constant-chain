@@ -51,6 +51,11 @@ func NewMultiView() *MultiView {
 
 }
 
+func (multiView *MultiView) Reset() {
+	multiView.viewByHash = make(map[common.Hash]View)
+	multiView.viewByPrevHash = make(map[common.Hash][]View)
+}
+
 func (multiView *MultiView) removeOutdatedView() {
 	for h, v := range multiView.viewByHash {
 		if v.GetHeight() < multiView.finalView.GetHeight() {
@@ -125,6 +130,7 @@ func (multiView *MultiView) updateViewState(newView View) {
 		multiView.bestView = newView
 	}
 
+	//get bestview with min produce time
 	if newView.GetHeight() == multiView.bestView.GetHeight() && newView.GetBlock().GetProduceTime() < multiView.bestView.GetBlock().GetProduceTime() {
 		multiView.bestView = newView
 	}
@@ -147,18 +153,10 @@ func (multiView *MultiView) updateViewState(newView View) {
 		if prev1View == nil || multiView.finalView.GetHeight() == prev1View.GetHeight() {
 			return
 		}
-
-		prev2Hash := prev1View.GetPreviousHash()
-		prev2View := multiView.viewByHash[*prev2Hash]
-		if prev2View == nil || multiView.finalView.GetHeight() == prev2View.GetHeight() {
-			return
-		}
-
 		bestViewTimeSlot := common.CalculateTimeSlot(multiView.bestView.GetBlock().GetProposeTime())
 		prev1TimeSlot := common.CalculateTimeSlot(prev1View.GetBlock().GetProposeTime())
-		prev2TimeSlot := common.CalculateTimeSlot(prev2View.GetBlock().GetProposeTime())
-		if prev1TimeSlot+1 == bestViewTimeSlot && prev2TimeSlot+2 == bestViewTimeSlot { //three sequential time slot
-			multiView.finalView = prev2View
+		if prev1TimeSlot+1 == bestViewTimeSlot { //three sequential time slot
+			multiView.finalView = prev1View
 		}
 	} else {
 		fmt.Println("Block version is not correct")

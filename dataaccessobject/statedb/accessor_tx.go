@@ -11,6 +11,7 @@ import (
 )
 
 func StoreSerialNumbers(stateDB *StateDB, tokenID common.Hash, serialNumbers [][]byte, shardID byte) error {
+	tokenID = common.ConfidentialAssetID
 	for _, serialNumber := range serialNumbers {
 		key := GenerateSerialNumberObjectKey(tokenID, shardID, serialNumber)
 		value := NewSerialNumberStateWithValue(tokenID, shardID, serialNumber)
@@ -23,8 +24,23 @@ func StoreSerialNumbers(stateDB *StateDB, tokenID common.Hash, serialNumbers [][
 }
 
 func HasSerialNumber(stateDB *StateDB, tokenID common.Hash, serialNumber []byte, shardID byte) (bool, error) {
-	key := GenerateSerialNumberObjectKey(tokenID, shardID, serialNumber)
+	// db key for version 2
+	caID := common.ConfidentialAssetID
+	key := GenerateSerialNumberObjectKey(caID, shardID, serialNumber)
 	s, has, err := stateDB.getSerialNumberState(key)
+	if err != nil {
+		return false, NewStatedbError(GetSerialNumberError, err)
+	}
+	if has {
+		if bytes.Compare(s.SerialNumber(), serialNumber) != 0 {
+			panic("same key wrong value")
+			return false, nil
+		}
+		return has, nil
+	}
+	// db key for version 1
+	key = GenerateSerialNumberObjectKey(tokenID, shardID, serialNumber)
+	s, has, err = stateDB.getSerialNumberState(key)
 	if err != nil {
 		return false, NewStatedbError(GetSerialNumberError, err)
 	}

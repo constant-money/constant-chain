@@ -665,7 +665,7 @@ func (intermediateWriter *IntermediateWriter) Commit(node common.Hash, report bo
 	// outside code doesn't see an inconsistent state (referenced data removed from
 	// memory cache during commit but not yet in persistent storage). This is ensured
 	// by only uncaching existing data when the database write finalizes.
-	start := time.Now()
+	//start := time.Now()
 	batch := intermediateWriter.diskdb.NewBatch()
 
 	// Move all of the accumulated preimages into a write batch
@@ -690,7 +690,7 @@ func (intermediateWriter *IntermediateWriter) Commit(node common.Hash, report bo
 	batch.Reset()
 
 	// Move the trie itself into the batch, flushing if enough data is accumulated
-	nodes, storage := len(intermediateWriter.dirties), intermediateWriter.dirtiesSize
+	//nodes, storage := len(intermediateWriter.dirties), intermediateWriter.dirtiesSize
 
 	uncacher := &cleaner{intermediateWriter}
 	if err := intermediateWriter.commit(node, batch, uncacher); err != nil {
@@ -717,8 +717,8 @@ func (intermediateWriter *IntermediateWriter) Commit(node common.Hash, report bo
 	//memcacheCommitSizeMeter.Mark(int64(storage - iw.dirtiesSize))
 	//memcacheCommitNodesMeter.Mark(int64(nodes - len(iw.dirties)))
 
-	Logger.log.Info("Persisted trie from memory database", "nodes", nodes-len(intermediateWriter.dirties)+int(intermediateWriter.flushnodes), "size", storage-intermediateWriter.dirtiesSize+intermediateWriter.flushsize, "time", time.Since(start)+intermediateWriter.flushtime,
-		"gcnodes", intermediateWriter.gcnodes, "gcsize", intermediateWriter.gcsize, "gctime", intermediateWriter.gctime, "livenodes", len(intermediateWriter.dirties), "livesize", intermediateWriter.dirtiesSize)
+	//Logger.log.Info("Persisted trie from memory database", "nodes", nodes-len(intermediateWriter.dirties)+int(intermediateWriter.flushnodes), "size", storage-intermediateWriter.dirtiesSize+intermediateWriter.flushsize, "time", time.Since(start)+intermediateWriter.flushtime,
+	//	"gcnodes", intermediateWriter.gcnodes, "gcsize", intermediateWriter.gcsize, "gctime", intermediateWriter.gctime, "livenodes", len(intermediateWriter.dirties), "livesize", intermediateWriter.dirtiesSize)
 
 	// Reset the garbage collection statistics
 	intermediateWriter.gcnodes, intermediateWriter.gcsize, intermediateWriter.gctime = 0, 0, 0

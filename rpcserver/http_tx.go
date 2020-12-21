@@ -145,6 +145,48 @@ func (httpServer *HttpServer) handleGetTransactionHashByReceiver(params interfac
 	return result, nil
 }
 
+// Get tx hash by receiver in paging fashion
+func (httpServer *HttpServer) handleGetTransactionHashByReceiverV2(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	if arrayParams == nil || len(arrayParams) < 3 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 3 element"))
+	}
+
+	paymentAddress, ok := arrayParams[0].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Payment address"))
+	}
+
+	skip, ok := arrayParams[1].(float64)
+	if !ok || skip < 0 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("skip"))
+	}
+
+	limit, ok := arrayParams[2].(float64)
+	if !ok || limit < 0 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("limit"))
+	}
+
+	txHashsByShards, err := httpServer.txService.GetTransactionHashByReceiverV2(paymentAddress, uint(skip), uint(limit))
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	}
+	txHashs := []common.Hash{}
+	for _, txHashsByShard := range txHashsByShards {
+		txHashs = append(txHashs, txHashsByShard...)
+	}
+	result := struct {
+		Skip uint
+		Limit uint
+		TxHashs []common.Hash
+	}{
+		uint(skip),
+		uint(limit),
+		txHashs,
+	}
+	return result, nil
+}
+
 func (httpServer *HttpServer) handleGetTransactionByReceiver(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	paramsArray := common.InterfaceSlice(params)
 	keys, ok := paramsArray[0].(map[string]interface{})
@@ -178,6 +220,74 @@ func (httpServer *HttpServer) handleGetTransactionByReceiver(params interface{},
 	result, err := httpServer.txService.GetTransactionByReceiver(keySet)
 
 	return result, err
+}
+
+func (httpServer *HttpServer) handleGetTransactionByReceiverV2(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	paramsArray := common.InterfaceSlice(params)
+	keys, ok := paramsArray[0].(map[string]interface{})
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("key param is invalid"))
+	}
+
+	// create a key set
+	keySet := incognitokey.KeySet{}
+
+	// get keyset only contain readonly-key by deserializing
+	readonlyKeyStr, ok := keys["ReadonlyKey"].(string)
+	if ok {
+		readonlyKey, err := wallet.Base58CheckDeserialize(readonlyKeyStr)
+		if err != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+		}
+		keySet.ReadonlyKey = readonlyKey.KeySet.ReadonlyKey
+	}
+
+	// get keyset only contain payment address by deserializing
+	paymentAddressStr, ok := keys["PaymentAddress"].(string)
+	if ok {
+		paymentAddress, err := wallet.Base58CheckDeserialize(paymentAddressStr)
+		if err != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+		}
+		keySet.PaymentAddress = paymentAddress.KeySet.PaymentAddress
+	}
+
+	// tokenID
+	tokenID := common.PRVIDStr
+	tokenIDParam, ok := keys["TokenID"].(string)
+	if ok && tokenIDParam != "" {
+		tokenID = tokenIDParam
+	}
+	tokenIDHash, err1 := common.Hash{}.NewHashFromStr(tokenID)
+	if err1 != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("TokenID is invalid"))
+	}
+
+	skip, ok := keys["Skip"].(float64)
+	if !ok || skip < 0 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("skip"))
+	}
+
+	limit, ok := keys["Limit"].(float64)
+	if !ok || limit < 0 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("limit"))
+	}
+	receivedTxsList, total, err := httpServer.txService.GetTransactionByReceiverV2(keySet, uint(skip), uint(limit), *tokenIDHash)
+	if err != nil {
+		return nil, err
+	}
+	result := struct {
+		Total uint
+		Skip uint
+		Limit uint
+		ReceivedTransactions []jsonresult.ReceivedTransactionV2
+	}{
+		total,
+		uint(skip),
+		uint(limit),
+		receivedTxsList.ReceivedTransactions,
+	}
+	return result, nil
 }
 
 // Get transaction by Hash

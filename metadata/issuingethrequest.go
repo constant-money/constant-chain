@@ -45,7 +45,12 @@ type IssuingETHAcceptedInst struct {
 	ExternalTokenID []byte      `json:"externalTokenId"`
 }
 
-type GetBlockByNumberRes struct {
+type GetETHHeaderByHashRes struct {
+	rpccaller.RPCBaseRes
+	Result *types.Header `json:"result"`
+}
+
+type GetETHHeaderByNumberRes struct {
 	rpccaller.RPCBaseRes
 	Result *types.Header `json:"result"`
 }
@@ -154,6 +159,7 @@ func (iReq IssuingETHRequest) ValidateMetadataByItself() bool {
 
 func (iReq IssuingETHRequest) Hash() *common.Hash {
 	record := iReq.BlockHash.String()
+	// TODO: @hung change to record += fmt.Sprint(iReq.TxIndex)
 	record += string(iReq.TxIndex)
 	proofStrs := iReq.ProofStrs
 	for _, proofStr := range proofStrs {
@@ -278,24 +284,50 @@ func GetETHHeader(
 	ethBlockHash rCommon.Hash,
 ) (*types.Header, error) {
 	rpcClient := rpccaller.NewRPCClient()
-	params := []interface{}{ethBlockHash, false}
-	var getBlockByNumberRes GetBlockByNumberRes
+	getETHHeaderByHashParams := []interface{}{ethBlockHash, false}
+	var getETHHeaderByHashRes GetETHHeaderByHashRes
 	err := rpcClient.RPCCall(
 		EthereumLightNodeProtocol,
 		EthereumLightNodeHost,
 		EthereumLightNodePort,
 		"eth_getBlockByHash",
-		params,
-		&getBlockByNumberRes,
+		getETHHeaderByHashParams,
+		&getETHHeaderByHashRes,
 	)
 	if err != nil {
 		return nil, err
 	}
-	if getBlockByNumberRes.RPCError != nil {
-		Logger.log.Infof("WARNING: an error occured during calling eth_getBlockByHash: %s", getBlockByNumberRes.RPCError.Message)
-		return nil, nil
+	if getETHHeaderByHashRes.RPCError != nil {
+		Logger.log.Infof("WARNING: an error occured during calling eth_getBlockByHash: %s", getETHHeaderByHashRes.RPCError.Message)
+		return nil, errors.New(fmt.Sprintf("An error occured during calling eth_getBlockByHash: %s", getETHHeaderByHashRes.RPCError.Message))
 	}
-	return getBlockByNumberRes.Result, nil
+
+	ethHeaderByHash := getETHHeaderByHashRes.Result
+	headerNum := ethHeaderByHash.Number
+
+	getETHHeaderByNumberParams := []interface{}{fmt.Sprintf("0x%x", headerNum), false}
+	var getETHHeaderByNumberRes GetETHHeaderByNumberRes
+	err = rpcClient.RPCCall(
+		EthereumLightNodeProtocol,
+		EthereumLightNodeHost,
+		EthereumLightNodePort,
+		"eth_getBlockByNumber",
+		getETHHeaderByNumberParams,
+		&getETHHeaderByNumberRes,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if getETHHeaderByNumberRes.RPCError != nil {
+		Logger.log.Infof("WARNING: an error occured during calling eth_getBlockByNumber: %s", getETHHeaderByNumberRes.RPCError.Message)
+		return nil, errors.New(fmt.Sprintf("An error occured during calling eth_getBlockByNumber: %s", getETHHeaderByNumberRes.RPCError.Message))
+	}
+
+	ethHeaderByNum := getETHHeaderByNumberRes.Result
+	if ethHeaderByNum.Hash().String() != ethHeaderByHash.Hash().String() {
+		return nil, errors.New(fmt.Sprintf("The requested eth BlockHash is being on fork branch, rejected!"))
+	}
+	return ethHeaderByHash, nil
 }
 
 // GetMostRecentETHBlockHeight get most recent block height on Ethereum
@@ -315,8 +347,7 @@ func GetMostRecentETHBlockHeight() (*big.Int, error) {
 		return nil, err
 	}
 	if getETHBlockNumRes.RPCError != nil {
-		Logger.log.Debugf("WARNING: an error occured during calling eth_blockNumber: %s", getETHBlockNumRes.RPCError.Message)
-		return nil, nil
+		return nil, errors.New(fmt.Sprintf("an error occured during calling eth_blockNumber: %s", getETHBlockNumRes.RPCError.Message))
 	}
 
 	blockNumber := new(big.Int)

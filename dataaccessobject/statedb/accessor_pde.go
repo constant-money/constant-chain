@@ -3,9 +3,10 @@ package statedb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"sort"
 	"strings"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 )
 
 func StoreWaitingPDEContributions(stateDB *StateDB, beaconHeight uint64, waitingPDEContributions map[string]*rawdbv2.PDEContribution) error {
@@ -76,6 +77,22 @@ func StorePDEShares(stateDB *StateDB, beaconHeight uint64, pdeShares map[string]
 		err := stateDB.SetStateObject(PDEShareObjectType, key, value)
 		if err != nil {
 			return NewStatedbError(StorePDEShareError, err)
+		}
+	}
+	return nil
+}
+
+func StorePDETradingFees(stateDB *StateDB, beaconHeight uint64, pdeTradingFees map[string]uint64) error {
+	for tempKey, feeAmount := range pdeTradingFees {
+		strs := strings.Split(tempKey, "-")
+		token1ID := strs[2]
+		token2ID := strs[3]
+		contributorAddress := strs[4]
+		key := GeneratePDETradingFeeObjectKey(token1ID, token2ID, contributorAddress)
+		value := NewPDETradingFeeStateWithValue(token1ID, token2ID, contributorAddress, feeAmount)
+		err := stateDB.SetStateObject(PDETradingFeeObjectType, key, value)
+		if err != nil {
+			return NewStatedbError(StorePDETradingFeeError, err)
 		}
 	}
 	return nil
@@ -156,4 +173,15 @@ func GetPDEContributionStatus(stateDB *StateDB, statusType []byte, statusSuffix 
 		return []byte{}, NewStatedbError(GetPDEStatusError, fmt.Errorf("status %+v with prefix %+v not found", string(statusType), string(statusSuffix)))
 	}
 	return s.statusContent, nil
+}
+
+func GetPDETradingFees(stateDB *StateDB, beaconHeight uint64) (map[string]uint64, error) {
+	pdeTradingFees := make(map[string]uint64)
+	pdeTradingFeeStates := stateDB.getAllPDETradingFeeState()
+	for _, tfState := range pdeTradingFeeStates {
+		key := string(GetPDETradingFeeKey(beaconHeight, tfState.Token1ID(), tfState.Token2ID(), tfState.ContributorAddress()))
+		value := tfState.Amount()
+		pdeTradingFees[key] = value
+	}
+	return pdeTradingFees, nil
 }

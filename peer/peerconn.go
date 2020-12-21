@@ -301,10 +301,6 @@ func (peerConn *PeerConn) processMessageForEachType(messageType reflect.Type, me
 		if peerConn.config.MessageListeners.OnCrossShard != nil {
 			peerConn.config.MessageListeners.OnCrossShard(peerConn, message.(*wire.MessageCrossShard))
 		}
-	case reflect.TypeOf(&wire.MessageShardToBeacon{}):
-		if peerConn.config.MessageListeners.OnShardToBeacon != nil {
-			peerConn.config.MessageListeners.OnShardToBeacon(peerConn, message.(*wire.MessageShardToBeacon))
-		}
 	case reflect.TypeOf(&wire.MessageGetBlockBeacon{}):
 		if peerConn.config.MessageListeners.OnGetBlockBeacon != nil {
 			peerConn.config.MessageListeners.OnGetBlockBeacon(peerConn, message.(*wire.MessageGetBlockBeacon))
@@ -316,10 +312,6 @@ func (peerConn *PeerConn) processMessageForEachType(messageType reflect.Type, me
 	case reflect.TypeOf(&wire.MessageGetCrossShard{}):
 		if peerConn.config.MessageListeners.OnGetCrossShard != nil {
 			peerConn.config.MessageListeners.OnGetCrossShard(peerConn, message.(*wire.MessageGetCrossShard))
-		}
-	case reflect.TypeOf(&wire.MessageGetShardToBeacon{}):
-		if peerConn.config.MessageListeners.OnGetShardToBeacon != nil {
-			peerConn.config.MessageListeners.OnGetShardToBeacon(peerConn, message.(*wire.MessageGetShardToBeacon))
 		}
 	case reflect.TypeOf(&wire.MessageVersion{}):
 		if peerConn.config.MessageListeners.OnVersion != nil {
@@ -418,6 +410,8 @@ func (peerConn *PeerConn) outMessageHandler(rw *bufio.ReadWriter) {
 		select {
 		case outMsg := <-peerConn.sendMessageQueue:
 			{
+				//fmt.Println("SEND:", reflect.TypeOf(outMsg.message))
+
 				var sendString string
 				if outMsg.rawBytes != nil && len(*outMsg.rawBytes) > 0 {
 					Logger.log.Debugf("OutMessageHandler with raw bytes")
@@ -488,11 +482,8 @@ func (peerConn *PeerConn) outMessageHandler(rw *bufio.ReadWriter) {
 			}
 		case <-peerConn.cWrite:
 			Logger.log.Debugf("OutMessageHandler QUIT %s %s", peerConn.remotePeerID.Pretty(), peerConn.remotePeer.GetRawAddress())
-
 			peerConn.setIsConnected(false)
-
 			close(peerConn.cDisconnect)
-
 			if peerConn.HandleDisconnected != nil {
 				go peerConn.HandleDisconnected(peerConn)
 			}

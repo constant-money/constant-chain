@@ -1,8 +1,9 @@
 package coin
 
 import (
-	"bytes"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
@@ -14,34 +15,34 @@ import (
 	"testing"
 )
 
-func TestIsCoinBelong(t *testing.T) {
-	privateKey0 := key.GeneratePrivateKey([]byte{0})
-	keyset0 := new(incognitokey.KeySet)
-	err := keyset0.InitFromPrivateKey(&privateKey0)
-	assert.Equal(t, nil, err)
-
-	privateKey1 := key.GeneratePrivateKey([]byte{1})
-	keyset1 := new(incognitokey.KeySet)
-	err = keyset1.InitFromPrivateKey(&privateKey1)
-	assert.Equal(t, nil, err)
-
-	paymentInfo0 := key.InitPaymentInfo(keyset0.PaymentAddress, 10, []byte{})
-	c0, err := NewCoinFromPaymentInfo(paymentInfo0)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, false, c0.IsEncrypted())
-	c0.ConcealOutputCoin(keyset0.PaymentAddress.GetPublicView())
-
-	paymentInfo1 := key.InitPaymentInfo(keyset1.PaymentAddress, 10, []byte{})
-	c1, err := NewCoinFromPaymentInfo(paymentInfo1)
-	assert.Equal(t, nil, err)
-	assert.Equal(t, false, c1.IsEncrypted())
-	c1.ConcealOutputCoin(keyset1.PaymentAddress.GetPublicView())
-
-	assert.Equal(t, true, IsCoinBelongToViewKey(c0, keyset0.ReadonlyKey))
-	assert.Equal(t, true, IsCoinBelongToViewKey(c1, keyset1.ReadonlyKey))
-	assert.Equal(t, false, IsCoinBelongToViewKey(c0, keyset1.ReadonlyKey))
-	assert.Equal(t, false, IsCoinBelongToViewKey(c1, keyset0.ReadonlyKey))
-}
+//func TestIsCoinBelong(t *testing.T) {
+//	privateKey0 := key.GeneratePrivateKey([]byte{0})
+//	keyset0 := new(incognitokey.KeySet)
+//	err := keyset0.InitFromPrivateKey(&privateKey0)
+//	assert.Equal(t, nil, err)
+//
+//	privateKey1 := key.GeneratePrivateKey([]byte{1})
+//	keyset1 := new(incognitokey.KeySet)
+//	err = keyset1.InitFromPrivateKey(&privateKey1)
+//	assert.Equal(t, nil, err)
+//
+//	paymentInfo0 := key.InitPaymentInfo(keyset0.PaymentAddress, 10, []byte{})
+//	c0, err := NewCoinFromPaymentInfo(paymentInfo0)
+//	assert.Equal(t, nil, err)
+//	assert.Equal(t, false, c0.IsEncrypted())
+//	c0.ConcealOutputCoin(keyset0.PaymentAddress.GetPublicView())
+//
+//	paymentInfo1 := key.InitPaymentInfo(keyset1.PaymentAddress, 10, []byte{})
+//	c1, err := NewCoinFromPaymentInfo(paymentInfo1)
+//	assert.Equal(t, nil, err)
+//	assert.Equal(t, false, c1.IsEncrypted())
+//	c1.ConcealOutputCoin(keyset1.PaymentAddress.GetPublicView())
+//
+//	assert.Equal(t, true, IsCoinBelongToViewKey(c0, keyset0.ReadonlyKey))
+//	assert.Equal(t, true, IsCoinBelongToViewKey(c1, keyset1.ReadonlyKey))
+//	assert.Equal(t, false, IsCoinBelongToViewKey(c0, keyset1.ReadonlyKey))
+//	assert.Equal(t, false, IsCoinBelongToViewKey(c1, keyset0.ReadonlyKey))
+//}
 
 
 // TEST VER 2
@@ -64,6 +65,7 @@ func TestCoinV2BytesAndSetBytes(t *testing.T) {
 		// test byte-marshalling of random plain coins
 		coin := getRandomCoinV2()
 		b := coin.Bytes()
+		fmt.Println("CoinBytes =", b)
 		coinByBytes := new(CoinV2).Init()
 		err := coinByBytes.SetBytes(b)
 		assert.Equal(t, nil, err, "Set Bytes should not have any error")
@@ -74,11 +76,12 @@ func TestCoinV2BytesAndSetBytes(t *testing.T) {
 		assert.Equal(t, coin.commitment.ToBytesS(), coinByBytes.commitment.ToBytesS(), "FromBytes then SetBytes should be equal")
 		assert.Equal(t, coin.info, coinByBytes.info, "FromBytes then SetBytes should be equal")
 
-		r, i, err := coin.GetTxRandomDetail()
-		rPrime, iPrime, errPrime := coinByBytes.GetTxRandomDetail()
+		rConceal, rOTA, i, err := coin.GetTxRandomDetail()
+		rConcealPrime, rOTAPrime, iPrime, errPrime := coinByBytes.GetTxRandomDetail()
 		assert.Equal(t, err, nil)
 		assert.Equal(t, errPrime, nil)
-		assert.Equal(t, true, operation.IsPointEqual(rPrime, r))
+		assert.Equal(t, true, operation.IsPointEqual(rOTAPrime, rOTA))
+		assert.Equal(t, true, operation.IsPointEqual(rConcealPrime, rConceal))
 		assert.Equal(t, i, iPrime)
 
 
@@ -100,11 +103,12 @@ func TestCoinV2BytesAndSetBytes(t *testing.T) {
 		assert.Equal(t, coin.publicKey.ToBytesS(), coinByBytes.publicKey.ToBytesS(), "FromBytes then SetBytes should be equal")
 		assert.Equal(t, coin.commitment.ToBytesS(), coinByBytes.commitment.ToBytesS(), "FromBytes then SetBytes should be equal")
 		assert.Equal(t, coin.info, coinByBytes.info, "FromBytes then SetBytes should be equal")
-		r, i, err = coin.GetTxRandomDetail()
-		rPrime, iPrime, errPrime = coinByBytes.GetTxRandomDetail()
+		rConceal, rOTA, i, err = coin.GetTxRandomDetail()
+		rConcealPrime, rOTAPrime, iPrime, errPrime = coinByBytes.GetTxRandomDetail()
 		assert.Equal(t, err, nil)
 		assert.Equal(t, errPrime, nil)
-		assert.Equal(t, true, operation.IsPointEqual(rPrime, r))
+		assert.Equal(t, true, operation.IsPointEqual(rOTAPrime, rOTA))
+		assert.Equal(t, true, operation.IsPointEqual(rConcealPrime, rConceal))
 		assert.Equal(t, i, iPrime)
 	}
 }
@@ -128,7 +132,10 @@ func TestCoinV2CreateCoinAndDecrypt(t *testing.T) {
 		assert.Equal(t, false, c.IsEncrypted())
 
 		// Conceal
-		c.ConcealOutputCoin(keyset.PaymentAddress.GetPublicView())
+		err = c.ConcealOutputCoin(keyset.PaymentAddress.GetPublicView())
+		if err != nil{
+			panic(err)
+		}
 		assert.Equal(t, true, c.IsEncrypted())
 		assert.Equal(t, true, c.GetSharedRandom() == nil)
 		assert.NotEqual(t, val, c.GetValue())
@@ -166,10 +173,10 @@ func TestTxRandomGroup(t *testing.T) {
 		group := NewTxRandom()
 		r := operation.RandomPoint()
 		i := uint32(common.RandInt() & ((1 << 32) - 1))
-		group.SetTxRandomPoint(r)
+		group.SetTxConcealRandomPoint(r)
 		group.SetIndex(i)
 
-		rPrime, err := group.GetTxRandomPoint()
+		rPrime, err := group.GetTxOTARandomPoint()
 		assert.Equal(t, err, nil)
 		assert.Equal(t, true, operation.IsPointEqual(rPrime, r))
 
@@ -181,7 +188,7 @@ func TestTxRandomGroup(t *testing.T) {
 		var group2 TxRandom
 		err = group2.SetBytes(b)
 		assert.Equal(t, nil, err)
-		rPrime, err = group.GetTxRandomPoint()
+		rPrime, err = group.GetTxOTARandomPoint()
 		assert.Equal(t, err, nil)
 		assert.Equal(t, true, operation.IsPointEqual(rPrime, r))
 
@@ -191,46 +198,66 @@ func TestTxRandomGroup(t *testing.T) {
 	}
 }
 
+func TestCoinV2_IsCoinBelongToKeySet(t *testing.T) {
+	privateKey := operation.RandomScalar().ToBytesS()
+	keySet := new(incognitokey.KeySet)
+	err := keySet.InitFromPrivateKeyByte(privateKey)
+	assert.Equal(t, nil, err, "InitFromPrivateKeyByte returns an error: %v", err)
+	assert.Equal(t, true, operation.IsPointEqual(keySet.PaymentAddress.GetOTAPublicKey(), new(operation.Point).ScalarMultBase(keySet.OTAKey.GetOTASecretKey())))
+	assert.Equal(t, true, operation.IsPointEqual(keySet.PaymentAddress.GetPublicView(), new(operation.Point).ScalarMultBase(keySet.ReadonlyKey.GetPrivateView())))
+	assert.Equal(t, true, operation.IsPointEqual(keySet.PaymentAddress.GetPublicSpend(), new(operation.Point).ScalarMultBase(new(operation.Scalar).FromBytesS(keySet.PrivateKey))))
+
+
+	paymentInfo := key.PaymentInfo{Amount: 10000, PaymentAddress: keySet.PaymentAddress, Message: []byte("Hello world")}
+
+	tmpCoinV2, err := NewCoinFromPaymentInfo(&paymentInfo)
+	assert.Equal(t, nil, err)
+
+	possessed, _ := tmpCoinV2.DoesCoinBelongToKeySet(keySet)
+	assert.Equal(t, true, possessed)
+
+}
+
 // TEST COIN VER 1
 
 var PedCom operation.PedersenCommitment = operation.PedCom
 
-func TestCoinV1CommitAllThenSwitchV2(t *testing.T) {
-	coin := new(PlainCoinV1).Init()
-	seedKey := operation.RandomScalar().ToBytesS()
-	privateKey := key.GeneratePrivateKey(seedKey)
-	publicKey, err := new(operation.Point).FromBytesS(key.GeneratePublicKey(privateKey))
-
-	assert.Equal(t, nil, err)
-
-	// init other fields for coin
-	coin.SetPublicKey(publicKey)
-	coin.SetSNDerivator(operation.RandomScalar())
-	coin.SetRandomness(operation.RandomScalar())
-	coin.SetValue(new(big.Int).SetBytes(common.RandBytes(2)).Uint64())
-	coin.SetKeyImage(new(operation.Point).Derive(PedCom.G[0], new(operation.Scalar).FromBytesS(privateKey), coin.GetSNDerivator()))
-	coin.SetInfo([]byte("Incognito chain"))
-
-	err = coin.CommitAll()
-	assert.Equal(t, nil, err)
-
-	allcm := coin.GetCommitment()
-	cm := ParseCommitmentToV2WithCoin(coin)
-
-	shardID, shardIDerr := coin.GetShardID()
-	assert.Equal(t, nil, shardIDerr)
-
-	allcm = ParseCommitmentToV2(
-		allcm,
-		coin.GetPublicKey(),
-		coin.GetSNDerivator(),
-		shardID,
-	)
-
-	b1 := allcm.ToBytesS()
-	b2 := cm.ToBytesS()
-	assert.Equal(t, true, bytes.Equal(b1, b2))
-}
+//func TestCoinV1CommitAllThenSwitchV2(t *testing.T) {
+//	coin := new(PlainCoinV1).Init()
+//	seedKey := operation.RandomScalar().ToBytesS()
+//	privateKey := key.GeneratePrivateKey(seedKey)
+//	publicKey, err := new(operation.Point).FromBytesS(key.GeneratePublicKey(privateKey))
+//
+//	assert.Equal(t, nil, err)
+//
+//	// init other fields for coin
+//	coin.SetPublicKey(publicKey)
+//	coin.SetSNDerivator(operation.RandomScalar())
+//	coin.SetRandomness(operation.RandomScalar())
+//	coin.SetValue(new(big.Int).SetBytes(common.RandBytes(2)).Uint64())
+//	coin.SetKeyImage(new(operation.Point).Derive(PedCom.G[0], new(operation.Scalar).FromBytesS(privateKey), coin.GetSNDerivator()))
+//	coin.SetInfo([]byte("Incognito chain"))
+//
+//	err = coin.CommitAll()
+//	assert.Equal(t, nil, err)
+//
+//	allcm := coin.GetCommitment()
+//	cm := ParseCommitmentToV2WithCoin(coin)
+//
+//	shardID, shardIDerr := coin.GetShardID()
+//	assert.Equal(t, nil, shardIDerr)
+//
+//	allcm = ParseCommitmentToV2(
+//		allcm,
+//		coin.GetPublicKey(),
+//		coin.GetSNDerivator(),
+//		shardID,
+//	)
+//
+//	b1 := allcm.ToBytesS()
+//	b2 := cm.ToBytesS()
+//	assert.Equal(t, true, bytes.Equal(b1, b2))
+//}
 
 func TestCoinV1CommitAll(t *testing.T) {
 	for i := 0; i < 3; i++ {

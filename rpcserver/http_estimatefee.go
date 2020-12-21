@@ -2,7 +2,6 @@ package rpcserver
 
 import (
 	"errors"
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
@@ -43,7 +42,8 @@ func (httpServer *HttpServer) handleEstimateFee(params interface{}, closeChan <-
 	}
 
 	// Should get outCoins from start
-	outCoins, err := httpServer.outputCoinService.ListDecryptedOutputCoinsByKeySet(senderKeySet, shardIDSender, 0)
+	// outCoins, _, err := httpServer.outputCoinService.ListDecryptedOutputCoinsByKeySet(senderKeySet, shardIDSender, 0)
+	outCoins, err := httpServer.outputCoinService.BlockChain.TryGetAllOutputCoinsByKeyset(senderKeySet, shardIDSender, &common.PRVCoinID, false)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.GetOutputCoinError, err)
 	}
@@ -90,7 +90,11 @@ func (httpServer *HttpServer) handleEstimateFee(params interface{}, closeChan <-
 		beaconHeight := httpServer.blockService.BlockChain.GetBeaconBestState().BestBlock.GetHeight()
 
 		var err2 error
-		_, estimateFeeCoinPerKb, estimateTxSizeInKb, err2 = httpServer.txService.EstimateFee(
+		ver, err := transaction.GetTxVersionFromCoins(outCoins)
+		if err!=nil{
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+		}
+		_, estimateFeeCoinPerKb, estimateTxSizeInKb, err2 = httpServer.txService.EstimateFee(int(ver),
 			defaultFeeCoinPerKb, isGetPTokenFee, outCoins, paymentInfos, shardIDSender, 8, hasPrivacy, nil, customPrivacyTokenParam, int64(beaconHeight))
 		if err2 != nil {
 			return nil, rpcservice.NewRPCError(rpcservice.RejectInvalidTxFeeError, err2)
@@ -100,7 +104,7 @@ func (httpServer *HttpServer) handleEstimateFee(params interface{}, closeChan <-
 	return result, nil
 }
 
-// handleEstimateFeeWithEstimator -- get fee from estimator
+/// handleEstimateFeeWithEstimator -- get fee from estimator
 func (httpServer *HttpServer) handleEstimateFeeWithEstimator(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	// all params
 	arrayParams := common.InterfaceSlice(params)

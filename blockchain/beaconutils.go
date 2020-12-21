@@ -10,9 +10,9 @@ import (
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
+	"github.com/incognitochain/incognito-chain/privacy"
 )
 
-//===================================Util for Beacon=============================
 func GetStakingCandidate(beaconBlock BeaconBlock) ([]string, []string) {
 	beacon := []string{}
 	shard := []string{}
@@ -32,46 +32,12 @@ func GetStakingCandidate(beaconBlock BeaconBlock) ([]string, []string) {
 	return beacon, shard
 }
 
-// Assumption:
-// validator and candidate public key encode as base58 string
-// assume that candidates are already been checked
-// Check validation of candidate in transaction
-func AssignValidator(candidates []incognitokey.CommitteePublicKey, rand int64, activeShards int) (map[byte][]incognitokey.CommitteePublicKey, error) {
-	pendingValidators := make(map[byte][]incognitokey.CommitteePublicKey)
-	for _, candidate := range candidates {
-		candidateStr, _ := candidate.ToBase58()
-		shardID := calculateCandidateShardID(candidateStr, rand, activeShards)
-		pendingValidators[shardID] = append(pendingValidators[shardID], candidate)
-	}
-	return pendingValidators, nil
-}
-
-// AssignValidatorShard, param for better convenience than AssignValidator
-func AssignValidatorShard(currentShardPendingValidator map[byte][]incognitokey.CommitteePublicKey, shardCandidates []incognitokey.CommitteePublicKey, rand int64, activeShards int) {
-	for _, candidate := range shardCandidates {
-		candidateStr, _ := candidate.ToBase58()
-		shardID := calculateCandidateShardID(candidateStr, rand, activeShards)
-		currentShardPendingValidator[shardID] = append(currentShardPendingValidator[shardID], candidate)
-	}
-}
-
-func VerifyValidator(candidate string, rand int64, shardID byte, activeShards int) (bool, error) {
-	res := calculateCandidateShardID(candidate, rand, activeShards)
-	if shardID == res {
-		return true, nil
-	} else {
-		return false, nil
-	}
-}
-
-/*
-	Assign Candidates Into Shard Pending Validator List
-	Each Shard Pending Validator List has a limit
-	If a candidate is assigned into shard which Pending Validator List has reach its limit then candidate will get back into candidate list
-	Otherwise, candidate will be converted to shard pending validator
-	- return param #1: remain shard candidate (not assign yet)
-	- return param #2: assigned candidate
-*/
+// assignShardCandidate Assign Candidates Into Shard Pending Validator List
+// Each Shard Pending Validator List has a limit
+// If a candidate is assigned into shard which Pending Validator List has reach its limit then candidate will get back into candidate list
+// Otherwise, candidate will be converted to shard pending validator
+// - return param #1: remain shard candidate (not assign yet)
+// - return param #2: assigned candidate
 func assignShardCandidate(candidates []string, numberOfPendingValidator map[byte]int, rand int64, testnetAssignOffset int, activeShards int) ([]string, map[byte][]string) {
 	assignedCandidates := make(map[byte][]string)
 	remainShardCandidates := []string{}
@@ -89,9 +55,7 @@ func assignShardCandidate(candidates []string, numberOfPendingValidator map[byte
 	return remainShardCandidates, assignedCandidates
 }
 
-/*
-	Shuffle Position Of Shard Candidates in List with Random Number
-*/
+// shuffleShardCandidate Shuffle Position Of Shard Candidates in List with Random Number
 func shuffleShardCandidate(candidates []string, rand int64) []string {
 	m := make(map[string]string)
 	temp := []string{}
@@ -121,10 +85,6 @@ func shuffleShardCandidate(candidates []string, rand int64) []string {
 func calculateCandidateShardID(candidate string, rand int64, activeShards int) (shardID byte) {
 	seed := candidate + strconv.Itoa(int(rand))
 	hash := common.HashB([]byte(seed))
-	// fmt.Println("Candidate public key", candidate)
-	// fmt.Println("Hash of candidate serialized pubkey and random number", hash)
-	// fmt.Printf("\"%d\",\n", hash[len(hash)-1])
-	// fmt.Println("Shard to be assign", hash[len(hash)-1])
 	shardID = byte(int(hash[len(hash)-1]) % activeShards)
 	Logger.log.Critical("calculateCandidateShardID/shardID", shardID)
 	return shardID
@@ -144,34 +104,6 @@ func filterValidators(
 	}
 	return resultingValidators
 }
-
-// consider these list as queue structure
-// unqueue a number of validator out of currentValidators list
-// enqueue a number of validator into currentValidators list <=> unqueue a number of validator out of pendingValidators list
-// return value: #1 remaining pendingValidators, #2 new currentValidators #3 swapped out validator, #4 incoming validator #5 error
-// func SwapValidator(pendingValidators []string, currentValidators []string, maxCommittee int, offset int) ([]string, []string, []string, []string, error) {
-// 	// filter for pending validator, , it should not already exist in current validator list
-// 	//filterPendingValidators := make([]string, len(pendingValidators))
-// 	//copy(filterPendingValidators, pendingValidators)
-// 	//for i, v := range filterPendingValidators {
-// 	//	ok, _ := common.SliceExists(currentValidators, v) // item in pending list already exist in current list
-// 	//	if ok {
-// 	//		filterPendingValidators = append(filterPendingValidators[:i], filterPendingValidators[i+1:]...)
-// 	//	}
-// 	//}
-// 	//if len(filterPendingValidators) < len(pendingValidators) {
-// 	//	pendingValidators = filterPendingValidators
-// 	//}
-// 	// end
-
-// 	if maxCommittee < 0 || offset < 0 {
-// 		panic("committee can't be zero")
-// 	}
-// 	if offset == 0 {
-// 		return []string{}, pendingValidators, currentValidators, []string{}, errors.New("can't not swap 0 validator")
-// 	}
-
-// }
 
 func isBadProducer(badProducers []string, producer string) bool {
 	for _, badProducer := range badProducers {
@@ -195,6 +127,14 @@ func CreateBeaconSwapActionForKeyListV2(
 	return swapInstruction, newPendingValidator, append(newBeaconCommittees, remainBeaconCommittees...)
 }
 
+// swap return argument
+// #1 remaining pendingValidators
+// #2 new currentValidators
+// #3 swapped out validator
+// #4 incoming validator
+// #5 error
+// REVIEW: @hung
+// - should check offset <= goodPendingValidators
 func swap(
 	badPendingValidators []string,
 	goodPendingValidators []string,
@@ -238,7 +178,7 @@ func swap(
 	return append(goodPendingValidators, badPendingValidators...), currentGoodProducers, swapValidator, tempValidators, nil
 }
 
-// consider these list as queue structure
+// SwapValidator consider these list as queue structure
 // unqueue a number of validator out of currentValidators list
 // enqueue a number of validator into currentValidators list <=> unqueue a number of validator out of pendingValidators list
 // return value: #1 remaining pendingValidators, #2 new currentValidators #3 swapped out validator, #4 incoming validator #5 error
@@ -257,11 +197,17 @@ func SwapValidator(
 	currentGoodProducers := filterValidators(currentValidators, producersBlackList, false)
 	goodPendingValidatorsLen := len(goodPendingValidators)
 	currentGoodProducersLen := len(currentGoodProducers)
-
+	// number of good producer more than minimum needed producer to continue
 	if currentGoodProducersLen >= minCommittee {
+		// current number of good producer reach maximum committee size => swap
 		if currentGoodProducersLen == maxCommittee {
 			offset = swapOffset
 		}
+		// if not then number of good producer are less than maximum committee size
+		// push more pending validator into committee list
+
+		// if number of current good pending validators are less than maximum push offset
+		// then push all good pending validator into committee
 		if offset > goodPendingValidatorsLen {
 			offset = goodPendingValidatorsLen
 		}
@@ -292,6 +238,7 @@ func SwapValidator(
 	return badPendingValidators, newProducers, swappedProducers, goodPendingValidators, nil
 }
 
+// RemoveValidator remove validator and return removed list
 // return: #param1: validator list after remove
 // in parameter: #param1: list of full validator
 // in parameter: #param2: list of removed validator
@@ -316,12 +263,10 @@ func RemoveValidator(validators []string, removedValidators []string) ([]string,
 	return remainingValidators, nil
 }
 
-/*
-	Shuffle Candidate:
-		Candidate Value Concatenate with Random Number
-		Then Hash and Obtain Hash Value
-		Sort Hash Value Then Re-arrange Candidate corresponding to Hash Value
-*/
+// Shuffle Candidate: suffer candidates with random number and return suffered list
+// Candidate Value Concatenate with Random Number
+// then Hash and Obtain Hash Value
+// Sort Hash Value Then Re-arrange Candidate corresponding to Hash Value
 func ShuffleCandidate(candidates []incognitokey.CommitteePublicKey, rand int64) ([]incognitokey.CommitteePublicKey, error) {
 	Logger.log.Debug("Beacon Process/Shuffle Candidate: Candidate Before Sort ", candidates)
 	hashes := []string{}
@@ -342,45 +287,6 @@ func ShuffleCandidate(candidates []incognitokey.CommitteePublicKey, rand int64) 
 	return sortedCandidate, nil
 }
 
-/*
-	Kick a list of candidate out of current validators list
-	Candidates will be eliminated as the list order (from 0 index to last index)
-	A candidate will be click out of list if it match those condition:
-		- candidate pubkey found in current validators list
-		- size of current validator list is greater or equal to min committess size
-	Return params:
-	#1 kickedValidator, #2 remain candidates (not kick yet), #3 new current validator list
-*/
-func kickValidatorByPubkeyList(candidates []string, currentValidators []string, minCommitteeSize int) ([]string, []string, []string) {
-	removedCandidates := []string{}
-	remainedCandidates := []string{}
-	remainedIndex := 0
-	for index, candidate := range candidates {
-		remainedIndex = index
-		if len(currentValidators) == minCommitteeSize {
-			break
-		}
-		if index := common.IndexOfStr(candidate, currentValidators); index < 0 {
-			remainedCandidates = append(remainedCandidates, candidate)
-			continue
-		} else {
-			removedCandidates = append(removedCandidates, candidate)
-			currentValidators = append(currentValidators[:index], currentValidators[index+1:]...)
-		}
-	}
-	if remainedIndex < len(candidates)-1 {
-		remainedCandidates = append(remainedCandidates, candidates[remainedIndex:]...)
-	}
-	return removedCandidates, remainedCandidates, currentValidators
-}
-func kickValidatorByPubkey(candidate string, currentValidators []string, minCommitteeSize int) (bool, []string) {
-	if index := common.IndexOfStr(candidate, currentValidators); index < 0 {
-		return false, currentValidators
-	} else {
-		currentValidators = append(currentValidators[:index], currentValidators[index+1:]...)
-		return true, currentValidators
-	}
-}
 func getStakeValidatorArrayString(v []string) ([]string, []string) {
 	beacon := []string{}
 	shard := []string{}
@@ -394,6 +300,7 @@ func getStakeValidatorArrayString(v []string) ([]string, []string) {
 	}
 	return beacon, shard
 }
+
 func snapshotCommittee(beaconCommittee []incognitokey.CommitteePublicKey, allShardCommittee map[byte][]incognitokey.CommitteePublicKey) ([]incognitokey.CommitteePublicKey, map[byte][]incognitokey.CommitteePublicKey, error) {
 	snapshotBeaconCommittee := []incognitokey.CommitteePublicKey{}
 	snapshotAllShardCommittee := make(map[byte][]incognitokey.CommitteePublicKey)
@@ -408,16 +315,18 @@ func snapshotCommittee(beaconCommittee []incognitokey.CommitteePublicKey, allSha
 		}
 		snapshotAllShardCommittee[shardID] = clonedShardCommittee
 	}
+
 	if !reflect.DeepEqual(beaconCommittee, snapshotBeaconCommittee) {
 		return []incognitokey.CommitteePublicKey{}, nil, fmt.Errorf("Failed To Clone Beacon Committee, expect %+v but get %+v", beaconCommittee, snapshotBeaconCommittee)
 	}
 	if !reflect.DeepEqual(allShardCommittee, snapshotAllShardCommittee) {
 		return []incognitokey.CommitteePublicKey{}, nil, fmt.Errorf("Failed To Clone Beacon Committee, expect %+v but get %+v", allShardCommittee, snapshotAllShardCommittee)
 	}
+
 	return snapshotBeaconCommittee, snapshotAllShardCommittee, nil
 }
-func snapshotRewardReceiver(rewardReceiver map[string]string) (map[string]string, error) {
-	snapshotRewardReceiver := make(map[string]string)
+func snapshotRewardReceiver(rewardReceiver map[string]privacy.PaymentAddress) (map[string]privacy.PaymentAddress, error) {
+	snapshotRewardReceiver := make(map[string]privacy.PaymentAddress)
 	for k, v := range rewardReceiver {
 		snapshotRewardReceiver[k] = v
 	}
