@@ -2,9 +2,9 @@ package wallet
 
 import (
 	"bytes"
-	"crypto/sha256"
+	// "crypto/sha256"
 	"github.com/incognitochain/incognito-chain/common"
-	"math/big"
+	// "math/big"
 )
 
 // padByteSlice returns a byte slice of the given size with contents of the
@@ -34,38 +34,38 @@ func compareByteSlices(a, b []byte) bool {
 }
 
 // computeChecksum returns hashing of data using SHA256
-func computeChecksum(data []byte) []byte {
-	hasher := sha256.New()
-	hasher.Write(data)
-	return hasher.Sum(nil)
-}
+// func computeChecksum(data []byte) []byte {
+// 	hasher := sha256.New()
+// 	hasher.Write(data)
+// 	return hasher.Sum(nil)
+// }
 
-// Appends to data the first (len(data) / 32)bits of the result of sha256(data)
-// Currently only supports data up to 32 bytes
-func addChecksum(data []byte) []byte {
-	// Get first byte of sha256
-	hash := computeChecksum(data)
-	firstChecksumByte := hash[0]
+// // Appends to data the first (len(data) / 32)bits of the result of sha256(data)
+// // Currently only supports data up to 32 bytes
+// func addChecksum(data []byte) []byte {
+// 	// Get first byte of sha256
+// 	hash := computeChecksum(data)
+// 	firstChecksumByte := hash[0]
 
-	// len() is in bytes so we divide by 4
-	checksumBitLength := uint(len(data) / 4)
+// 	// len() is in bytes so we divide by 4
+// 	checksumBitLength := uint(len(data) / 4)
 
-	// For each bit of check sum we want we shift the data one the left
-	// and then set the (new) right most bit equal to checksum bit at that index
-	// staring from the left
-	dataBigInt := new(big.Int).SetBytes(data)
-	for i := uint(0); i < checksumBitLength; i++ {
-		// Bitshift 1 left
-		dataBigInt.Mul(dataBigInt, bigTwo)
+// 	// For each bit of check sum we want we shift the data one the left
+// 	// and then set the (new) right most bit equal to checksum bit at that index
+// 	// staring from the left
+// 	dataBigInt := new(big.Int).SetBytes(data)
+// 	for i := uint(0); i < checksumBitLength; i++ {
+// 		// Bitshift 1 left
+// 		dataBigInt.Mul(dataBigInt, bigTwo)
 
-		// Set rightmost bit if leftmost checksum bit is set
-		if uint8(firstChecksumByte&(1<<(7-i))) > 0 {
-			dataBigInt.Or(dataBigInt, bigOne)
-		}
-	}
+// 		// Set rightmost bit if leftmost checksum bit is set
+// 		if uint8(firstChecksumByte&(1<<(7-i))) > 0 {
+// 			dataBigInt.Or(dataBigInt, bigOne)
+// 		}
+// 	}
 
-	return dataBigInt.Bytes()
-}
+// 	return dataBigInt.Bytes()
+// }
 
 func IsPublicKeyBurningAddress(publicKey []byte) bool {
 	// get burning address

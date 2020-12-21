@@ -1,7 +1,7 @@
 package coin
 
 import (
-	"bytes"
+	// "bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -298,7 +298,7 @@ func (c CoinV2) GetShardID() (uint8, error) {
 	return shardID, nil
 }
 func (c CoinV2) GetCoinDetailEncrypted() []byte {
-	return nil
+	return c.GetAmount().ToBytesS()
 }
 
 
@@ -514,53 +514,53 @@ func (c *CoinV2) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (c *CoinV2) CheckCoinValid(paymentAdd key.PaymentAddress, sharedRandom []byte, amount uint64) bool {
-	if c.GetValue() != amount {
-		return false
-	}
-	// check one-time address is corresponding to paymentaddress
-	r := new(operation.Scalar).FromBytesS(sharedRandom)
-	if !r.ScalarValid() {
-		return false
-	}
+// func (c *CoinV2) CheckCoinValid(paymentAdd key.PaymentAddress, sharedRandom []byte, amount uint64) bool {
+// 	if c.GetValue() != amount {
+// 		return false
+// 	}
+// 	// check one-time address is corresponding to paymentaddress
+// 	r := new(operation.Scalar).FromBytesS(sharedRandom)
+// 	if !r.ScalarValid() {
+// 		return false
+// 	}
 
-	rK := new(operation.Point).ScalarMult(paymentAdd.GetOTAPublicKey(), r)
-	_, txOTARandomPoint, index,  err := c.GetTxRandomDetail()
-	if err  != nil {
-		return false
-	}
-	if !operation.IsPointEqual(new(operation.Point).ScalarMultBase(r), txOTARandomPoint) {
-		return false
-	}
+// 	rK := new(operation.Point).ScalarMult(paymentAdd.GetOTAPublicKey(), r)
+// 	_, txOTARandomPoint, index,  err := c.GetTxRandomDetail()
+// 	if err  != nil {
+// 		return false
+// 	}
+// 	if !operation.IsPointEqual(new(operation.Point).ScalarMultBase(r), txOTARandomPoint) {
+// 		return false
+// 	}
 
-	hash := operation.HashToScalar(append(rK.ToBytesS(), common.Uint32ToBytes(index)...))
-	HrKG := new(operation.Point).ScalarMultBase(hash)
-	tmpPubKey := new(operation.Point).Add(HrKG, paymentAdd.GetPublicSpend())
-	return bytes.Equal(tmpPubKey.ToBytesS(), c.publicKey.ToBytesS())
-}
+// 	hash := operation.HashToScalar(append(rK.ToBytesS(), common.Uint32ToBytes(index)...))
+// 	HrKG := new(operation.Point).ScalarMultBase(hash)
+// 	tmpPubKey := new(operation.Point).Add(HrKG, paymentAdd.GetPublicSpend())
+// 	return bytes.Equal(tmpPubKey.ToBytesS(), c.publicKey.ToBytesS())
+// }
 
 // Check whether the utxo is from this keyset
-func (c *CoinV2) DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point) {
-	_, txOTARandomPoint, index, err1 :=  c.GetTxRandomDetail()
-	if err1 != nil {
-		return false, nil
-	}
+// func (c *CoinV2) DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point) {
+// 	_, txOTARandomPoint, index, err1 :=  c.GetTxRandomDetail()
+// 	if err1 != nil {
+// 		return false, nil
+// 	}
 
-	//Check if the utxo belong to this one-time-address
-	rK := new(operation.Point).ScalarMult(txOTARandomPoint, keySet.OTAKey.GetOTASecretKey())
+// 	//Check if the utxo belong to this one-time-address
+// 	rK := new(operation.Point).ScalarMult(txOTARandomPoint, keySet.OTAKey.GetOTASecretKey())
 
-	hashed := operation.HashToScalar(
-		append(rK.ToBytesS(), common.Uint32ToBytes(index)...),
-	)
+// 	hashed := operation.HashToScalar(
+// 		append(rK.ToBytesS(), common.Uint32ToBytes(index)...),
+// 	)
 
-	HnG := new(operation.Point).ScalarMultBase(hashed)
-	KCheck := new(operation.Point).Sub(c.GetPublicKey(), HnG)
+// 	HnG := new(operation.Point).ScalarMultBase(hashed)
+// 	KCheck := new(operation.Point).Sub(c.GetPublicKey(), HnG)
 
-	////Retrieve the sharedConcealRandomPoint for generating the blinded assetTag
-	//var rSharedConcealPoint *operation.Point
-	//if keySet.ReadonlyKey.GetPrivateView() != nil {
-	//	rSharedConcealPoint = new(operation.Point).ScalarMult(txConcealRandomPoint, keySet.ReadonlyKey.GetPrivateView())
-	//}
+// 	////Retrieve the sharedConcealRandomPoint for generating the blinded assetTag
+// 	//var rSharedConcealPoint *operation.Point
+// 	//if keySet.ReadonlyKey.GetPrivateView() != nil {
+// 	//	rSharedConcealPoint = new(operation.Point).ScalarMult(txConcealRandomPoint, keySet.ReadonlyKey.GetPrivateView())
+// 	//}
 
-	return operation.IsPointEqual(KCheck, keySet.OTAKey.GetPublicSpend()), rK
-}
+// 	return operation.IsPointEqual(KCheck, keySet.OTAKey.GetPublicSpend()), rK
+// }

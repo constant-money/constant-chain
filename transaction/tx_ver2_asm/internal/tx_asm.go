@@ -4,7 +4,7 @@ import(
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
-	"fmt"
+	// "fmt"
 	"strconv"
 	"time"
 
@@ -160,7 +160,6 @@ var genericError = errors.New("Generic error for ASM")
 type InitParamsAsm struct{
 	SenderSK    privacy.PrivateKey		`json:"SenderSK"`
 	PaymentInfo []printedPaymentInfo	`json:"PaymentInfo"`
-	// TODO: implement serializer for coin ver2 in JS
 	InputCoins  []CoinInter 	 		`json:"InputCoins"`
 	Fee         uint64 					`json:"Fee"`
 	HasPrivacy  bool 					`json:"HasPrivacy,omitempty"`
@@ -183,15 +182,47 @@ type TxPrivacyInitParams struct {
 	Metadata 	metadata.Metadata
 	Info        []byte
 }
+func NewTxParams(sk *privacy.PrivateKey, pInfos []*privacy.PaymentInfo, inputs []privacy.PlainCoin, fee uint64, isPriv bool, tokenID *common.Hash, md metadata.Metadata, info []byte) *TxPrivacyInitParams{
+	if info==nil{
+		info = []byte("")
+	}
+	return &TxPrivacyInitParams{
+		SenderSK: sk,
+		PaymentInfo: pInfos,
+		InputCoins: inputs,
+		Fee: fee,
+		HasPrivacy: isPriv,
+		TokenID: tokenID,
+		Metadata: md,
+		Info: info,
+	}
+}
 
 func (params *InitParamsAsm) GetInputCoins() ([]privacy.PlainCoin, []uint64){
 	var resultCoins []privacy.PlainCoin
 	var resultIndexes []uint64
+	if len(params.InputCoins)==0{
+		return []privacy.PlainCoin{}, []uint64{}
+	}
+	ver := params.InputCoins[0].Version
 	for _,ci := range params.InputCoins{
-		c, ind, err := ci.ToCoin()
-		if err!=nil{
-			println(err.Error())
-			return nil, nil
+		var c privacy.PlainCoin
+		var ind uint64
+		var err error
+		if ver==2{
+			c, ind, err = ci.ToCoin()
+			if err!=nil{
+				println(err.Error())
+				return nil, nil
+			}
+		}else {
+			var temp *privacy.CoinV1
+			temp, ind, err = ci.ToCoinV1()
+			if err!=nil{
+				println(err.Error())
+				return nil, nil
+			}
+			c = temp.CoinDetails
 		}
 		resultCoins = append(resultCoins, c)
 		resultIndexes = append(resultIndexes, ind)
@@ -205,8 +236,12 @@ func (params *InitParamsAsm) GetGenericParams() *TxPrivacyInitParams{
 		temp, _ := payInf.To()
 		pInfos = append(pInfos, temp)
 	}
-	var tid common.Hash
-	tid.NewHashFromStr(params.TokenID)
+	tid, err := getTokenIDFromString(params.TokenID)
+	if err!=nil{
+		println(err.Error())
+		return nil
+	}
+
 	md, err := metadata.ParseMetadata(params.Metadata)
 	if err!=nil{
 		println(string(params.Metadata))
@@ -219,7 +254,7 @@ func (params *InitParamsAsm) GetGenericParams() *TxPrivacyInitParams{
 		info = params.Info
 	}
 	ics, _ := params.GetInputCoins()
-	return &TxPrivacyInitParams{SenderSK: &params.SenderSK, PaymentInfo: pInfos, InputCoins: ics, Fee: params.Fee, HasPrivacy: params.HasPrivacy, TokenID: &tid, Metadata: md, Info: info}
+	return NewTxParams(&params.SenderSK, pInfos, ics, params.Fee, params.HasPrivacy, &tid, md, info)
 }
 
 type printedPaymentInfo struct {
@@ -287,6 +322,9 @@ type CoinInter struct {
 	Mask    		b58CompatBytes 	`json:"Randomness"`
 	Value 			printedUintStr 	`json:"Value"`
 	Amount 			b58CompatBytes 	`json:"CoinDetailsEncrypted"`
+
+	// for v1
+	SNDerivator     b58CompatBytes 	`json:"SNDerivator"`
 	// tag is nil unless confidential asset
 	AssetTag  		b58CompatBytes 	`json:"AssetTag"`
 }
@@ -371,7 +409,15 @@ func (c CoinInter) ToCoin() (*privacy.CoinV2, uint64, error){
 	ind := big.NewInt(0).SetBytes(c.Index)
 	return result, ind.Uint64(), nil
 }
-func GetCoinInter(coin *privacy.CoinV2) CoinInter{
+func GetCoinInter(coin privacy.PlainCoin) CoinInter{
+	var amount []byte = ScalarToBytes(nil)
+	var txr []byte = ScalarToBytes(nil)
+	cv2, ok := coin.(*privacy.CoinV2)
+	if ok{
+		amount = ScalarToBytes(cv2.GetAmount())
+		txr = coin.GetTxRandom().Bytes()
+	}
+
 	return CoinInter{
 		Version: printedUintStr(coin.GetVersion()),
 		Info: coin.GetInfo(),
@@ -380,12 +426,68 @@ func GetCoinInter(coin *privacy.CoinV2) CoinInter{
 		KeyImage: PointToBytes(coin.GetKeyImage()),
 		SharedRandom: ScalarToBytes(coin.GetSharedRandom()),
 		SharedConcealRandom: ScalarToBytes(coin.GetSharedConcealRandom()),
-		TxRandom: coin.GetTxRandom().Bytes(),
+		TxRandom: txr,
 		Mask: ScalarToBytes(coin.GetRandomness()),
 		Value: printedUintStr(coin.GetValue()),
-		Amount: ScalarToBytes(coin.GetAmount()),
+		Amount: amount,
 		AssetTag: PointToBytes(coin.GetAssetTag()),
+
+		SNDerivator: ScalarToBytes(coin.GetSNDerivator()),
 	}
+}
+
+func (c CoinInter) ToCoinV1() (*privacy.CoinV1, uint64, error){
+	var err error
+	var p *privacy.Point
+	result := &privacy.CoinV1{}
+	result.Init()
+	result.CoinDetails.SetInfo(c.Info)
+	if c.PublicKey.IsBlank(){
+		result.CoinDetails.SetPublicKey(nil)
+	}else{
+		p, err = (&privacy.Point{}).FromBytesS(c.PublicKey)
+		if err!=nil{
+			return nil, 0, err
+		}
+		result.CoinDetails.SetPublicKey(p)
+	}
+
+	if c.Commitment.IsBlank(){
+		result.CoinDetails.SetCommitment(nil)
+	}else{
+		p, err = (&privacy.Point{}).FromBytesS(c.Commitment)
+		if err!=nil{
+			return nil, 0, err
+		}
+		result.CoinDetails.SetCommitment(p)
+	}
+
+	if c.KeyImage.IsBlank(){
+		result.CoinDetails.SetKeyImage(nil)
+	}else{
+		p, err = (&privacy.Point{}).FromBytesS(c.KeyImage)
+		if err!=nil{
+			return nil, 0, err
+		}
+		result.CoinDetails.SetKeyImage(p)
+	}
+
+	result.CoinDetails.SetValue(uint64(c.Value))
+	if c.Mask.IsBlank(){
+		result.CoinDetails.SetRandomness(nil)
+	}else{
+		result.CoinDetails.SetRandomness((&privacy.Scalar{}).FromBytesS(c.Mask))
+	}
+
+	if c.SNDerivator.IsBlank(){
+		result.CoinDetails.SetSNDerivator(nil)
+	}else{
+		result.CoinDetails.SetSNDerivator((&privacy.Scalar{}).FromBytesS(c.SNDerivator))
+	}
+	result.CoinDetailsEncrypted.SetBytes([]byte(c.Amount))
+
+	ind := big.NewInt(0).SetBytes(c.Index)
+	return result, ind.Uint64(), nil
 }
 
 func ScalarToBytes(sc *privacy.Scalar) []byte{
@@ -400,27 +502,28 @@ func PointToBytes(sc *privacy.Point) []byte{
 	}
 	return sc.ToBytesS()
 }
-func (ci CoinInter) Bytes() []byte{
-	c, _, err := ci.ToCoin()
-	if err!=nil{
-		return nil
-	}
-	return c.Bytes()
-}
-func pad(arr []byte, length int) []byte{
-	result := make([]byte, length)
-	copy(result[length-len(arr):length], arr)
-	return result
-}
-func (ci *CoinInter) SetBytes(coinBytes []byte) error {
-	c := &privacy.CoinV2{}
-	err := c.SetBytes(coinBytes)
-	if err!=nil{
-		return err
-	}
-	*ci = GetCoinInter(c)
-	return nil
-}
+
+// func (ci CoinInter) Bytes() []byte{
+// 	c, _, err := ci.ToCoin()
+// 	if err!=nil{
+// 		return nil
+// 	}
+// 	return c.Bytes()
+// }
+// func pad(arr []byte, length int) []byte{
+// 	result := make([]byte, length)
+// 	copy(result[length-len(arr):length], arr)
+// 	return result
+// }
+// func (ci *CoinInter) SetBytes(coinBytes []byte) error {
+// 	c := &privacy.CoinV2{}
+// 	err := c.SetBytes(coinBytes)
+// 	if err!=nil{
+// 		return err
+// 	}
+// 	*ci = GetCoinInter(c)
+// 	return nil
+// }
 
 func (tx Tx) Hash() *common.Hash {
 	// leave out signature & its public key when hashing tx
@@ -612,7 +715,8 @@ func (tx *Tx) signMetadata(privateKey *privacy.PrivateKey) error {
 
 	// convert signature to byte array
 	tx.Metadata.SetSig(signature.Bytes())
-	fmt.Println("Signature Detail", tx.Metadata.GetSig())
+	// println("Signed MD")
+	// println(tx.Metadata.GetSig())
 	return nil
 }
 
@@ -697,7 +801,6 @@ func createPrivKeyMlsag(inputCoins []privacy.PlainCoin, outputCoins []*privacy.C
 	return privKeyMlsag, nil
 }
 
-
 func updateParamsWhenOverBalance(originPInfs *[]printedPaymentInfo, gParams *TxPrivacyInitParams, senderPaymentAddree privacy.PaymentAddress) error {
 	// Calculate sum of all output coins' value
 	sumOutputValue := uint64(0)
@@ -725,10 +828,21 @@ func updateParamsWhenOverBalance(originPInfs *[]printedPaymentInfo, gParams *TxP
 		temp.Amount = uint64(overBalance)
 		temp.PaymentAddress = senderPaymentAddree
 		changePaymentInfo := &printedPaymentInfo{}
+
 		changePaymentInfo.From(temp)
+		// println("change to", string(changePaymentInfo.PaymentAddress), "with amount", overBalance)
 		gParams.PaymentInfo = append(gParams.PaymentInfo, temp)
 		*originPInfs = append(*originPInfs, *changePaymentInfo)
 	}
 
 	return nil
+}
+
+func getTokenIDFromString(s string) (common.Hash, error){
+	if len(s)==0{
+		return common.PRVCoinID, nil
+	}else{
+		res, err := common.Hash{}.NewHashFromStr(s)
+		return *res, err
+	}
 }

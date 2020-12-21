@@ -6,17 +6,17 @@ import (
 	"encoding/hex"
 	"fmt"
 	// "github.com/ethereum/go-ethereum/common"
-	"log"
+	// "log"
 	"math/big"
 	"net"
-	"os"
-	"os/user"
-	"path/filepath"
-	"reflect"
+	// "os"
+	// "os/user"
+	// "path/filepath"
+	// "reflect"
 	"runtime"
 	"strconv"
 	"strings"
-	"unicode"
+	// "unicode"
 
 	"github.com/pkg/errors"
 )
@@ -26,66 +26,66 @@ import (
 // details.  This unexported version takes an operating system argument
 // primarily to enable the testing package to properly test the function by
 // forcing an operating system that is not the currently one.
-func appDataDir(goos, appName string, roaming bool) string {
-	if appName == "" || appName == "." {
-		return "."
-	}
+// func appDataDir(goos, appName string, roaming bool) string {
+// 	if appName == "" || appName == "." {
+// 		return "."
+// 	}
 
-	// The caller really shouldn't prepend the appName with a period, but
-	// if they do, handle it gracefully by trimming it.
-	appName = strings.TrimPrefix(appName, ".")
-	appNameUpper := string(unicode.ToUpper(rune(appName[0]))) + appName[1:]
-	appNameLower := string(unicode.ToLower(rune(appName[0]))) + appName[1:]
+// 	// The caller really shouldn't prepend the appName with a period, but
+// 	// if they do, handle it gracefully by trimming it.
+// 	appName = strings.TrimPrefix(appName, ".")
+// 	appNameUpper := string(unicode.ToUpper(rune(appName[0]))) + appName[1:]
+// 	appNameLower := string(unicode.ToLower(rune(appName[0]))) + appName[1:]
 
-	// Get the OS specific home directory via the Go standard lib.
-	var homeDir string
-	usr, err := user.Current()
-	if err == nil {
-		homeDir = usr.HomeDir
-	}
+// 	// Get the OS specific home directory via the Go standard lib.
+// 	var homeDir string
+// 	usr, err := user.Current()
+// 	if err == nil {
+// 		homeDir = usr.HomeDir
+// 	}
 
-	// Fall back to standard HOME environment variable that works
-	// for most POSIX OSes if the directory from the Go standard
-	// lib failed.
-	if err != nil || homeDir == "" {
-		homeDir = os.Getenv("HOME")
-	}
+// 	// Fall back to standard HOME environment variable that works
+// 	// for most POSIX OSes if the directory from the Go standard
+// 	// lib failed.
+// 	if err != nil || homeDir == "" {
+// 		homeDir = os.Getenv("HOME")
+// 	}
 
-	switch goos {
-	// Attempt to use the LOCALAPPDATA or APPDATA environment variable on
-	// Windows.
-	case "windows":
-		// Windows XP and before didn't have a LOCALAPPDATA, so fallback
-		// to regular APPDATA when LOCALAPPDATA is not set.
-		appData := os.Getenv("LOCALAPPDATA")
-		if roaming || appData == "" {
-			appData = os.Getenv("APPDATA")
-		}
+// 	switch goos {
+// 	// Attempt to use the LOCALAPPDATA or APPDATA environment variable on
+// 	// Windows.
+// 	case "windows":
+// 		// Windows XP and before didn't have a LOCALAPPDATA, so fallback
+// 		// to regular APPDATA when LOCALAPPDATA is not set.
+// 		appData := os.Getenv("LOCALAPPDATA")
+// 		if roaming || appData == "" {
+// 			appData = os.Getenv("APPDATA")
+// 		}
 
-		if appData != "" {
-			return filepath.Join(appData, appNameUpper)
-		}
+// 		if appData != "" {
+// 			return filepath.Join(appData, appNameUpper)
+// 		}
 
-	case "darwin":
-		if homeDir != "" {
-			return filepath.Join(homeDir, "Library",
-				"Application Support", appNameUpper)
-		}
+// 	case "darwin":
+// 		if homeDir != "" {
+// 			return filepath.Join(homeDir, "Library",
+// 				"Application Support", appNameUpper)
+// 		}
 
-	case "plan9":
-		if homeDir != "" {
-			return filepath.Join(homeDir, appNameLower)
-		}
+// 	case "plan9":
+// 		if homeDir != "" {
+// 			return filepath.Join(homeDir, appNameLower)
+// 		}
 
-	default:
-		if homeDir != "" {
-			return filepath.Join(homeDir, "."+appNameLower)
-		}
-	}
+// 	default:
+// 		if homeDir != "" {
+// 			return filepath.Join(homeDir, "."+appNameLower)
+// 		}
+// 	}
 
-	// Fall back to the current directory if all else fails.
-	return "."
-}
+// 	// Fall back to the current directory if all else fails.
+// 	return "."
+// }
 
 // AppDataDir returns an operating system specific directory to be used for
 // storing application data for an application.
@@ -108,27 +108,27 @@ func appDataDir(goos, appName string, roaming bool) string {
 //   Mac OS: $HOME/Library/Application Support/Myapp
 //   Windows: %LOCALAPPDATA%\Myapp
 //   Plan 9: $home/myapp
-func AppDataDir(appName string, roaming bool) string {
-	return appDataDir(runtime.GOOS, appName, roaming)
-}
+// func AppDataDir(appName string, roaming bool) string {
+// 	return appDataDir(runtime.GOOS, appName, roaming)
+// }
 
 // InterfaceSlice receives a slice which is a interface
 // and converts it into slice of interface
-func InterfaceSlice(slice interface{}) []interface{} {
-	s := reflect.ValueOf(slice)
-	if s.Kind() != reflect.Slice {
-		log.Println("InterfaceSlice() given a non-slice type")
-		return nil
-	}
+// func InterfaceSlice(slice interface{}) []interface{} {
+// 	s := reflect.ValueOf(slice)
+// 	if s.Kind() != reflect.Slice {
+// 		log.Println("InterfaceSlice() given a non-slice type")
+// 		return nil
+// 	}
 
-	ret := make([]interface{}, s.Len())
+// 	ret := make([]interface{}, s.Len())
 
-	for i := 0; i < s.Len(); i++ {
-		ret[i] = s.Index(i).Interface()
-	}
+// 	for i := 0; i < s.Len(); i++ {
+// 		ret[i] = s.Index(i).Interface()
+// 	}
 
-	return ret
-}
+// 	return ret
+// }
 
 // ParseListeners determines whether each listen address is IPv4 and IPv6 and
 // returns a slice of appropriate net.Addrs to listen on with TCP. It also
@@ -198,22 +198,22 @@ func ParseListener(addr string, netType string) (*SimpleAddr, error) {
 
 // SliceExists receives a slice and a item in interface type
 // checks whether the slice contain the item or not
-func SliceExists(slice interface{}, item interface{}) (bool, error) {
-	s := reflect.ValueOf(slice)
+// func SliceExists(slice interface{}, item interface{}) (bool, error) {
+// 	s := reflect.ValueOf(slice)
 
-	if s.Kind() != reflect.Slice {
-		return false, errors.New("SliceExists() given a non-slice type")
-	}
+// 	if s.Kind() != reflect.Slice {
+// 		return false, errors.New("SliceExists() given a non-slice type")
+// 	}
 
-	for i := 0; i < s.Len(); i++ {
-		interfacea := s.Index(i).Interface()
-		if interfacea == item {
-			return true, nil
-		}
-	}
+// 	for i := 0; i < s.Len(); i++ {
+// 		interfacea := s.Index(i).Interface()
+// 		if interfacea == item {
+// 			return true, nil
+// 		}
+// 	}
 
-	return false, nil
-}
+// 	return false, nil
+// }
 
 // GetShardIDFromLastByte receives a last byte of public key and
 // returns a corresponding shardID
@@ -270,17 +270,17 @@ func IndexOfStrInHashMap(v string, m map[Hash]string) int {
 
 // cleanAndExpandPath expands environment variables and leading ~ in the
 // passed path, cleans the result, and returns it.
-func CleanAndExpandPath(path string, defaultHomeDir string) string {
-	// Expand initial ~ to OS specific home directory.
-	if strings.HasPrefix(path, "~") {
-		homeDir := filepath.Dir(defaultHomeDir)
-		path = strings.Replace(path, "~", homeDir, 1)
-	}
+// func CleanAndExpandPath(path string, defaultHomeDir string) string {
+// 	// Expand initial ~ to OS specific home directory.
+// 	if strings.HasPrefix(path, "~") {
+// 		homeDir := filepath.Dir(defaultHomeDir)
+// 		path = strings.Replace(path, "~", homeDir, 1)
+// 	}
 
-	// NOTE: The os.ExpandEnv doesn't work with Windows-style %VARIABLE%,
-	// but they variables can still be expanded via POSIX-style $VARIABLE.
-	return filepath.Clean(os.ExpandEnv(path))
-}
+// 	// NOTE: The os.ExpandEnv doesn't work with Windows-style %VARIABLE%,
+// 	// but they variables can still be expanded via POSIX-style $VARIABLE.
+// 	return filepath.Clean(os.ExpandEnv(path))
+// }
 
 // RandBigIntMaxRange generates a big int with maximum value
 func RandBigIntMaxRange(max *big.Int) (*big.Int, error) {
@@ -448,13 +448,13 @@ func CheckError(errs ...error) error {
 }
 
 // GetENV to get environment variable by key
-func GetENV(key, fallback string) string {
-	value, ok := os.LookupEnv(key)
-	if !ok {
-		return fallback
-	}
-	return value
-}
+// func GetENV(key, fallback string) string {
+// 	value, ok := os.LookupEnv(key)
+// 	if !ok {
+// 		return fallback
+// 	}
+// 	return value
+// }
 
 func GetValidStaker(committees []string, stakers []string) []string {
 	validStaker := []string{}
@@ -497,14 +497,14 @@ func BytesSToUint16(b []byte) (uint16, error) {
 	return BytesToUint16(bytes), nil
 }
 
-func IsPortalToken(tokenIDStr string) bool {
-	isExisted, _ := SliceExists(PortalSupportedIncTokenIDs, tokenIDStr)
-	return isExisted
-}
+// func IsPortalToken(tokenIDStr string) bool {
+// 	isExisted, _ := SliceExists(PortalSupportedIncTokenIDs, tokenIDStr)
+// 	return isExisted
+// }
 
-func IsPortalExchangeRateToken(tokenIDStr string) bool {
-	return IsPortalToken(tokenIDStr) || tokenIDStr == PRVIDStr
-}
+// func IsPortalExchangeRateToken(tokenIDStr string) bool {
+// 	return IsPortalToken(tokenIDStr) || tokenIDStr == PRVIDStr
+// }
 
 // CopyBytes returns an exact copy of the provided bytes.
 func CopyBytes(b []byte) (copiedBytes []byte) {

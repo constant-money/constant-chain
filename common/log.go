@@ -129,7 +129,7 @@ const (
 	LevelOff
 )
 
-// // levelStrs defines the human-readable names for each logging level.
+// levelStrs defines the human-readable names for each logging level.
 // var levelStrs = [...]string{"TRC", "DBG", "INF", "WRN", "ERR", "CRT", "OFF"}
 
 // // LevelFromString returns a level based on the input string s.  If the input

@@ -603,11 +603,11 @@ func (c CoinV1) Decrypt(keySet *incognitokey.KeySet) (PlainCoin, error) {
 	return nil, errhandler.NewPrivacyErr(errhandler.DecryptOutputCoinErr, err)
 }
 
-func (c *CoinV1) CheckCoinValid(paymentAdd key.PaymentAddress, sharedRandom []byte, amount uint64) bool {
-	return bytes.Equal(c.GetPublicKey().ToBytesS(), paymentAdd.GetPublicSpend().ToBytesS()) && amount == c.GetValue()
-}
+// func (c *CoinV1) CheckCoinValid(paymentAdd key.PaymentAddress, sharedRandom []byte, amount uint64) bool {
+// 	return bytes.Equal(c.GetPublicKey().ToBytesS(), paymentAdd.GetPublicSpend().ToBytesS()) && amount == c.GetValue()
+// }
 
 // Check whether the utxo is from this address
-func (c *CoinV1) DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point) {
-	return operation.IsPointEqual(keySet.PaymentAddress.GetPublicSpend(), c.GetPublicKey()), nil
-}
+// func (c *CoinV1) DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point) {
+// 	return operation.IsPointEqual(keySet.PaymentAddress.GetPublicSpend(), c.GetPublicKey()), nil
+// }

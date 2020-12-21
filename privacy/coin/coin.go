@@ -1,7 +1,7 @@
 package coin
 
 import (
-	"encoding/json"
+// 	"encoding/json"
 
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy/key"
@@ -35,8 +35,8 @@ type Coin interface {
 	Bytes() []byte
 	SetBytes([]byte) error
 
-	CheckCoinValid(key.PaymentAddress, []byte, uint64) bool
-	DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point)
+	// CheckCoinValid(key.PaymentAddress, []byte, uint64) bool
+	// DoesCoinBelongToKeySet(keySet *incognitokey.KeySet) (bool, *operation.Point)
 }
 
 type PlainCoin interface {
@@ -92,36 +92,36 @@ func NewPlainCoinFromByte(b []byte) (PlainCoin, error) {
 	return c, err
 }
 
-// First byte should determine the version or json marshal "34"
-func NewCoinFromByte(b []byte) (Coin, error) {
-	coinV1 := new(CoinV1)
-	coinV2 := new(CoinV2)
-	if errV2 := json.Unmarshal(b, coinV2); errV2 != nil {
-		if errV1 := json.Unmarshal(b, coinV1); errV1 != nil {
-			version := b[0]
-			if version == CoinVersion2 {
-				err := coinV2.SetBytes(b)
-				return coinV2, err
-			} else {
-				err := coinV1.SetBytes(b)
-				return coinV1, err
-			}
-		} else {
-			return coinV1, nil
-		}
-	} else {
-		return coinV2, nil
-	}
-}
+// // First byte should determine the version or json marshal "34"
+// func NewCoinFromByte(b []byte) (Coin, error) {
+// 	coinV1 := new(CoinV1)
+// 	coinV2 := new(CoinV2)
+// 	if errV2 := json.Unmarshal(b, coinV2); errV2 != nil {
+// 		if errV1 := json.Unmarshal(b, coinV1); errV1 != nil {
+// 			version := b[0]
+// 			if version == CoinVersion2 {
+// 				err := coinV2.SetBytes(b)
+// 				return coinV2, err
+// 			} else {
+// 				err := coinV1.SetBytes(b)
+// 				return coinV1, err
+// 			}
+// 		} else {
+// 			return coinV1, nil
+// 		}
+// 	} else {
+// 		return coinV2, nil
+// 	}
+// }
 
-func ParseCoinsFromBytes(data []json.RawMessage) ([]Coin, error) {
-	coinList := make([]Coin, len(data))
-	for i := 0; i < len(data); i++ {
-		if coin, err := NewCoinFromByte(data[i]); err != nil {
-			return nil, err
-		} else {
-			coinList[i] = coin
-		}
-	}
-	return coinList, nil
-}
+// func ParseCoinsFromBytes(data []json.RawMessage) ([]Coin, error) {
+// 	coinList := make([]Coin, len(data))
+// 	for i := 0; i < len(data); i++ {
+// 		if coin, err := NewCoinFromByte(data[i]); err != nil {
+// 			return nil, err
+// 		} else {
+// 			coinList[i] = coin
+// 		}
+// 	}
+// 	return coinList, nil
+// }

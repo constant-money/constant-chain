@@ -23,34 +23,34 @@ func CmprG2(pn *bn256.G2) []byte {
 }
 
 // DecmprG1 is
-func DecmprG1(bytes []byte) (*bn256.G1, error) {
-	bytesTemp := []byte{}
-	bytesTemp = append(bytesTemp, bytes...)
-	if len(bytesTemp) != CCmprPnSz {
-		return nil, NewBLSSignatureError(InvalidInputParamsSizeErr, nil)
-	}
-	oddPoint := ((bytesTemp[0] & CMaskByte) != 0x00)
-	if oddPoint {
-		bytesTemp[0] &= CNotMaskB
-	}
-	xCoor := big.NewInt(1)
-	xCoor.SetBytes(bytesTemp)
-	pn, err := xCoor2G1P(xCoor, oddPoint)
-	if err != nil {
-		return nil, NewBLSSignatureError(DecompressFromByteErr, nil)
-	}
-	return pn, nil
-}
+// func DecmprG1(bytes []byte) (*bn256.G1, error) {
+// 	bytesTemp := []byte{}
+// 	bytesTemp = append(bytesTemp, bytes...)
+// 	if len(bytesTemp) != CCmprPnSz {
+// 		return nil, NewBLSSignatureError(InvalidInputParamsSizeErr, nil)
+// 	}
+// 	oddPoint := ((bytesTemp[0] & CMaskByte) != 0x00)
+// 	if oddPoint {
+// 		bytesTemp[0] &= CNotMaskB
+// 	}
+// 	xCoor := big.NewInt(1)
+// 	xCoor.SetBytes(bytesTemp)
+// 	pn, err := xCoor2G1P(xCoor, oddPoint)
+// 	if err != nil {
+// 		return nil, NewBLSSignatureError(DecompressFromByteErr, nil)
+// 	}
+// 	return pn, nil
+// }
 
-// DecmprG2 is
-func DecmprG2(bytes []byte) (*bn256.G2, error) {
-	pn := new(bn256.G2)
-	_, err := pn.Unmarshal(bytes)
-	if err != nil {
-		return nil, NewBLSSignatureError(DecompressFromByteErr, nil)
-	}
-	return pn, nil
-}
+// // DecmprG2 is
+// func DecmprG2(bytes []byte) (*bn256.G2, error) {
+// 	pn := new(bn256.G2)
+// 	_, err := pn.Unmarshal(bytes)
+// 	if err != nil {
+// 		return nil, NewBLSSignatureError(DecompressFromByteErr, nil)
+// 	}
+// 	return pn, nil
+// }
 
 func xCoor2G1P(xCoor *big.Int, oddPoint bool) (*bn256.G1, error) {
 	pnBytesArr := I2Bytes(xCoor, CBigIntSz)

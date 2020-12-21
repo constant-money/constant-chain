@@ -94,10 +94,10 @@ type SchnorrPrivateKey = schnorr.SchnorrPrivateKey
 
 type Coin = coin.Coin
 type PlainCoin = coin.PlainCoin
-// type PlainCoinV1 = coin.PlainCoinV1
-// type CoinV1 = coin.CoinV1
+type PlainCoinV1 = coin.PlainCoinV1
+type CoinV1 = coin.CoinV1
 type CoinV2 = coin.CoinV2
-// type CoinObject = coin.CoinObject
+type CoinObject = coin.CoinObject
 type TxRandom = coin.TxRandom
 
 type Proof = proof.Proof
@@ -105,7 +105,7 @@ type Proof = proof.Proof
 // type PaymentWitnessParam = zkp.PaymentWitnessParam
 // type PaymentWitness = zkp.PaymentWitness
 type ProofV2 = privacy_v2.PaymentProofV2
-// type ProofForConversion = privacy_v2.ConversionProofVer1ToVer2
+type ProofForConversion = privacy_v2.ConversionProofVer1ToVer2
 type AggregatedRangeProof = agg_interface.AggregatedRangeProof
 // type AggregatedRangeProofV1 = aggregatedrange.AggregatedRangeProof
 type AggregatedRangeProofV2 = bulletproofs.AggregatedRangeProof
@@ -113,15 +113,15 @@ type AggregatedRangeProofV2 = bulletproofs.AggregatedRangeProof
 // var LoggerV1 = &zkp.Logger
 var LoggerV2 = &privacy_v2.Logger
 
-func NewProofWithVersion(version int8) Proof {
-	var result Proof
-	if version == 1 {
-		// result = &zkp.PaymentProof{}
-	} else {
-		result = &privacy_v2.PaymentProofV2{}
-	}
-	return result
-}
+// func NewProofWithVersion(version int8) Proof {
+// 	var result Proof
+// 	if version == 1 {
+// 		result = &zkp.PaymentProof{}
+// 	} else {
+// 		result = &privacy_v2.PaymentProofV2{}
+// 	}
+// 	return result
+// }
 
 func ArrayScalarToBytes(arr *[]*operation.Scalar) ([]byte, error) {
 	scalarArr := *arr

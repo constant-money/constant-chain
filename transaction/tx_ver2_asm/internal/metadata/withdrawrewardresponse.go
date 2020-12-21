@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/pkg/errors"
+	// "github.com/pkg/errors"
 	"strconv"
 )
 
@@ -26,9 +26,9 @@ func NewWithDrawRewardResponse(metaRequest *WithDrawRewardRequest, reqID *common
 		RewardPublicKey: metaRequest.PaymentAddress.Pk[:],
 	}
 	result.Version = metaRequest.Version
-	if ok, err := common.SliceExists(AcceptedWithdrawRewardRequestVersion, result.Version); !ok || err != nil {
-		return nil, errors.Errorf("Invalid version %d", result.Version)
-	}
+	// if ok, err := common.SliceExists(AcceptedWithdrawRewardRequestVersion, result.Version); !ok || err != nil {
+	// 	return nil, errors.Errorf("Invalid version %d", result.Version)
+	// }
 	return result, nil
 }
 

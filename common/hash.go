@@ -172,21 +172,21 @@ func (hashObj *Hash) Cmp(target *Hash) (int, error) {
 // 	return r
 // }
 
-func HashArrayInterface(target interface{}) (Hash, error) {
-	arr := InterfaceSlice(target)
-	//if len(arr) == 0 {
-	//	return Hash{}, errors.New("interface input is not an array")
-	//}
-	temp := []byte{0}
-	for value := range arr {
-		valueBytes, err := json.Marshal(&value)
-		if err != nil {
-			return Hash{}, err
-		}
-		temp = append(temp, valueBytes...)
-	}
-	return HashH(temp), nil
-}
+// func HashArrayInterface(target interface{}) (Hash, error) {
+// 	arr := InterfaceSlice(target)
+// 	//if len(arr) == 0 {
+// 	//	return Hash{}, errors.New("interface input is not an array")
+// 	//}
+// 	temp := []byte{0}
+// 	for value := range arr {
+// 		valueBytes, err := json.Marshal(&value)
+// 		if err != nil {
+// 			return Hash{}, err
+// 		}
+// 		temp = append(temp, valueBytes...)
+// 	}
+// 	return HashH(temp), nil
+// }
 
 func HashArrayOfHashArray(target []Hash) Hash {
 	temp := []byte{0}

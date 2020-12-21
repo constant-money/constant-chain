@@ -8,6 +8,7 @@ import (
 	"github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes/blsmultisig"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/incognitochain/incognito-chain/privacy/privacy_v1/hybridencryption"
 	"github.com/incognitochain/incognito-chain/wallet"
 
 	// "github.com/incognitochain/incognito-chain/metadata"
@@ -65,10 +66,63 @@ func CreateTransaction(_ js.Value, jsInputs []js.Value) (interface{}, error){
 			return "", err
 		}
 	}
+	res := b58.Encode(txJson, common.ZeroByte)
 
-	// lockTimeBytes := common.AddPaddingBigInt(new(big.Int).SetInt64(tx.LockTime), 8)
-	// resBytes := append(txJson, lockTimeBytes...)
+	return res, nil
+}
 
+func CreateConvertTx(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+
+	params := &InitParamsAsm{}
+	// DEBUG
+	println("Before parse - TX parameters")
+	println(args)
+	err := json.Unmarshal([]byte(args), params)
+	if err!=nil{
+		println(err.Error())
+		return "", err
+	}
+	println("After parse - TX parameters")
+	thoseBytesAgain, _ := json.Marshal(params)
+	println(string(thoseBytesAgain))
+	// END DEBUG
+
+	var txJson []byte
+	if params.TokenParams==nil{			
+		tx := &Tx{}
+		err = InitConversionASM(tx, params)
+
+		if err != nil {
+			println("Can not create tx: ", err.Error())
+			return "", err
+		}
+
+		// serialize tx json
+		txJson, err = json.Marshal(tx)
+		if err != nil {
+			println("Can not marshal tx: ", err)
+			return "", err
+		}
+	}else{
+		tx := &TxToken{}
+		err = InitTokenConversionASM(tx, params)
+
+		if err != nil {
+			println("Can not create tx: ", err.Error())
+			return "", err
+		}
+
+		// serialize tx json
+		txJson, err = json.Marshal(tx)
+		if err != nil {
+			println("Error marshalling tx: ", err)
+			return "", err
+		}
+	}
 	res := b58.Encode(txJson, common.ZeroByte)
 
 	return res, nil
@@ -116,20 +170,41 @@ func DecryptCoin(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		KeySet 	string
 	}{}
 	err = json.Unmarshal([]byte(paramStr), temp)
-	c, _, err := temp.Coin.ToCoin()
 	if err!=nil{
 		return "", err
 	}
-	kw, err := wallet.Base58CheckDeserialize(temp.KeySet)
+	tempKw, err := wallet.Base58CheckDeserialize(temp.KeySet)
 	if err!=nil{
 		return "", err
 	}
-	_, err = c.Decrypt(&kw.KeySet)
-	if err!=nil{
-		println(err.Error())
-		return "", err
+	ks := tempKw.KeySet
+	var res CoinInter
+	if temp.Coin.Version==2{
+		c, _, err := temp.Coin.ToCoin()
+		if err!=nil{
+			return "", err
+		}
+		
+		_, err = c.Decrypt(&ks)
+		if err!=nil{
+			println(err.Error())
+			return "", err
+		}
+		res = GetCoinInter(c)
+	}else if temp.Coin.Version==1{
+		c, _, err := temp.Coin.ToCoinV1()
+		if err!=nil{
+			return "", err
+		}
+		
+		pc, err := c.Decrypt(&ks)
+		if err!=nil{
+			println(err.Error())
+			return "", err
+		}
+		res = GetCoinInter(pc)
 	}
-	res := GetCoinInter(c)
+	
 	res.Index = temp.Coin.Index
 	resJson, err := json.Marshal(res)
 	if err != nil {
@@ -151,6 +226,9 @@ func CreateCoin(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		TokenID			string
 	}{}
 	err = json.Unmarshal([]byte(paramStr), temp)
+	if err!=nil{
+		return "", err
+	}
 	pInf, err := temp.PaymentInfo.To()
 	if err!=nil{
 		return "", err
@@ -164,7 +242,7 @@ func CreateCoin(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		}
 	}else{
 		var tokenID common.Hash
-		tokenID.NewHashFromStr(temp.TokenID)
+		tokenID, _ = getTokenIDFromString(temp.TokenID)
 		c, _, err = privacy.NewCoinCA(pInf, &tokenID)
 		if err!=nil{
 			println(err.Error())
@@ -194,5 +272,47 @@ func GenerateBLSKeyPairFromSeed(_ js.Value, jsInputs []js.Value) (interface{}, e
 	keyPairBytes = append(keyPairBytes, blsmultisig.CmprG2(publicKey)...)
 	keyPairEncode := b64.EncodeToString(keyPairBytes)
 	return keyPairEncode, nil
+}
+
+func HybridEncrypt(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	
+	raw, _ := b64.DecodeString(args)
+	publicKeyBytes := raw[0:privacy.Ed25519KeySize]
+	publicKeyPoint, err := new(privacy.Point).FromBytesS(publicKeyBytes)
+	if err != nil {
+		return "", errors.Errorf("Invalid public key encryption")
+	}
+
+	msgBytes := raw[privacy.Ed25519KeySize:]
+	ciphertext, err := hybridencryption.HybridEncrypt(msgBytes, publicKeyPoint)
+	if err != nil{
+		return "", err
+	}
+	return b64.EncodeToString(ciphertext.Bytes()), nil
+}
+
+func HybridDecrypt(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	
+	raw, _ := b64.DecodeString(args)
+	privateKeyBytes := raw[0:privacy.Ed25519KeySize]
+	privateKeyScalar := new(privacy.Scalar).FromBytesS(privateKeyBytes)
+
+	ciphertextBytes := raw[privacy.Ed25519KeySize:]
+	ciphertext := new(hybridencryption.HybridCipherText)
+	ciphertext.SetBytes(ciphertextBytes)
+
+	plaintextBytes, err := hybridencryption.HybridDecrypt(ciphertext, privateKeyScalar)
+	if err != nil{
+		return "", err
+	}
+	return b64.EncodeToString(plaintextBytes), nil
 }
 

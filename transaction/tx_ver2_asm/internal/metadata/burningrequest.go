@@ -39,6 +39,8 @@ func NewBurningRequest(
 	return burningReq, nil
 }
 
+func (bReq *BurningRequest) ShouldSignMetaData() bool { return true }
+
 func (bReq BurningRequest) Hash() *common.Hash {
 	record := bReq.MetadataBase.Hash().String()
 	record += bReq.BurnerAddress.String()
@@ -51,3 +53,17 @@ func (bReq BurningRequest) Hash() *common.Hash {
 	hash := common.HashH([]byte(record))
 	return &hash
 }
+
+func (bReq BurningRequest) HashWithoutSig() *common.Hash {
+	record := bReq.MetadataBase.Hash().String()
+	record += bReq.BurnerAddress.String()
+	record += bReq.TokenID.String()
+	record += strconv.FormatUint(bReq.BurningAmount, 10)
+	record += bReq.TokenName
+	record += bReq.RemoteAddress
+
+	// final hash
+	hash := common.HashH([]byte(record))
+	return &hash
+}
+

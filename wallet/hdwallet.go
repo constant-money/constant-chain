@@ -2,8 +2,8 @@ package wallet
 
 import (
 	"bytes"
-	"crypto/hmac"
-	"crypto/sha512"
+	// "crypto/hmac"
+	// "crypto/sha512"
 	"errors"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -25,69 +25,69 @@ type KeyWallet struct {
 
 // NewMasterKey creates a new master extended PubKey from a Seed
 // Seed is a bytes array which any size
-func NewMasterKey(seed []byte) (*KeyWallet, error) {
-	// Generate PubKey and chaincode
-	hmacObj := hmac.New(sha512.New, []byte("Incognito Seed"))
-	_, err := hmacObj.Write(seed)
-	if err != nil {
-		Logger.log.Error(err)
-		return nil, err
-	}
-	intermediary := hmacObj.Sum(nil)
+// func NewMasterKey(seed []byte) (*KeyWallet, error) {
+// 	// Generate PubKey and chaincode
+// 	hmacObj := hmac.New(sha512.New, []byte("Incognito Seed"))
+// 	_, err := hmacObj.Write(seed)
+// 	if err != nil {
+// 		Logger.log.Error(err)
+// 		return nil, err
+// 	}
+// 	intermediary := hmacObj.Sum(nil)
 
-	// Split it into our PubKey and chain code
-	keyBytes := intermediary[:32]  // use to create master private/public keypair
-	chainCode := intermediary[32:] // be used with public PubKey (in keypair) for new Child keys
+// 	// Split it into our PubKey and chain code
+// 	keyBytes := intermediary[:32]  // use to create master private/public keypair
+// 	chainCode := intermediary[32:] // be used with public PubKey (in keypair) for new Child keys
 
-	keySet := (&incognitokey.KeySet{}).GenerateKey(keyBytes)
+// 	keySet := (&incognitokey.KeySet{}).GenerateKey(keyBytes)
 
-	// Create the PubKey struct
-	key := &KeyWallet{
-		ChainCode:   chainCode,
-		KeySet:      *keySet,
-		Depth:       0x00,
-		ChildNumber: []byte{0x00, 0x00, 0x00, 0x00},
-	}
+// 	// Create the PubKey struct
+// 	key := &KeyWallet{
+// 		ChainCode:   chainCode,
+// 		KeySet:      *keySet,
+// 		Depth:       0x00,
+// 		ChildNumber: []byte{0x00, 0x00, 0x00, 0x00},
+// 	}
 
-	return key, nil
-}
+// 	return key, nil
+// }
 
 // NewChildKey derives a Child KeyWallet from a given parent as outlined by bip32
 // 2 child keys is derived from one key and a same child index are the same
-func (key *KeyWallet) NewChildKey(childIdx uint32) (*KeyWallet, error) {
-	intermediary, err := key.getIntermediary(childIdx)
-	if err != nil {
-		return nil, NewWalletError(NewChildKeyError, err)
-	}
+// func (key *KeyWallet) NewChildKey(childIdx uint32) (*KeyWallet, error) {
+// 	intermediary, err := key.getIntermediary(childIdx)
+// 	if err != nil {
+// 		return nil, NewWalletError(NewChildKeyError, err)
+// 	}
 
-	newSeed := []byte{}
-	newSeed = append(newSeed[:], intermediary[:32]...)
-	newKeyset := (&incognitokey.KeySet{}).GenerateKey(newSeed)
-	// Create Child KeySet with data common to all both scenarios
-	childKey := &KeyWallet{
-		ChildNumber: common.Uint32ToBytes(childIdx),
-		ChainCode:   intermediary[32:],
-		Depth:       key.Depth + 1,
-		KeySet:      *newKeyset,
-	}
+// 	newSeed := []byte{}
+// 	newSeed = append(newSeed[:], intermediary[:32]...)
+// 	newKeyset := (&incognitokey.KeySet{}).GenerateKey(newSeed)
+// 	// Create Child KeySet with data common to all both scenarios
+// 	childKey := &KeyWallet{
+// 		ChildNumber: common.Uint32ToBytes(childIdx),
+// 		ChainCode:   intermediary[32:],
+// 		Depth:       key.Depth + 1,
+// 		KeySet:      *newKeyset,
+// 	}
 
-	return childKey, nil
-}
+// 	return childKey, nil
+// }
 
 // getIntermediary
-func (key *KeyWallet) getIntermediary(childIdx uint32) ([]byte, error) {
-	childIndexBytes := common.Uint32ToBytes(childIdx)
+// func (key *KeyWallet) getIntermediary(childIdx uint32) ([]byte, error) {
+// 	childIndexBytes := common.Uint32ToBytes(childIdx)
 
-	var data []byte
-	data = append(data, childIndexBytes...)
+// 	var data []byte
+// 	data = append(data, childIndexBytes...)
 
-	hmacObj := hmac.New(sha512.New, key.ChainCode)
-	_, err := hmacObj.Write(data)
-	if err != nil {
-		return nil, err
-	}
-	return hmacObj.Sum(nil), nil
-}
+// 	hmacObj := hmac.New(sha512.New, key.ChainCode)
+// 	_, err := hmacObj.Write(data)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	return hmacObj.Sum(nil), nil
+// }
 
 // Serialize receives keyType and serializes key which has keyType to bytes array
 // and append 4-byte checksum into bytes array

@@ -16,7 +16,7 @@ func CalculateSize(meta Metadata) uint64 {
 
 func ParseMetadata(raw json.RawMessage) (Metadata, error) {
 	var err error
-	if raw == nil {
+	if raw == nil || string(raw)=="null" {
 		return nil, nil
 	}
 

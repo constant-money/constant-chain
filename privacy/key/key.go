@@ -2,6 +2,7 @@ package key
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
 )
@@ -55,6 +56,28 @@ func (viewKey ViewingKey) GetPrivateView() *operation.Scalar {
 type OTAKey struct{
 	pk        PublicKey //32 bytes: used to
 	otaSecret PrivateOTAKey
+}
+
+func (k *OTAKey) MarshalJSON() ([]byte, error){
+	temp := struct{
+		Pk        PublicKey
+		OTASecret PrivateOTAKey
+	}{k.pk, k.otaSecret}
+	return json.Marshal(temp)
+}
+
+func UnmarshalJSON(b []byte, k *OTAKey) error{
+	temp := struct{
+		Pk        PublicKey
+		OTASecret PrivateOTAKey
+	}{}
+	err := json.Unmarshal(b, temp)
+	if err!=nil{
+		return err
+	}
+	k.pk = temp.Pk
+	k.otaSecret = temp.OTASecret
+	return nil
 }
 
 func (otaKey OTAKey) GetPublicSpend() *operation.Point {

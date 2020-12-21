@@ -1,13 +1,13 @@
 package privacy_v2
 
 import (
-	"bytes"
+	// "bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"fmt"
+	// "fmt"
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/privacy/key"
+	// "github.com/incognitochain/incognito-chain/privacy/key"
 	"github.com/incognitochain/incognito-chain/privacy/privacy_v1/zeroknowledge/utils"
 
 	"github.com/incognitochain/incognito-chain/privacy/coin"
@@ -291,130 +291,130 @@ func ProveConversion(inputCoins []coin.PlainCoin, outputCoins []*coin.CoinV2, se
 	return proof, nil
 }
 
-func (proof *ConversionProofVer1ToVer2) ValidateSanity(additionalData interface{}) (bool, error) {
-	if proof.Version != ConversionProofVersion {
-		return false, errors.New("Proof version of ConversionProof is not right")
-	}
-	if len(proof.outputCoins) != 1 {
-		return false, errors.New("ConversionProof len(outputCoins) should be 1, found len(outputCoins) != 1")
-	}
-	for i := 0; i < len(proof.serialNumberNoPrivacyProof); i++ {
-		if !proof.serialNumberNoPrivacyProof[i].ValidateSanity() {
-			return false, errors.New("validate sanity Serial number no privacy proof failed")
-		}
-	}
-	if len(proof.inputCoins) != len(proof.serialNumberNoPrivacyProof) {
-		return false, errors.New("validate sanity Serial number length is not the same with input coins length")
-	}
-	// check input coins without privacy
-	for _, c := range proof.inputCoins {
-		if c.GetCommitment()==nil || !c.GetCommitment().PointValid() {
-			return false, errors.New("validate sanity CoinCommitment of input coin failed")
-		}
-		if c.GetPublicKey()==nil || !c.GetPublicKey().PointValid() {
-			return false, errors.New("validate sanity PublicKey of input coin failed")
-		}
-		if c.GetKeyImage()==nil || !c.GetKeyImage().PointValid() {
-			return false, errors.New("validate sanity Serial number of input coin failed")
-		}
-		if c.GetRandomness()==nil || !c.GetRandomness().ScalarValid() {
-			return false, errors.New("validate sanity Randomness of input coin failed")
-		}
-		if c.GetSNDerivator()==nil || !c.GetSNDerivator().ScalarValid() {
-			return false, errors.New("validate sanity SNDerivator of input coin failed")
-		}
-		if c.IsEncrypted() {
-			return false, errors.New("validate sanity input coin isEncrypted failed")
-		}
-	}
+// func (proof *ConversionProofVer1ToVer2) ValidateSanity(additionalData interface{}) (bool, error) {
+// 	if proof.Version != ConversionProofVersion {
+// 		return false, errors.New("Proof version of ConversionProof is not right")
+// 	}
+// 	if len(proof.outputCoins) != 1 {
+// 		return false, errors.New("ConversionProof len(outputCoins) should be 1, found len(outputCoins) != 1")
+// 	}
+// 	for i := 0; i < len(proof.serialNumberNoPrivacyProof); i++ {
+// 		if !proof.serialNumberNoPrivacyProof[i].ValidateSanity() {
+// 			return false, errors.New("validate sanity Serial number no privacy proof failed")
+// 		}
+// 	}
+// 	if len(proof.inputCoins) != len(proof.serialNumberNoPrivacyProof) {
+// 		return false, errors.New("validate sanity Serial number length is not the same with input coins length")
+// 	}
+// 	// check input coins without privacy
+// 	for _, c := range proof.inputCoins {
+// 		if c.GetCommitment()==nil || !c.GetCommitment().PointValid() {
+// 			return false, errors.New("validate sanity CoinCommitment of input coin failed")
+// 		}
+// 		if c.GetPublicKey()==nil || !c.GetPublicKey().PointValid() {
+// 			return false, errors.New("validate sanity PublicKey of input coin failed")
+// 		}
+// 		if c.GetKeyImage()==nil || !c.GetKeyImage().PointValid() {
+// 			return false, errors.New("validate sanity Serial number of input coin failed")
+// 		}
+// 		if c.GetRandomness()==nil || !c.GetRandomness().ScalarValid() {
+// 			return false, errors.New("validate sanity Randomness of input coin failed")
+// 		}
+// 		if c.GetSNDerivator()==nil || !c.GetSNDerivator().ScalarValid() {
+// 			return false, errors.New("validate sanity SNDerivator of input coin failed")
+// 		}
+// 		if c.IsEncrypted() {
+// 			return false, errors.New("validate sanity input coin isEncrypted failed")
+// 		}
+// 	}
 
-	// check output coins without privacy
-	c := proof.outputCoins[0]
-	if c.GetCommitment()==nil || !c.GetCommitment().PointValid() {
-		return false, errors.New("validate sanity CoinCommitment of output coin failed")
-	}
-	if c.GetPublicKey()==nil || !c.GetPublicKey().PointValid() {
-		return false, errors.New("validate sanity PublicKey of output coin failed")
-	}
-	if c.GetRandomness()==nil || !c.GetRandomness().ScalarValid() {
-		return false, errors.New("validate sanity Randomness of output coin failed")
-	}
-	if c.IsEncrypted() {
-		return false, errors.New("validate sanity input coin isEncrypted failed")
-	}
-	return true, nil
-}
+// 	// check output coins without privacy
+// 	c := proof.outputCoins[0]
+// 	if c.GetCommitment()==nil || !c.GetCommitment().PointValid() {
+// 		return false, errors.New("validate sanity CoinCommitment of output coin failed")
+// 	}
+// 	if c.GetPublicKey()==nil || !c.GetPublicKey().PointValid() {
+// 		return false, errors.New("validate sanity PublicKey of output coin failed")
+// 	}
+// 	if c.GetRandomness()==nil || !c.GetRandomness().ScalarValid() {
+// 		return false, errors.New("validate sanity Randomness of output coin failed")
+// 	}
+// 	if c.IsEncrypted() {
+// 		return false, errors.New("validate sanity input coin isEncrypted failed")
+// 	}
+// 	return true, nil
+// }
 
-func (proof ConversionProofVer1ToVer2) Verify(boolParams map[string]bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, additionalData interface{}) (bool, error) {
-	//Step to verify ConversionProofVer1ToVer2
-	//	- verify sumInput = sumOutput + fee
-	//	- verify if serial number of each input coin has been derived correctly
-	//	- verify input coins' randomness
-	//	- verify if output coins' commitment has been calculated correctly
-	hasPrivacy, ok := boolParams["hasPrivacy"]
-	if !ok {
-		hasPrivacy = false
-	}
+// func (proof ConversionProofVer1ToVer2) Verify(boolParams map[string]bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, additionalData interface{}) (bool, error) {
+// 	//Step to verify ConversionProofVer1ToVer2
+// 	//	- verify sumInput = sumOutput + fee
+// 	//	- verify if serial number of each input coin has been derived correctly
+// 	//	- verify input coins' randomness
+// 	//	- verify if output coins' commitment has been calculated correctly
+// 	hasPrivacy, ok := boolParams["hasPrivacy"]
+// 	if !ok {
+// 		hasPrivacy = false
+// 	}
 
-	if hasPrivacy {
-		return false, errors.New("ConversionProof does not have privacy, something is wrong")
-	}
-	sumInput, sumOutput := uint64(0), uint64(0)
+// 	if hasPrivacy {
+// 		return false, errors.New("ConversionProof does not have privacy, something is wrong")
+// 	}
+// 	sumInput, sumOutput := uint64(0), uint64(0)
 
-	for i := 0; i < len(proof.inputCoins); i += 1 {
-		if proof.inputCoins[i].IsEncrypted() {
-			return false, errors.New("ConversionProof input should not be encrypted")
-		}
-		if !bytes.Equal(pubKey, proof.inputCoins[i].GetPublicKey().ToBytesS()) {
-			return false, errors.New("ConversionProof inputCoins.publicKey should equal to pubkey")
-		}
-		//Check the consistency of input coins' commitment
-		commitment := proof.inputCoins[i].GetCommitment()
-		err := proof.inputCoins[i].CommitAll()
-		if err != nil {
-			return false, err
-		}
-		if !bytes.Equal(commitment.ToBytesS(), proof.inputCoins[i].GetCommitment().ToBytesS()){
-			return false, errors.New("ConversionProof inputCoins.commitment is not correct")
-		}
+// 	for i := 0; i < len(proof.inputCoins); i += 1 {
+// 		if proof.inputCoins[i].IsEncrypted() {
+// 			return false, errors.New("ConversionProof input should not be encrypted")
+// 		}
+// 		if !bytes.Equal(pubKey, proof.inputCoins[i].GetPublicKey().ToBytesS()) {
+// 			return false, errors.New("ConversionProof inputCoins.publicKey should equal to pubkey")
+// 		}
+// 		//Check the consistency of input coins' commitment
+// 		commitment := proof.inputCoins[i].GetCommitment()
+// 		err := proof.inputCoins[i].CommitAll()
+// 		if err != nil {
+// 			return false, err
+// 		}
+// 		if !bytes.Equal(commitment.ToBytesS(), proof.inputCoins[i].GetCommitment().ToBytesS()){
+// 			return false, errors.New("ConversionProof inputCoins.commitment is not correct")
+// 		}
 
-		//Check input overflow (not really necessary)
-		inputValue := proof.inputCoins[i].GetValue()
-		tmpInputSum := sumInput + inputValue
-		if tmpInputSum < sumInput || tmpInputSum < inputValue{
-			return false, errors.New("Overflown sumOutput")
-		}
-		sumInput += inputValue
-	}
-	for i := 0; i < len(proof.outputCoins); i += 1 {
-		if proof.outputCoins[i].IsEncrypted() {
-			return false, errors.New("ConversionProof output should not be encrypted")
-		}
-		//Check output overflow
-		outputValue := proof.outputCoins[i].GetValue()
-		tmpOutputSum := sumOutput + outputValue
-		if tmpOutputSum < sumOutput || tmpOutputSum < outputValue{
-			return false, errors.New("Overflown sumOutput")
-		}
-		sumOutput += outputValue
-	}
-	tmpSum := sumOutput + fee
-	if tmpSum < sumOutput || tmpSum < fee {
-		return false, errors.New(fmt.Sprintf("Overflown sumOutput+fee: output value = %v, fee = %v, sum = %v\n", sumOutput, fee, tmpSum))
-	}
-	if sumInput != tmpSum {
-		return false, errors.New("ConversionProof input should be equal to fee + sum output")
-	}
-	if len(proof.inputCoins) != len(proof.serialNumberNoPrivacyProof) {
-		return false, errors.New("The number of input coins should be equal to the number of proofs")
-	}
+// 		//Check input overflow (not really necessary)
+// 		inputValue := proof.inputCoins[i].GetValue()
+// 		tmpInputSum := sumInput + inputValue
+// 		if tmpInputSum < sumInput || tmpInputSum < inputValue{
+// 			return false, errors.New("Overflown sumOutput")
+// 		}
+// 		sumInput += inputValue
+// 	}
+// 	for i := 0; i < len(proof.outputCoins); i += 1 {
+// 		if proof.outputCoins[i].IsEncrypted() {
+// 			return false, errors.New("ConversionProof output should not be encrypted")
+// 		}
+// 		//Check output overflow
+// 		outputValue := proof.outputCoins[i].GetValue()
+// 		tmpOutputSum := sumOutput + outputValue
+// 		if tmpOutputSum < sumOutput || tmpOutputSum < outputValue{
+// 			return false, errors.New("Overflown sumOutput")
+// 		}
+// 		sumOutput += outputValue
+// 	}
+// 	tmpSum := sumOutput + fee
+// 	if tmpSum < sumOutput || tmpSum < fee {
+// 		return false, errors.New(fmt.Sprintf("Overflown sumOutput+fee: output value = %v, fee = %v, sum = %v\n", sumOutput, fee, tmpSum))
+// 	}
+// 	if sumInput != tmpSum {
+// 		return false, errors.New("ConversionProof input should be equal to fee + sum output")
+// 	}
+// 	if len(proof.inputCoins) != len(proof.serialNumberNoPrivacyProof) {
+// 		return false, errors.New("The number of input coins should be equal to the number of proofs")
+// 	}
 
-	for i := 0; i < len(proof.inputCoins); i += 1 {
-		valid, err := proof.serialNumberNoPrivacyProof[i].Verify(nil)
-		if !valid {
-			Logger.Log.Errorf("Verify serial number no privacy proof failed")
-			return false, errhandler.NewPrivacyErr(errhandler.VerifySerialNumberNoPrivacyProofFailedErr, err)
-		}
-	}
-	return true, nil
-}
+// 	for i := 0; i < len(proof.inputCoins); i += 1 {
+// 		valid, err := proof.serialNumberNoPrivacyProof[i].Verify(nil)
+// 		if !valid {
+// 			Logger.Log.Errorf("Verify serial number no privacy proof failed")
+// 			return false, errhandler.NewPrivacyErr(errhandler.VerifySerialNumberNoPrivacyProofFailedErr, err)
+// 		}
+// 	}
+// 	return true, nil
+// }
