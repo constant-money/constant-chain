@@ -2,7 +2,9 @@ package internal
 
 import (
 	"syscall/js"
+	"encoding/hex"
 	"encoding/json"
+	"strconv"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes/blsmultisig"
@@ -264,14 +266,30 @@ func GenerateBLSKeyPairFromSeed(_ js.Value, jsInputs []js.Value) (interface{}, e
 		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
 	}
 	args := jsInputs[0].String()
-	
-	seed, _ := b64.DecodeString(args)
+	seed, err := b64.DecodeString(args)
+	if err != nil {
+		return "", err
+	}
 	privateKey, publicKey := blsmultisig.KeyGen(seed)
 	keyPairBytes := []byte{}
 	keyPairBytes = append(keyPairBytes, common.AddPaddingBigInt(privateKey, common.BigIntSize)...)
 	keyPairBytes = append(keyPairBytes, blsmultisig.CmprG2(publicKey)...)
 	keyPairEncode := b64.EncodeToString(keyPairBytes)
 	return keyPairEncode, nil
+}
+
+func GenerateKeyFromSeed(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	seed, err := b64.DecodeString(args)
+	if err != nil {
+		return "", err
+	}
+	key := privacy.GeneratePrivateKey(seed)
+	res := b64.EncodeToString(key)
+	return res, nil
 }
 
 func HybridEncrypt(_ js.Value, jsInputs []js.Value) (interface{}, error){
@@ -314,5 +332,141 @@ func HybridDecrypt(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		return "", err
 	}
 	return b64.EncodeToString(plaintextBytes), nil
+}
+
+func ScalarMultBase(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	scalar, err := b64.DecodeString(args)
+	if err != nil {
+		return "", err
+	}
+
+	point := new(privacy.Point).ScalarMultBase(new(privacy.Scalar).FromBytesS(scalar))
+	res := b64.EncodeToString(point.ToBytesS())
+	return res, nil
+}
+
+func RandomScalars(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	num, err := strconv.ParseUint(args, 10, 64)
+	if err != nil {
+		return "", nil
+	}
+
+	var scalars []byte
+	for i := 0; i < int(num); i++ {
+		scalars = append(scalars, privacy.RandomScalar().ToBytesS()...)
+	}
+
+	res := b64.EncodeToString(scalars)
+	return res, nil
+}
+
+func GetSignPublicKey(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	raw := []byte(args)
+	var holder struct{
+		Data struct{
+			Sk string `json:"privateKey"`
+		} `json:"data"`
+	}
+
+	err := json.Unmarshal(raw, &holder)
+	if err != nil {
+		println("Error can not unmarshal data : %v\n", err)
+		return "", err
+	}
+	privateKey := holder.Data.Sk
+	keyWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return "", errors.Errorf("Invalid private key")
+	}
+	senderSK := keyWallet.KeySet.PrivateKey
+	sk := new(privacy.Scalar).FromBytesS(senderSK[:HashSize])
+	r := new(privacy.Scalar).FromBytesS(senderSK[HashSize:])
+	sigKey := new(privacy.SchnorrPrivateKey)
+	sigKey.Set(sk, r)
+	sigPubKey := sigKey.GetPublicKey().GetPublicKey().ToBytesS()
+
+	return hex.EncodeToString(sigPubKey), nil
+}
+
+func SignPoolWithdraw(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<1{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
+	}
+	args := jsInputs[0].String()
+	raw := []byte(args)
+	var holder struct{
+		Data struct{
+			Sk string `json:"privateKey"`
+			Amount string `json:"amount"`
+			PaymentAddress string `json:"paymentAddress"`
+		} `json:"data"`
+	}
+
+	err := json.Unmarshal(raw, &holder)
+	if err != nil {
+		println("Error can not unmarshal data : %v\n", err)
+		return "", err
+	}
+	privateKey := holder.Data.Sk
+	keyWallet, err := wallet.Base58CheckDeserialize(privateKey)
+	if err != nil {
+		return "", errors.Errorf("Invalid private key")
+	}
+	senderSK := keyWallet.KeySet.PrivateKey
+	sk := new(privacy.Scalar).FromBytesS(senderSK[:HashSize])
+	r := new(privacy.Scalar).FromBytesS(senderSK[HashSize:])
+	sigKey := new(privacy.SchnorrPrivateKey)
+	sigKey.Set(sk, r)
+
+	message := holder.Data.PaymentAddress + holder.Data.Amount
+	hashed := common.HashH([]byte(message))
+	signature, err := sigKey.Sign(hashed[:])
+	if err != nil {
+		println(err.Error())
+		return "", errors.Errorf("Sign error")
+	}
+
+	return hex.EncodeToString(signature.Bytes()), nil
+}
+
+// signEncode string, signPublicKeyEncode string, amount string, paymentAddress string
+func VerifySign(_ js.Value, jsInputs []js.Value) (interface{}, error){
+	if len(jsInputs)<4{
+		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 4)
+	}
+	temp, err := hex.DecodeString(jsInputs[1].String())
+	if err != nil {
+		return "", errors.Errorf("Can not decode sign public key")
+	}
+	sigPublicKey, err := new(privacy.Point).FromBytesS(temp)
+	if err != nil {
+		return "", errors.Errorf("Get sigPublicKey error")
+	}
+	verifyKey := new(privacy.SchnorrPublicKey)
+	verifyKey.Set(sigPublicKey)
+
+	temp, err = hex.DecodeString(jsInputs[0].String())
+	signature := new(privacy.SchnSignature)
+	err = signature.SetBytes(temp)
+	if err != nil {
+		return false, errors.Errorf("Sig set bytes error")
+	}
+	message := jsInputs[3].String() + jsInputs[2].String()
+	hashed := common.HashH([]byte(message))
+	res := verifyKey.Verify(signature, hashed[:])
+
+	return res, nil
 }
 
