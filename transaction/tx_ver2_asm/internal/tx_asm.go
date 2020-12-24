@@ -744,7 +744,10 @@ func (tx *Tx) initializeTxAndParams(params_compat *TxPrivacyInitParams, payments
 	senderPaymentAddress := privacy.GeneratePaymentAddress(skBytes)
 	tx.sigPrivKey = skBytes
 	// Tx: initialize some values
-	tx.LockTime = time.Now().Unix()
+	// non-zero means it was set before
+	if tx.LockTime==0{
+		tx.LockTime = time.Now().Unix()
+	}
 	tx.Fee = params_compat.Fee
 	// normal type indicator
 	tx.Type = TxNormalType
