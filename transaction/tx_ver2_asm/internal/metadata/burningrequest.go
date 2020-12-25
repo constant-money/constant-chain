@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"strconv"
+	"encoding/json"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy"
@@ -66,4 +67,27 @@ func (bReq BurningRequest) HashWithoutSig() *common.Hash {
 	hash := common.HashH([]byte(record))
 	return &hash
 }
+
+func (br *BurningRequest) UnmarshalJSON(raw []byte) error{
+	var temp struct{
+		BurnerAddress privacy.PaymentAddress
+		BurningAmount uintMaybeString
+		TokenID       common.Hash
+		TokenName     string
+		RemoteAddress string
+		MetadataBase
+	}
+	err := json.Unmarshal(raw, &temp)
+	*br = BurningRequest{
+		BurnerAddress: temp.BurnerAddress,
+		BurningAmount: uint64(temp.BurningAmount),
+		TokenID: temp.TokenID,
+		TokenName: temp.TokenName,
+		RemoteAddress: temp.RemoteAddress,
+		MetadataBase: temp.MetadataBase,
+	}
+	return err
+}
+
+
 

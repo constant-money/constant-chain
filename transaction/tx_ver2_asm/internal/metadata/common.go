@@ -155,3 +155,22 @@ func HasBridgeInstructions(instructions [][]string) bool {
 	}
 	return false
 }
+
+type uintMaybeString uint64
+func (u uintMaybeString) MarshalJSON() ([]byte, error){
+	return json.Marshal(u)
+}
+func (u *uintMaybeString) UnmarshalJSON(raw []byte) error{
+	var theNum uint64
+	err := json.Unmarshal(raw, &theNum)
+	if err!=nil{
+		var theStr string
+		json.Unmarshal(raw, &theStr)
+		temp, err := strconv.ParseUint(theStr, 10, 64)
+		*u = uintMaybeString(temp)
+		return err
+	}
+	*u = uintMaybeString(theNum)	
+	return err
+}
+

@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"encoding/json"
 	"github.com/incognitochain/incognito-chain/common"
 	"strconv"
 )
@@ -81,3 +82,29 @@ func (pc PDETradeRequest) Hash() *common.Hash {
 	hash := common.HashH([]byte(record))
 	return &hash
 }
+
+func (pc *PDETradeRequest) UnmarshalJSON(raw []byte) error{
+	var temp struct{
+		TokenIDToBuyStr     string
+		TokenIDToSellStr    string
+		SellAmount          uintMaybeString
+		MinAcceptableAmount uintMaybeString
+		TradingFee          uintMaybeString
+		TraderAddressStr    string
+		TxRandomStr         string
+		MetadataBase
+	}
+	err := json.Unmarshal(raw, &temp)
+	*pc = PDETradeRequest{
+		TokenIDToBuyStr: temp.TokenIDToBuyStr,
+		TokenIDToSellStr: temp.TokenIDToSellStr,
+		SellAmount: uint64(temp.SellAmount),
+		MinAcceptableAmount: uint64(temp.MinAcceptableAmount),
+		TradingFee: uint64(temp.TradingFee),
+		TraderAddressStr: temp.TraderAddressStr,
+		TxRandomStr: temp.TxRandomStr,
+		MetadataBase: temp.MetadataBase,
+	}
+	return err
+}
+

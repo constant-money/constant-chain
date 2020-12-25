@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"strconv"
+	"encoding/json"
 
 	"github.com/incognitochain/incognito-chain/common"
 )
@@ -78,3 +79,23 @@ func (pc PDEWithdrawalRequest) HashWithoutSig() *common.Hash {
 	hash := common.HashH([]byte(record))
 	return &hash
 }
+
+func (pc *PDEWithdrawalRequest) UnmarshalJSON(raw []byte) error{
+	var temp struct{
+		WithdrawerAddressStr  string
+		WithdrawalToken1IDStr string
+		WithdrawalToken2IDStr string
+		WithdrawalShareAmt    uintMaybeString
+		MetadataBase
+	}
+	err := json.Unmarshal(raw, &temp)
+	*pc = PDEWithdrawalRequest{
+		WithdrawerAddressStr: temp.WithdrawerAddressStr,
+		WithdrawalToken1IDStr: temp.WithdrawalToken1IDStr,
+		WithdrawalToken2IDStr: temp.WithdrawalToken2IDStr,
+		WithdrawalShareAmt: uint64(temp.WithdrawalShareAmt),
+		MetadataBase: temp.MetadataBase,
+	}
+	return err
+}
+

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"strconv"
+	"encoding/json"
 
 	"github.com/incognitochain/incognito-chain/common"
 )
@@ -97,3 +98,23 @@ func (pc PDEContribution) Hash() *common.Hash {
 	hash := common.HashH([]byte(record))
 	return &hash
 }
+
+func (pc *PDEContribution) UnmarshalJSON(raw []byte) error{
+	var temp struct{
+		PDEContributionPairID string
+		ContributorAddressStr string
+		ContributedAmount     uintMaybeString
+		TokenIDStr            string
+		MetadataBase
+	}
+	err := json.Unmarshal(raw, &temp)
+	*pc = PDEContribution{
+		PDEContributionPairID: temp.PDEContributionPairID,
+		ContributorAddressStr: temp.ContributorAddressStr,
+		ContributedAmount: uint64(temp.ContributedAmount),
+		TokenIDStr: temp.TokenIDStr,
+		MetadataBase: temp.MetadataBase,
+	}
+	return err
+}
+

@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"encoding/json"
 	"errors"
 )
 
@@ -50,4 +51,25 @@ func (stakingMetadata StakingMetadata) GetBeaconStakeAmount() uint64 {
 
 func (stakingMetadata StakingMetadata) GetShardStateAmount() uint64 {
 	return stakingMetadata.StakingAmountShard
+}
+
+func (sm *StakingMetadata) UnmarshalJSON(raw []byte) error{
+	var temp struct{
+		MetadataBase
+		FunderPaymentAddress         string
+		RewardReceiverPaymentAddress string
+		StakingAmountShard           uintMaybeString
+		AutoReStaking                bool
+		CommitteePublicKey           string
+	}
+	err := json.Unmarshal(raw, &temp)
+	*sm = StakingMetadata{
+		MetadataBase: temp.MetadataBase,
+		FunderPaymentAddress: temp.FunderPaymentAddress,
+		RewardReceiverPaymentAddress: temp.RewardReceiverPaymentAddress,
+		StakingAmountShard: uint64(temp.StakingAmountShard),
+		AutoReStaking: temp.AutoReStaking,
+		CommitteePublicKey: temp.CommitteePublicKey,
+	}
+	return err
 }
