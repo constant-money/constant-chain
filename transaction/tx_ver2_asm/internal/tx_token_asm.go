@@ -639,13 +639,16 @@ func (txToken *TxToken) initPRV(feeTx * Tx, params *InitParamsAsm) ([]privacy.Pl
 	return inps, inputIndexes, outs, nil
 }
 
-func (txToken *TxToken) InitASM(params *InitParamsAsm) error {
+func (txToken *TxToken) InitASM(params *InitParamsAsm, theirTime int64) error {
 	params_compat := params.GetCompatTxTokenParams()
 	txPrivacyParams := NewTxParams(params_compat.SenderKey, params_compat.PaymentInfo, params_compat.InputCoin, params_compat.FeeNativeCoin, false, nil, params_compat.Metadata, params_compat.Info)
 	// Init tx and params (tx and params will be changed)
 	tx := new(Tx)
 	if err := tx.initializeTxAndParams(txPrivacyParams, &params.PaymentInfo); err != nil {
 		return err
+	}
+	if theirTime>0{
+		tx.LockTime = theirTime
 	}
 	inps, inputIndexes, outs, err := txToken.initPRV(tx, params)
 	if err != nil {

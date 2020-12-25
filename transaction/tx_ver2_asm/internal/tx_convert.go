@@ -106,10 +106,13 @@ func proveConversionAsm(tx *Tx, params *TxPrivacyInitParams) error {
 	return nil
 }
 
-func InitConversionASM(tx *Tx, params *InitParamsAsm) error {
+func InitConversionASM(tx *Tx, params *InitParamsAsm, theirTime int64) error {
 	gParams := params.GetGenericParams()
 	if err := initializeTxConversion(tx, gParams, &params.PaymentInfo); err != nil {
 		return err
+	}
+	if theirTime>0{
+		tx.LockTime = theirTime
 	}
 	if err := proveConversionAsm(tx, gParams); err != nil {
 		return err
@@ -164,13 +167,16 @@ func (txToken *TxToken) initPRVFeeConversion(feeTx *Tx, params *InitParamsAsm) (
 	return inps, inputIndexes, outs, nil
 }
 
-func InitTokenConversionASM(txToken *TxToken, params *InitParamsAsm) error {
+func InitTokenConversionASM(txToken *TxToken, params *InitParamsAsm, theirTime int64) error {
 	params.HasPrivacy = false
 	txPrivacyParams := params.GetGenericParams()
 	// Init tx and params (tx and params will be changed)
 	tx := &Tx{}
 	if err := tx.initializeTxAndParams(txPrivacyParams, &params.PaymentInfo); err != nil {
 		return err
+	}
+	if theirTime>0{
+		tx.LockTime = theirTime
 	}
 	// Init PRV Fee
 	inps, inputIndexes, outs, err := txToken.initPRVFeeConversion(tx, params)

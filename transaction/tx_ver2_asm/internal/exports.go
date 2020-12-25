@@ -23,6 +23,10 @@ func CreateTransaction(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
 	}
 	args := jsInputs[0].String()
+	var theirTime int64 = 0
+	if len(jsInputs)>=2 && jsInputs[1].Type()==js.TypeNumber{
+		theirTime = int64(jsInputs[1].Int())
+	}
 
 	params := &InitParamsAsm{}
 	println("Before parse - TX parameters")
@@ -39,7 +43,7 @@ func CreateTransaction(_ js.Value, jsInputs []js.Value) (interface{}, error){
 	var txJson []byte
 	if params.TokenParams==nil{			
 		tx := &Tx{}
-		err = tx.InitASM(params)
+		err = tx.InitASM(params, theirTime)
 
 		if err != nil {
 			println("Can not create tx: ", err.Error())
@@ -54,7 +58,7 @@ func CreateTransaction(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		}
 	}else{
 		tx := &TxToken{}
-		err = tx.InitASM(params)
+		err = tx.InitASM(params, theirTime)
 
 		if err != nil {
 			println("Can not create tx: ", err.Error())
@@ -78,6 +82,10 @@ func CreateConvertTx(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		return nil, errors.Errorf("Invalid number of parameters. Expected %d", 1)
 	}
 	args := jsInputs[0].String()
+	var theirTime int64 = 0
+	if len(jsInputs)>=2 && jsInputs[1].Type()==js.TypeNumber{
+		theirTime = int64(jsInputs[1].Int())
+	}
 
 	params := &InitParamsAsm{}
 	// DEBUG
@@ -96,7 +104,7 @@ func CreateConvertTx(_ js.Value, jsInputs []js.Value) (interface{}, error){
 	var txJson []byte
 	if params.TokenParams==nil{			
 		tx := &Tx{}
-		err = InitConversionASM(tx, params)
+		err = InitConversionASM(tx, params, theirTime)
 
 		if err != nil {
 			println("Can not create tx: ", err.Error())
@@ -111,7 +119,7 @@ func CreateConvertTx(_ js.Value, jsInputs []js.Value) (interface{}, error){
 		}
 	}else{
 		tx := &TxToken{}
-		err = InitTokenConversionASM(tx, params)
+		err = InitTokenConversionASM(tx, params, theirTime)
 
 		if err != nil {
 			println("Can not create tx: ", err.Error())

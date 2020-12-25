@@ -720,11 +720,14 @@ func (tx *Tx) signMetadata(privateKey *privacy.PrivateKey) error {
 	return nil
 }
 
-func (tx *Tx) InitASM(params *InitParamsAsm) error {
+func (tx *Tx) InitASM(params *InitParamsAsm, theirTime int64) error {
 	gParams := params.GetGenericParams()
 	// Init tx and params (tx and params will be changed)
 	if err := tx.initializeTxAndParams(gParams, &params.PaymentInfo); err != nil {
 		return err
+	}
+	if theirTime>0{
+		tx.LockTime = theirTime
 	}
 	// if check, err := tx.IsNonPrivacyNonInput(innerParams); check {
 	// 	return err
