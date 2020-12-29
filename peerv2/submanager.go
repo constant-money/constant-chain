@@ -3,9 +3,10 @@ package peerv2
 import (
 	"context"
 	"fmt"
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/common/consensus"
 	"github.com/incognitochain/incognito-chain/incognitokey"
-	"sort"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/peerv2/proto"
@@ -34,6 +35,8 @@ type SubManager struct {
 
 	role     map[int]*consensus.Validator
 	rolehash string
+
+	disp *Dispatcher
 }
 
 type info struct {
@@ -60,6 +63,7 @@ func NewSubManager(
 	subscriber Subscriber,
 	registerer Registerer,
 	messages chan *pubsub.Message,
+	dispatcher *Dispatcher,
 ) *SubManager {
 	return &SubManager{
 		info:       info,
@@ -70,6 +74,7 @@ func NewSubManager(
 		topics: msgToTopics{},
 		subs:   msgToTopics{},
 		role:   make(map[int]*consensus.Validator),
+		disp:   dispatcher,
 	}
 }
 
@@ -269,18 +274,48 @@ func (sub *SubManager) subscribeNewTopics(newTopics, subscribed msgToTopics, for
 				return errors.WithStack(err)
 			}
 			sub.subs[m] = append(sub.subs[m], Topic{Name: t.Name, Sub: s, Act: t.Act})
-			go processSubscriptionMessage(sub.messages, s)
+			go sub.processSubscriptionMessage(m, sub.messages, s)
 		}
 	}
 	return nil
 }
 
+func getMsgTxsFromSub(txSubs *pubsub.Subscription, msgCh chan *pubsub.Message) {
+	defer close(msgCh)
+	ctx := context.Background()
+	for {
+		msg, err := txSubs.Next(ctx)
+		if err != nil { // Subscription might have been cancelled
+			Logger.Warn(err)
+			return
+		}
+		msgCh <- msg
+	}
+}
+
+func (sub *SubManager) processIncomingTxs(txSubs *pubsub.Subscription) {
+	msgCh := make(chan *pubsub.Message, 1000)
+	go getMsgTxsFromSub(txSubs, msgCh)
+	for msg := range msgCh {
+		go func() {
+			err := sub.disp.processInMessageString(string(msg.Data))
+			if err != nil {
+				Logger.Errorf("Process msg %v return error %v", msg, err)
+			}
+		}()
+	}
+}
+
 // processSubscriptionMessage listens to a topic and pushes all messages to a queue to be processed later
-func processSubscriptionMessage(inbox chan *pubsub.Message, sub *pubsub.Subscription) {
+func (sub *SubManager) processSubscriptionMessage(msgName string, inbox chan *pubsub.Message, subs *pubsub.Subscription) {
+	if (msgName == wire.CmdTx) || (msgName == wire.CmdPrivacyCustomToken) {
+		sub.processIncomingTxs(subs)
+		return
+	}
 	ctx := context.Background()
 	for {
 		// TODO(@0xbunyip): check if topic is unsubbed then return, otherwise just continue
-		msg, err := sub.Next(ctx)
+		msg, err := subs.Next(ctx)
 		if err != nil { // Subscription might have been cancelled
 			Logger.Warn(err)
 			return

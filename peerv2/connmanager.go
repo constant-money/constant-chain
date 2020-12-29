@@ -3,11 +3,12 @@ package peerv2
 import (
 	"context"
 	"encoding/hex"
-	"github.com/incognitochain/incognito-chain/blockchain"
-	"github.com/incognitochain/incognito-chain/peerv2/wrapper"
 	"io"
 	"reflect"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/blockchain"
+	"github.com/incognitochain/incognito-chain/peerv2/wrapper"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -118,7 +119,7 @@ func (cm *ConnManager) Start(ns NetSync) {
 	go cm.keepHighwayConnection()
 
 	cm.Requester = NewRequester(cm.LocalHost.GRPC)
-	cm.subscriber = NewSubManager(cm.info, cm.ps, cm.Requester, cm.messages)
+	cm.subscriber = NewSubManager(cm.info, cm.ps, cm.Requester, cm.messages, cm.disp)
 	cm.Provider = NewBlockProvider(cm.LocalHost.GRPC, ns)
 	go cm.manageRoleSubscription()
 	cm.process()

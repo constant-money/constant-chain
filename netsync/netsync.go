@@ -53,6 +53,7 @@ type NetSyncConfig struct {
 		// list functions callback which are assigned from Server struct
 		PushMessageToPeer(wire.Message, libp2p.ID) error
 		PushMessageToAll(wire.Message) error
+		PushMessageToShard(msg wire.Message, shard byte) error
 	}
 	Consensus interface {
 		OnBFTMsg(*wire.MessageBFT)
@@ -264,6 +265,9 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 	// 	return
 	// }
 	if isAdded := netSync.handleCacheTx(*msg.Transaction.Hash()); !isAdded {
+		// Broadcast to network
+		sID := common.GetShardIDFromLastByte(msg.Transaction.GetSenderAddrLastByte())
+		err := netSync.config.Server.PushMessageToShard(msg, sID)
 		hash, _, err := netSync.config.TxMemPool.MaybeAcceptTransaction(msg.Transaction, beaconHeight)
 		if err != nil {
 			Logger.log.Error(err)
@@ -276,12 +280,12 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 				metrics.TagValue:         msg.Transaction.Hash().String(),
 			})*/
 			Logger.log.Debugf("there is hash of transaction %s", hash.String())
-			err := netSync.config.Server.PushMessageToAll(msg)
-			if err != nil {
-				Logger.log.Error(err)
-			} else {
-				netSync.config.TxMemPool.MarkForwardedTransaction(*msg.Transaction.Hash())
-			}
+			// err := netSync.config.Server.PushMessageToAll(msg)
+			// if err != nil {
+			// 	Logger.log.Error(err)
+			// } else {
+			netSync.config.TxMemPool.MarkForwardedTransaction(*msg.Transaction.Hash())
+			// }
 		}
 	}
 	Logger.log.Debug("Transaction %+v found in cache", *msg.Transaction.Hash())
@@ -294,18 +298,20 @@ func (netSync *NetSync) handleMessageTxPrivacyToken(msg *wire.MessageTxPrivacyTo
 	// 	return
 	// }
 	if isAdded := netSync.handleCacheTx(*msg.Transaction.Hash()); !isAdded {
+		// Broadcast to network
+		sID := common.GetShardIDFromLastByte(msg.Transaction.GetSenderAddrLastByte())
+		err := netSync.config.Server.PushMessageToShard(msg, sID)
 		hash, _, err := netSync.config.TxMemPool.MaybeAcceptTransaction(msg.Transaction, beaconHeight)
 		if err != nil {
 			Logger.log.Error(err)
 		} else {
 			Logger.log.Debugf("Node got hash of transaction %s", hash.String())
-			// Broadcast to network
-			err := netSync.config.Server.PushMessageToAll(msg)
-			if err != nil {
-				Logger.log.Error(err)
-			} else {
-				netSync.config.TxMemPool.MarkForwardedTransaction(*msg.Transaction.Hash())
-			}
+			// err := netSync.config.Server.PushMessageToShard(msg, sID)
+			// if err != nil {
+			// 	Logger.log.Error(err)
+			// } else {
+			netSync.config.TxMemPool.MarkForwardedTransaction(*msg.Transaction.Hash())
+			// }
 		}
 	}
 	Logger.log.Debug("Transaction %+v found in cache", *msg.Transaction.Hash())
