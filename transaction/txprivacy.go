@@ -173,7 +173,7 @@ func (tx *Tx) Init(params *TxPrivacyInitParams) error {
 		Logger.log.Debugf("len(inputCoins) == 0 && fee == 0 && !hasPrivacy\n")
 		tx.Fee = params.fee
 		tx.sigPrivKey = *params.senderSK
-		tx.PubKeyLastByteSender = pkLastByteSender
+		tx.PubKeyLastByteSender = common.GetShardIDFromLastByte(pkLastByteSender)
 		err := tx.signTx()
 		if err != nil {
 			Logger.log.Error(errors.New(fmt.Sprintf("Cannot sign tx %v\n", err)))
@@ -374,7 +374,7 @@ func (tx *Tx) Init(params *TxPrivacyInitParams) error {
 	}
 
 	// sign tx
-	tx.PubKeyLastByteSender = pkLastByteSender
+	tx.PubKeyLastByteSender = common.GetShardIDFromLastByte(pkLastByteSender)
 	err = tx.signTx()
 	if err != nil {
 		Logger.log.Error(err)
@@ -682,6 +682,21 @@ func (tx Tx) ListSerialNumbersHashH() []common.Hash {
 	return result
 }
 
+func (tx Tx) ListSNDOutputsHashH() []common.Hash {
+	result := []common.Hash{}
+	if tx.Proof != nil {
+		for _, outputCoin := range tx.Proof.GetOutputCoins() {
+			hash := common.HashH(outputCoin.CoinDetails.GetSNDerivator().ToBytesS())
+			result = append(result, hash)
+		}
+	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].String() < result[j].String()
+	})
+	return result
+}
+
+
 // CheckCMExistence returns true if cm exists in cm list
 func (tx Tx) CheckCMExistence(cm []byte, stateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
 	ok, err := statedb.HasCommitment(stateDB, *tokenID, cm, shardID)
@@ -803,9 +818,40 @@ func (tx Tx) validateDoubleSpendTxWithCurrentMempool(poolSerialNumbersHashH map[
 	return nil
 }
 
+func (tx Tx) validateDoubleSNDOutputsWithCurrentMempool(poolSndOutputsHashH map[common.Hash][]common.Hash) error {
+	if tx.Proof == nil {
+		return nil
+	}
+	temp := make(map[common.Hash]interface{})
+	for _, outputCoin := range tx.Proof.GetOutputCoins() {
+		hash := common.HashH(outputCoin.CoinDetails.GetSNDerivator().ToBytesS())
+		temp[hash] = nil
+	}
+
+	for _, listSndOutputs := range poolSndOutputsHashH {
+		for _, sndHash := range listSndOutputs {
+			if _, ok := temp[sndHash]; ok {
+				return fmt.Errorf("duplicate snd output with current mempool %v",
+					sndHash.String())
+			}
+		}
+	}
+	return nil
+}
+
 func (tx Tx) ValidateTxWithCurrentMempool(mr metadata.MempoolRetriever) error {
+	// check double snd outputs in mempool
+	poolSNDOutputsHashH := mr.GetSNDOutputsHashH()
+	duplicateSNDs := tx.validateDoubleSNDOutputsWithCurrentMempool(poolSNDOutputsHashH)
+	if duplicateSNDs != nil {
+		return duplicateSNDs
+	}
+
+	// check double spend
 	poolSerialNumbersHashH := mr.GetSerialNumbersHashH()
 	return tx.validateDoubleSpendTxWithCurrentMempool(poolSerialNumbersHashH)
+
+
 }
 
 // ValidateDoubleSpend - check double spend for any transaction type
@@ -1368,7 +1414,7 @@ func (tx *Tx) InitTxSalary(salary uint64, receiverAddr *privacy.PaymentAddress, 
 	}
 	tx.Proof.SetOutputCoins(tempOutputCoin)
 	// get last byte
-	tx.PubKeyLastByteSender = receiverAddr.Pk[len(receiverAddr.Pk)-1]
+	tx.PubKeyLastByteSender = common.GetShardIDFromLastByte(receiverAddr.Pk[len(receiverAddr.Pk)-1])
 	// sign Tx
 	tx.SigPubKey = receiverAddr.Pk
 	tx.sigPrivKey = *privateKey
@@ -1562,7 +1608,7 @@ func (tx *Tx) InitForASM(params *TxPrivacyInitParamsForASM, serverTime int64) er
 		//Logger.log.Debugf("len(inputCoins) == 0 && fee == 0 && !hasPrivacy\n")
 		tx.Fee = params.txParam.fee
 		tx.sigPrivKey = *params.txParam.senderSK
-		tx.PubKeyLastByteSender = pkLastByteSender
+		tx.PubKeyLastByteSender = common.GetShardIDFromLastByte(pkLastByteSender)
 		err := tx.signTx()
 		if err != nil {
 			Logger.log.Error(errors.New(fmt.Sprintf("Cannot sign tx %v\n", err)))
@@ -1726,7 +1772,7 @@ func (tx *Tx) InitForASM(params *TxPrivacyInitParamsForASM, serverTime int64) er
 	}
 
 	// sign tx
-	tx.PubKeyLastByteSender = pkLastByteSender
+	tx.PubKeyLastByteSender = common.GetShardIDFromLastByte(pkLastByteSender)
 	err = tx.signTx()
 	if err != nil {
 		Logger.log.Error(err)

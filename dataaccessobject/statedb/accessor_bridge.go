@@ -35,7 +35,7 @@ func IsETHTxHashIssued(stateDB *StateDB, uniqueEthTx []byte) (bool, error) {
 	return has, nil
 }
 
-func CanProcessCIncToken(stateDB *StateDB, incTokenID common.Hash) (bool, error) {
+func CanProcessCIncToken(stateDB *StateDB, incTokenID common.Hash, privacyTokenExisted bool) (bool, error) {
 	dBridgeTokenExisted, err := IsBridgeTokenExistedByType(stateDB, incTokenID, false)
 	if err != nil {
 		return false, NewStatedbError(CanProcessCIncTokenError, err)
@@ -47,7 +47,6 @@ func CanProcessCIncToken(stateDB *StateDB, incTokenID common.Hash) (bool, error)
 	if err != nil {
 		return false, NewStatedbError(CanProcessCIncTokenError, err)
 	}
-	privacyTokenExisted := PrivacyTokenIDExisted(stateDB, incTokenID)
 	if !cBridgeTokenExisted && privacyTokenExisted {
 		return false, nil
 	}
@@ -86,7 +85,7 @@ func getBridgeTokenByType(stateDB *StateDB, incTokenID common.Hash, isCentralize
 	return tokenInfoState, has, nil
 }
 
-func CanProcessTokenPair(stateDB *StateDB, externalTokenID []byte, incTokenID common.Hash) (bool, error) {
+func CanProcessTokenPair(stateDB *StateDB, externalTokenID []byte, incTokenID common.Hash, privacyTokenExisted bool) (bool, error) {
 	if len(externalTokenID) == 0 || len(incTokenID[:]) == 0 {
 		return false, nil
 	}
@@ -103,7 +102,6 @@ func CanProcessTokenPair(stateDB *StateDB, externalTokenID []byte, incTokenID co
 		return false, NewStatedbError(CanProcessTokenPairError, err)
 	}
 	log.Println("INFO: whether inc token was existed in decentralized token set: ", dBridgeTokenExisted)
-	privacyTokenExisted := PrivacyTokenIDExisted(stateDB, incTokenID)
 	if !dBridgeTokenExisted && privacyTokenExisted {
 		log.Println("WARNING: failed at condition 1: ", dBridgeTokenExisted, privacyTokenExisted)
 		return false, nil

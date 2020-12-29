@@ -1127,6 +1127,19 @@ func (tp TxPool) GetSerialNumbersHashH() map[common.Hash][]common.Hash {
 	return m
 }
 
+func (tp TxPool) GetSNDOutputsHashH() map[common.Hash][]common.Hash {
+	//tp.mtx.RLock()
+	//defer tp.mtx.RUnlock()
+	res := make(map[common.Hash][]common.Hash)
+	for txHash, txDesc := range tp.pool {
+		res[txHash] = []common.Hash{}
+		for _, sndHash := range txDesc.Desc.Tx.ListSNDOutputsHashH() {
+			res[txHash] = append(res[txHash], sndHash)
+		}
+	}
+	return res
+}
+
 func (tp TxPool) GetTxsInMem() map[common.Hash]metadata.TxDesc {
 	//tp.mtx.RLock()
 	//defer tp.mtx.RUnlock()

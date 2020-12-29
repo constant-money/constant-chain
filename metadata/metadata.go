@@ -53,6 +53,7 @@ type TxDesc struct {
 type MempoolRetriever interface {
 	GetSerialNumbersHashH() map[common.Hash][]common.Hash
 	GetTxsInMem() map[common.Hash]TxDesc
+	GetSNDOutputsHashH() map[common.Hash][]common.Hash
 }
 
 type ChainRetriever interface {
@@ -115,6 +116,7 @@ type Transaction interface {
 	GetMetadataFromVinsTx(ChainRetriever, ShardViewRetriever, BeaconViewRetriever) (Metadata, error)
 	GetTokenID() *common.Hash
 	ListSerialNumbersHashH() []common.Hash
+	ListSNDOutputsHashH() []common.Hash
 	Hash() *common.Hash
 	// VALIDATE FUNC
 	CheckTxVersion(int8) bool

@@ -2,6 +2,7 @@ package consensus_v2
 
 import (
 	"fmt"
+	"github.com/incognitochain/incognito-chain/metrics/monitor"
 	"strings"
 	"time"
 
@@ -52,6 +53,10 @@ func (s *Engine) GetOneValidator() *consensus.Validator {
 
 func (s *Engine) GetOneValidatorForEachConsensusProcess() map[int]*consensus.Validator {
 	chainValidator := make(map[int]*consensus.Validator)
+	role := ""
+	layer := ""
+	chainID := -2
+	pubkey := ""
 	if len(s.validators) > 0 {
 		for _, validator := range s.validators {
 			if validator.State.ChainID != -2 {
@@ -59,14 +64,30 @@ func (s *Engine) GetOneValidatorForEachConsensusProcess() map[int]*consensus.Val
 				if ok {
 					if validator.State.Role == common.CommitteeRole {
 						chainValidator[validator.State.ChainID] = validator
+						pubkey = validator.MiningKey.GetPublicKeyBase58()
+						role = validator.State.Role
+						chainID = validator.State.ChainID
+						layer = validator.State.Layer
 					}
 				} else {
 					chainValidator[validator.State.ChainID] = validator
+					pubkey = validator.MiningKey.GetPublicKeyBase58()
+					role = validator.State.Role
+					chainID = validator.State.ChainID
+					layer = validator.State.Layer
+				}
+			} else {
+				if role == "" { //role not set, and userkey in waiting role
+					role = validator.State.Role
+					layer = validator.State.Layer
 				}
 			}
 		}
 	}
-
+	monitor.SetGlobalParam("Role", role)
+	monitor.SetGlobalParam("Layer", layer)
+	monitor.SetGlobalParam("ShardID", chainID)
+	monitor.SetGlobalParam("MINING_PUBKEY", pubkey)
 	//fmt.Println("GetOneValidatorForEachConsensusProcess", chainValidator[1])
 	return chainValidator
 }

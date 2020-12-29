@@ -117,3 +117,23 @@ func (blockchain *BlockChain) GetAllBridgeTokens() ([]common.Hash, []*rawdbv2.Br
 	}
 	return bridgeTokenIDs, allBridgeTokens, nil
 }
+
+func (blockchain *BlockChain) PrivacyTokenIDExistedInAllShards(curView *BeaconBestState, tokenID common.Hash) (bool, error) {
+	for shardID, shardHash := range curView.BestShardHash {
+		db := blockchain.GetShardChainDatabase(shardID)
+		shardRootHash, err := GetShardRootsHashByBlockHash(db, shardID, shardHash)
+		if err != nil {
+			return false, err
+		}
+		stateDB, err := statedb.NewWithPrefixTrie(shardRootHash.TransactionStateDBRootHash,
+			statedb.NewDatabaseAccessWarper(db))
+		if err != nil {
+			return false, err
+		}
+		isExist := statedb.PrivacyTokenIDExisted(stateDB, tokenID)
+		if isExist {
+			return true, nil
+		}
+	}
+	return false, nil
+}

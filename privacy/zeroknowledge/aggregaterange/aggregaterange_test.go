@@ -163,7 +163,7 @@ func TestAggregatedRangeProveVerifyUltraFast(t *testing.T) {
 		proofs = append(proofs, proof)
 	}
 	// verify the proof faster
-	res, err, _ := VerifyBatchingAggregatedRangeProofs(proofs)
+	res, err, _ := VerifyBatch(proofs)
 	assert.Equal(t, true, res)
 	assert.Equal(t, nil, err)
 }
@@ -199,7 +199,7 @@ func TestBenchmarkAggregatedRangeProveVerifyUltraFast(t *testing.T) {
 		}
 		// verify the proof faster
 		start = time.Now()
-		res, err, _ := VerifyBatchingAggregatedRangeProofs(proofs)
+		res, err, _ := VerifyBatch(proofs)
 		fmt.Println(t1, time.Now().Sub(start), k)
 
 		assert.Equal(t, true, res)

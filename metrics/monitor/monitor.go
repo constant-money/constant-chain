@@ -179,7 +179,9 @@ func (s *logKV) Write() {
 	//s.param["PACKAGE"] = fmt.Sprintf("%s", r.FindStringSubmatch(fn)[1])
 	s.param["Time"] = fmt.Sprintf("%s", time.Now().Format(time.RFC3339))
 	b, _ := json.Marshal(s.param)
-
+	if v, ok := s.param["Role"]; !ok || v == "" {
+		return
+	}
 	//io.Copy(monitorFile, bytes.NewReader(b))
 	//io.Copy(monitorFile, bytes.NewReader([]byte("\n")))
 

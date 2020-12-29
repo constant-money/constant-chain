@@ -78,8 +78,13 @@ func (s *Engine) GetNodeMiningPublicKeys() (userPks []*incognitokey.CommitteePub
 	return userPks
 }
 
+//legacy code -> get all key type  of 1 mining key
 func (engine *Engine) GetAllMiningPublicKeys() []string {
-	return []string{}
+	var keys []string
+	for keyType, _ := range engine.userMiningPublicKeys.MiningPubKey {
+		keys = append(keys, fmt.Sprintf("%v:%v", keyType, engine.userMiningPublicKeys.GetMiningKeyBase58(keyType)))
+	}
+	return keys
 }
 
 func (engine *Engine) SignDataWithCurrentMiningKey(

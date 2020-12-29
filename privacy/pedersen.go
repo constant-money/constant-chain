@@ -12,6 +12,8 @@ const (
 	PedersenRandomnessIndex = byte(0x04)
 )
 
+var GBase, HBase *Point
+
 // PedersenCommitment represents the parameters for the commitment
 type PedersenCommitment struct {
 	G []*Point // generators
@@ -31,6 +33,8 @@ func newPedersenParams() PedersenCommitment {
 	for i := 1; i < len(pcm.G); i++ {
 		pcm.G[i] = HashToPointFromIndex(int64(i), CStringBulletProof)
 	}
+	GBase = new(Point).Set(pcm.G[1])
+	HBase = new(Point).Set(pcm.G[4])
 	return pcm
 }
 

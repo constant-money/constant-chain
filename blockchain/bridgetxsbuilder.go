@@ -38,6 +38,7 @@ func (blockchain *BlockChain) buildInstructionsForContractingReq(
 }
 
 func (blockchain *BlockChain) buildInstructionsForIssuingReq(
+	beaconBestState *BeaconBestState,
 	stateDB *statedb.StateDB,
 	contentStr string,
 	shardID byte,
@@ -62,7 +63,12 @@ func (blockchain *BlockChain) buildInstructionsForIssuingReq(
 		return append(instructions, rejectedInst), nil
 	}
 
-	ok, err := statedb.CanProcessCIncToken(stateDB, issuingTokenID)
+	privacyTokenExisted, err := blockchain.PrivacyTokenIDExistedInAllShards(beaconBestState, issuingTokenID)
+	if err != nil {
+		Logger.log.Info("WARNING: an issue occured while checking it can process for the incognito token or not: ", err)
+		return append(instructions, rejectedInst), nil
+	}
+	ok, err := statedb.CanProcessCIncToken(stateDB, issuingTokenID, privacyTokenExisted)
 	if err != nil {
 		Logger.log.Info("WARNING: an issue occured while checking it can process for the incognito token or not: ", err)
 		return append(instructions, rejectedInst), nil
@@ -91,7 +97,14 @@ func (blockchain *BlockChain) buildInstructionsForIssuingReq(
 	return append(instructions, returnedInst), nil
 }
 
-func (blockchain *BlockChain) buildInstructionsForIssuingETHReq(stateDB *statedb.StateDB, contentStr string, shardID byte, metaType int, ac *metadata.AccumulatedValues) ([][]string, error) {
+func (blockchain *BlockChain) buildInstructionsForIssuingETHReq(
+	beaconBestState *BeaconBestState,
+	stateDB *statedb.StateDB,
+	contentStr string,
+	shardID byte,
+	metaType int,
+	ac *metadata.AccumulatedValues,
+) ([][]string, error) {
 	Logger.log.Info("[Decentralized bridge token issuance] Starting...")
 	instructions := [][]string{}
 	issuingETHReqAction, err := metadata.ParseETHIssuingInstContent(contentStr)
@@ -155,8 +168,12 @@ func (blockchain *BlockChain) buildInstructionsForIssuingETHReq(stateDB *statedb
 		Logger.log.Info("WARNING: pair of incognito token id & ethereum's id is invalid in current block")
 		return append(instructions, rejectedInst), nil
 	}
-
-	isValid, err := statedb.CanProcessTokenPair(stateDB, ethereumToken, md.IncTokenID)
+	privacyTokenExisted, err := blockchain.PrivacyTokenIDExistedInAllShards(beaconBestState, md.IncTokenID)
+	if err != nil {
+		Logger.log.Info("WARNING: an issue occured while checking it can process for the incognito token or not: ", err)
+		return append(instructions, rejectedInst), nil
+	}
+	isValid, err := statedb.CanProcessTokenPair(stateDB, ethereumToken, md.IncTokenID, privacyTokenExisted)
 	if err != nil {
 		Logger.log.Info("WARNING: an error occured while checking it can process for token pair on the previous blocks or not: ", err)
 		return append(instructions, rejectedInst), nil

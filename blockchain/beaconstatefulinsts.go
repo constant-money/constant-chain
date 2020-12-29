@@ -81,17 +81,18 @@ func groupPDEActionsByShardID(
 }
 
 func (blockchain *BlockChain) buildStatefulInstructions(
-	stateDB *statedb.StateDB,
+	beaconBestState *BeaconBestState,
+	featureStateDB *statedb.StateDB,
 	statefulActionsByShardID map[byte][][]string,
 	beaconHeight uint64,
 	rewardForCustodianByEpoch map[common.Hash]uint64,
 	portalParams PortalParams) [][]string {
-	currentPDEState, err := InitCurrentPDEStateFromDB(stateDB, beaconHeight-1)
+	currentPDEState, err := InitCurrentPDEStateFromDB(featureStateDB, beaconHeight-1)
 	if err != nil {
 		Logger.log.Error(err)
 	}
 
-	currentPortalState, err := InitCurrentPortalStateFromDB(stateDB)
+	currentPortalState, err := InitCurrentPortalStateFromDB(featureStateDB)
 	if err != nil {
 		Logger.log.Error(err)
 	}
@@ -148,10 +149,10 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 			newInst := [][]string{}
 			switch metaType {
 			case metadata.IssuingRequestMeta:
-				newInst, err = blockchain.buildInstructionsForIssuingReq(stateDB, contentStr, shardID, metaType, accumulatedValues)
+				newInst, err = blockchain.buildInstructionsForIssuingReq(beaconBestState, featureStateDB, contentStr, shardID, metaType, accumulatedValues)
 
 			case metadata.IssuingETHRequestMeta:
-				newInst, err = blockchain.buildInstructionsForIssuingETHReq(stateDB, contentStr, shardID, metaType, accumulatedValues)
+				newInst, err = blockchain.buildInstructionsForIssuingETHReq(beaconBestState, featureStateDB, contentStr, shardID, metaType, accumulatedValues)
 
 			case metadata.PDEContributionMeta:
 				pdeContributionActionsByShardID = groupPDEActionsByShardID(
@@ -302,7 +303,7 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 
 	// handle portal instructions
 	portalInsts, err := blockchain.handlePortalInsts(
-		stateDB,
+		featureStateDB,
 		beaconHeight-1,
 		currentPortalState,
 		portalCustodianDepositActionsByShardID,
@@ -435,7 +436,7 @@ func categorizeNSortPDECrossPoolTradeInstsByFee(
 			}
 			tradeMeta := crossPoolTradeRequestAction.Meta
 			if (isTradingFairContainsPRV(tradeMeta.TokenIDToSellStr, tradeMeta.TokenIDToBuyStr) && !isPoolPairExisting(beaconHeight, currentPDEState, tradeMeta.TokenIDToSellStr, tradeMeta.TokenIDToBuyStr)) ||
-			(!isTradingFairContainsPRV(tradeMeta.TokenIDToSellStr, tradeMeta.TokenIDToBuyStr) && (!isPoolPairExisting(beaconHeight, currentPDEState, prvIDStr, tradeMeta.TokenIDToSellStr) || !isPoolPairExisting(beaconHeight, currentPDEState, prvIDStr, tradeMeta.TokenIDToBuyStr))) {
+				(!isTradingFairContainsPRV(tradeMeta.TokenIDToSellStr, tradeMeta.TokenIDToBuyStr) && (!isPoolPairExisting(beaconHeight, currentPDEState, prvIDStr, tradeMeta.TokenIDToSellStr) || !isPoolPairExisting(beaconHeight, currentPDEState, prvIDStr, tradeMeta.TokenIDToBuyStr))) {
 				untradableActions = append(untradableActions, crossPoolTradeRequestAction)
 				continue
 			}
