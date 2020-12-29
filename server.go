@@ -1030,12 +1030,15 @@ func (serverObj *Server) OnGetCrossShard(_ *peer.PeerConn, msg *wire.MessageGetC
 	Logger.log.Debug("Receive a getcrossshard END")
 }
 
+var totalTxReceived = 0
+
 // OnTx is invoked when a peer receives a tx message.  It blocks
 // until the transaction has been fully processed.  Unlock the block
 // handler this does not serialize all transactions through a single thread
 // transactions don't rely on the previous one in a linear fashion like blocks.
 func (serverObj *Server) OnTx(peer *peer.PeerConn, msg *wire.MessageTx) {
-	Logger.log.Debug("Receive a new transaction START")
+	totalTxReceived++
+	Logger.log.Infof("[debugz] Receive a new transaction, total %v", totalTxReceived)
 	var txProcessed chan struct{}
 	serverObj.netSync.QueueTx(nil, msg, txProcessed)
 	//<-txProcessed

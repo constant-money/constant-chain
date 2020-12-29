@@ -258,9 +258,11 @@ func (netSync *NetSync) QueueMessage(peer *peer.Peer, msg wire.Message, done cha
 	netSync.cMessage <- msg
 }
 
+var totalTxPushed = 0
+
 // handleTxMsg handles transaction messages from all peers.
 func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64) {
-	Logger.log.Debug("Handling new message tx")
+	Logger.log.Info("Handling new message tx")
 	// if !netSync.handleTxWithRole(msg.Transaction) {
 	// 	return
 	// }
@@ -268,6 +270,12 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 		// Broadcast to network
 		sID := common.GetShardIDFromLastByte(msg.Transaction.GetSenderAddrLastByte())
 		err := netSync.config.Server.PushMessageToShard(msg, sID)
+		if err != nil {
+			Logger.log.Errorf("[debugz] cannot push this tx %v to shard %v, got err %v", msg.Transaction.Hash().String(), sID, err)
+		} else {
+			totalTxPushed++
+			Logger.log.Infof("[debugz] pushed %v txs", totalTxPushed)
+		}
 		hash, _, err := netSync.config.TxMemPool.MaybeAcceptTransaction(msg.Transaction, beaconHeight)
 		if err != nil {
 			Logger.log.Error(err)
