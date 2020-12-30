@@ -267,6 +267,7 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 	// 	return
 	// }
 	if isAdded := netSync.handleCacheTx(*msg.Transaction.Hash()); !isAdded {
+		Logger.log.Info("[debugz] Added new message tx")
 		// Broadcast to network
 		sID := common.GetShardIDFromLastByte(msg.Transaction.GetSenderAddrLastByte())
 		err := netSync.config.Server.PushMessageToShard(msg, sID)
