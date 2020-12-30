@@ -78,6 +78,7 @@ type RpcServerConfig struct {
 		// Push TxNormal Message
 		PushMessageToAll(message wire.Message) error
 		PushMessageToPeer(message wire.Message, id peer2.ID) error
+		PushMessageToShard(msg wire.Message, shard byte) error
 		GetNodeRole() string
 		// GetUserKeySet() *incognitokey.KeySet
 		EnableMining(enable bool) error

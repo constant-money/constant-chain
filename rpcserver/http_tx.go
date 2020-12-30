@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -34,6 +35,9 @@ func (httpServer *HttpServer) handleCreateRawTransaction(params interface{}, clo
 	return result, nil
 }
 
+var totalTxsRawSent = []int{0, 0, 0, 0, 0, 0, 0, 0}
+var lockerr sync.Mutex
+
 // handleSendTransaction implements the sendtransaction command.
 // Parameter #1—a serialized transaction to broadcast
 // Parameter #2–whether to allow high fees
@@ -53,10 +57,13 @@ func (httpServer *HttpServer) handleSendRawTransaction(params interface{}, close
 	if err != nil {
 		return nil, err
 	}
-
-	err2 := httpServer.config.Server.PushMessageToAll(txMsg)
+	sID := common.GetShardIDFromLastByte(LastBytePubKeySender)
+	err2 := httpServer.config.Server.PushMessageToShard(txMsg, sID)
 	if err2 == nil {
-		Logger.log.Info("handleSendRawTransaction broadcast message to all successfully")
+		lockerr.Lock()
+		totalTxsRawSent[sID]++
+		lockerr.Unlock()
+		Logger.log.Infof("[debugz] handleSendRawTransaction broadcast message to all successfully, total txs %v sent to shard %v ", totalTxsRawSent[sID], sID)
 		httpServer.config.TxMemPool.MarkForwardedTransaction(*txHash)
 	} else {
 		Logger.log.Errorf("handleSendRawTransaction broadcast message to all with error %+v", err2)
@@ -173,8 +180,8 @@ func (httpServer *HttpServer) handleGetTransactionHashByReceiverV2(params interf
 		txHashs = append(txHashs, txHashsByShard...)
 	}
 	result := struct {
-		Skip uint
-		Limit uint
+		Skip    uint
+		Limit   uint
 		TxHashs []common.Hash
 	}{
 		uint(skip),
@@ -274,9 +281,9 @@ func (httpServer *HttpServer) handleGetTransactionByReceiverV2(params interface{
 		return nil, err
 	}
 	result := struct {
-		Total uint
-		Skip uint
-		Limit uint
+		Total                uint
+		Skip                 uint
+		Limit                uint
 		ReceivedTransactions []jsonresult.ReceivedTransactionV2
 	}{
 		total,
@@ -786,7 +793,6 @@ func (httpServer *HttpServer) handleCreateAndSendPrivacyCustomTokenTransactionV2
 	}
 	return tx, nil
 }
-
 
 // handleCreateRawStakingTransaction handles create staking
 func (httpServer *HttpServer) handleCreateRawStakingTransaction(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
