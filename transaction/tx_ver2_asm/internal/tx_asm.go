@@ -127,7 +127,7 @@ type Tx struct {
 	LockTime int64  `json:"LockTime"`
 	Fee      uint64 `json:"Fee"` // Fee applies: always consant
 	Info     []byte // 512 bytes
-	
+
 	// Sign and Privacy proof, required
 	SigPubKey            []byte `json:"SigPubKey"` // 33 bytes
 	Sig                  []byte `json:"Sig"`       //
@@ -375,7 +375,8 @@ func (c CoinInter) ToCoin() (*privacy.CoinV2, uint64, error){
 	}
 
 	if c.Amount.IsBlank(){
-		result.SetAmount(nil)
+		temp := (&privacy.Scalar{}).FromUint64(uint64(c.Value))
+		result.SetAmount(temp)
 	}else{
 		result.SetAmount((&privacy.Scalar{}).FromBytesS(c.Amount))
 	}
@@ -387,7 +388,7 @@ func (c CoinInter) ToCoin() (*privacy.CoinV2, uint64, error){
 		err = txr.SetBytes(c.TxRandom)
 		if err!=nil{
 			return nil, 0, err
-		}	
+		}
 		result.SetTxRandom(txr)
 	}
 
@@ -648,7 +649,7 @@ func (tx *Tx) sign(inp []privacy.PlainCoin, inputIndexes []uint64, out []*privac
 		return errors.New("Re-signing TX is not allowed")
 	}
 	ringSize := privacy.RingSize
-	
+
 
 	// Generate Ring
 	piBig, piErr := RandBigIntMaxRange(big.NewInt(int64(ringSize)))
