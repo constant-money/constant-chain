@@ -42,11 +42,11 @@ const (
 	SampleConfigFilename               = "sample-config.conf"
 	DefaultDisableRpcTLS               = true
 	DefaultFastStartup                 = true
-	DefaultNodeMode                    = common.NodeModeRelay
-	DefaultEnableMining                = true
-	DefaultTxPoolTTL                   = uint(15 * 60) // 15 minutes
-	DefaultTxPoolMaxTx                 = uint64(100000)
-	DefaultLimitFee                    = uint64(1) // 1 nano PRV = 10^-9 PRV
+	// DefaultNodeMode                    = common.NodeModeRelay
+	DefaultEnableMining = true
+	DefaultTxPoolTTL    = uint(15 * 60) // 15 minutes
+	DefaultTxPoolMaxTx  = uint64(100000)
+	DefaultLimitFee     = uint64(1) // 1 nano PRV = 10^-9 PRV
 	//DefaultLimitFee = uint64(100000) // 100000 nano PRV = 100000 * 10^-9 PRV
 	// For wallet
 	DefaultWalletName     = "wallet"
@@ -122,7 +122,7 @@ type config struct {
 	TestNet        string `long:"testnet" description:"Use the test network"`
 	TestNetVersion string `long:"testnetversion" description:"Use the test network"`
 
-	NodeMode    string `long:"nodemode" description:"Role of this node (beacon/shard/wallet/relay | default role is 'relay' (relayshards must be set to run), 'auto' mode will switch between 'beacon' and 'shard')"`
+	// NodeMode    string `long:"nodemode" description:"Role of this node (beacon/shard/wallet/relay | default role is 'relay' (relayshards must be set to run), 'auto' mode will switch between 'beacon' and 'shard')"`
 	RelayShards string `long:"relayshards" description:"set relay shards of this node when in 'relay' mode if noderole is auto then it only sync shard data when user is a shard producer/validator"`
 	// For Wallet
 	Wallet           bool   `long:"enablewallet" description:"Enable wallet"`
@@ -333,18 +333,18 @@ func loadConfig() (*config, []string, error) {
 		DiscoverPeers:               true,
 		TestNet:                     "true",
 		DiscoverPeersAddress:        "127.0.0.1:9330", //"35.230.8.182:9339",
-		NodeMode:                    DefaultNodeMode,
-		MiningKeys:                  common.EmptyString,
-		PrivateKey:                  common.EmptyString,
-		FastStartup:                 DefaultFastStartup,
-		TxPoolTTL:                   DefaultTxPoolTTL,
-		TxPoolMaxTx:                 DefaultTxPoolMaxTx,
-		PersistMempool:              DefaultPersistMempool,
-		LimitFee:                    DefaultLimitFee,
-		MetricUrl:                   DefaultMetricUrl,
-		BtcClient:                   DefaultBtcClient,
-		BtcClientPort:               DefaultBtcClientPort,
-		EnableMining:                DefaultEnableMining,
+		// NodeMode:                    DefaultNodeMode,
+		MiningKeys:     common.EmptyString,
+		PrivateKey:     common.EmptyString,
+		FastStartup:    DefaultFastStartup,
+		TxPoolTTL:      DefaultTxPoolTTL,
+		TxPoolMaxTx:    DefaultTxPoolMaxTx,
+		PersistMempool: DefaultPersistMempool,
+		LimitFee:       DefaultLimitFee,
+		MetricUrl:      DefaultMetricUrl,
+		BtcClient:      DefaultBtcClient,
+		BtcClientPort:  DefaultBtcClientPort,
+		EnableMining:   DefaultEnableMining,
 	}
 
 	// Service options which are only added on Windows.
@@ -647,9 +647,9 @@ func loadConfig() (*config, []string, error) {
 		}
 	}
 
-	if cfg.MiningKeys == "" && cfg.PrivateKey == "" && cfg.NodeMode != common.NodeModeRelay {
-		return nil, nil, errors.New("MiningKeys can't be empty if nodemode isn't relay")
-	}
+	// if cfg.MiningKeys == "" && cfg.PrivateKey == "" && cfg.NodeMode != common.NodeModeRelay {
+	// 	return nil, nil, errors.New("MiningKeys can't be empty if nodemode isn't relay")
+	// }
 
 	// Warn about missing config file only after all other configuration is
 	// done.  This prevents the warning on help messages and invalid

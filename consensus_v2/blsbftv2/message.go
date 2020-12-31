@@ -26,7 +26,7 @@ type BFTVote struct {
 	BLS           []byte
 	BRI           []byte
 	Confirmation  []byte
-	isValid       int // 0 not process, 1 valid, -1 not valid
+	IsValid       int // 0 not process, 1 valid, -1 not valid
 	TimeSlot      uint64
 }
 

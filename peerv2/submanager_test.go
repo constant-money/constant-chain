@@ -84,7 +84,7 @@ func TestSubscribeRoleChanged(t *testing.T) {
 	sub := &SubManager{
 		info: info{
 			consensusData: consensusData,
-			nodeMode:      common.NodeModeAuto,
+			syncMode:      common.NodeModeAuto,
 			relayShard:    []byte{},
 		},
 		role:       role,
@@ -110,7 +110,7 @@ func TestSubscribeForced(t *testing.T) {
 	sub := &SubManager{
 		info: info{
 			consensusData: consensusData,
-			nodeMode:      common.NodeModeAuto,
+			syncMode:      common.NodeModeAuto,
 			relayShard:    []byte{},
 		},
 		role:       role,
@@ -293,7 +293,7 @@ func TestRegisterToProxy(t *testing.T) {
 
 	sub := &SubManager{
 		info: info{
-			nodeMode: common.NodeModeAuto,
+			syncMode: common.NodeModeAuto,
 			peerID:   peer.ID(""),
 		},
 		registerer: registerer,

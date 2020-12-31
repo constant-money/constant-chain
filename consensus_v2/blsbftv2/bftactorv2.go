@@ -8,6 +8,8 @@ import (
 	"sort"
 	"time"
 
+	"github.com/incognitochain/incognito-chain/multiview"
+
 	signatureschemes2 "github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes"
 
 	lru "github.com/hashicorp/golang-lru"
@@ -145,11 +147,18 @@ func (e *BLSBFT_V2) Start() error {
 				}
 
 			case voteMsg := <-e.VoteMessageCh:
-				voteMsg.isValid = 0
+				voteMsg.IsValid = 0
 				if b, ok := e.receiveBlockByHash[voteMsg.BlockHash]; ok { //if receiveblock is already initiated
 					if _, ok := b.votes[voteMsg.Validator]; !ok { // and not receive validatorA vote
 						b.votes[voteMsg.Validator] = &voteMsg // store it
-						e.Logger.Infof("%v Receive vote for block %s (%d) from %v", e.ChainKey, voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.Validator)
+						vid, v := GetValidatorIndex(e.Chain.GetBestView(), voteMsg.Validator)
+						if v != nil {
+							vbase58, _ := v.ToBase58()
+							e.Logger.Infof("%v Receive vote (%d) for block %s from validator %d %v", e.ChainKey, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.BlockHash, vid, vbase58)
+						} else {
+							e.Logger.Infof("%v Receive vote (%d) for block from unknown validator", e.ChainKey, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.BlockHash, voteMsg.Validator)
+						}
+
 						b.hasNewVote = true
 					}
 				} else {
@@ -158,7 +167,13 @@ func (e *BLSBFT_V2) Start() error {
 						hasNewVote: true,
 					}
 					e.receiveBlockByHash[voteMsg.BlockHash].votes[voteMsg.Validator] = &voteMsg
-					e.Logger.Infof("%v Receive vote for block %s (%d) from %v", e.ChainKey, voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.Validator)
+					vid, v := GetValidatorIndex(e.Chain.GetBestView(), voteMsg.Validator)
+					if v != nil {
+						vbase58, _ := v.ToBase58()
+						e.Logger.Infof("%v Receive vote (%d) for block %s from validator %d %v", e.ChainKey, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.BlockHash, vid, vbase58)
+					} else {
+						e.Logger.Infof("%v Receive vote (%d) for block from unknown validator", e.ChainKey, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.BlockHash, voteMsg.Validator)
+					}
 				}
 
 			case <-ticker:
@@ -178,7 +193,7 @@ func (e *BLSBFT_V2) Start() error {
 				/*
 					Check for whether we should propose block
 				*/
-				proposerPk := bestView.GetProposerByTimeSlot(e.currentTimeSlot, 2)
+				proposerPk, _ := bestView.GetProposerByTimeSlot(e.currentTimeSlot, 2)
 				var userProposeKey signatureschemes2.MiningKey
 				shouldPropose := false
 				shouldListen := true
@@ -297,6 +312,15 @@ func NewInstance(chain ChainInterface, chainKey string, chainID int, node NodeIn
 	return newInstance
 }
 
+func GetValidatorIndex(view multiview.View, validator string) (int, *incognitokey.CommitteePublicKey) {
+	for id, c := range view.GetCommittee() {
+		if validator == c.GetMiningKeyBase58(common.BlsConsensus) {
+			return id, &c
+		}
+	}
+	return -1, nil
+}
+
 func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBlockInfo) {
 	//no vote
 	if v.hasNewVote == false {
@@ -324,25 +348,29 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 	errVote := 0
 	for id, vote := range v.votes {
 		dsaKey := []byte{}
-		if vote.isValid == 0 {
-			for _, c := range view.GetCommittee() {
-				//e.Logger.Error(vote.Validator, c.GetMiningKeyBase58(common.BlsConsensus))
-				if vote.Validator == c.GetMiningKeyBase58(common.BlsConsensus) {
-					dsaKey = c.MiningPubKey[common.BridgeConsensus]
-				}
+		if vote.IsValid == 0 {
+			cid, committeePk := GetValidatorIndex(view, vote.Validator)
+			if committeePk != nil {
+				dsaKey = committeePk.MiningPubKey[common.BridgeConsensus]
+			} else {
+				e.Logger.Error("Receive vote from nonCommittee member")
+				continue
 			}
+
 			if len(dsaKey) == 0 {
-				e.Logger.Error("canot find dsa key")
+				e.Logger.Error(fmt.Sprintf("Cannot find dsa key from vote of %d", cid))
+				continue
 			}
+
 			err := vote.validateVoteOwner(dsaKey)
 			if err != nil {
 				e.Logger.Error(dsaKey)
 				e.Logger.Error(err)
 				panic(1)
-				v.votes[id].isValid = -1
+				v.votes[id].IsValid = -1
 				errVote++
 			} else {
-				v.votes[id].isValid = 1
+				v.votes[id].IsValid = 1
 				validVote++
 			}
 		} else {
@@ -359,7 +387,7 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 			e.Logger.Error(err)
 			return
 		}
-		aggSig, brigSigs, validatorIdx, err := combineVotes(v.votes, committeeBLSString)
+		aggSig, brigSigs, validatorIdx, err := CombineVotes(v.votes, committeeBLSString)
 		if err != nil {
 			e.Logger.Error(err)
 			return
@@ -406,58 +434,77 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 	}
 
 	//if valid then vote
+	committeeBLSString, _ := incognitokey.ExtractPublickeysFromCommitteeKeyList(view.GetCommittee(), common.BlsConsensus)
 	for _, userKey := range e.UserKeySet {
-		var Vote = new(BFTVote)
-		bytelist := []blsmultisig.PublicKey{}
-		selfIdx := 0
-		userBLSPk := userKey.GetPublicKey().GetMiningKeyBase58(common.BlsConsensus)
-		for i, v := range e.Chain.GetBestView().GetCommittee() {
-			if v.GetMiningKeyBase58(common.BlsConsensus) == userBLSPk {
-				selfIdx = i
-			}
-			bytelist = append(bytelist, v.MiningPubKey[common.BlsConsensus])
-		}
-
-		blsSig, err := userKey.BLSSignData(v.block.Hash().GetBytes(), selfIdx, bytelist)
-		if err != nil {
-			e.Logger.Error(err)
-			return NewConsensusError(UnExpectedError, err)
-		}
-		bridgeSig := []byte{}
-		if metadata.HasBridgeInstructions(v.block.GetInstructions()) || metadata.HasPortalInstructions(v.block.GetInstructions()) {
-			bridgeSig, err = userKey.BriSignData(v.block.Hash().GetBytes())
+		pubKey := userKey.GetPublicKey()
+		if common.IndexOfStr(pubKey.GetMiningKeyBase58(e.GetConsensusName()), committeeBLSString) != -1 {
+			Vote, err := CreateVote(&userKey, v.block, e.Chain.GetBestView().GetCommittee())
 			if err != nil {
 				e.Logger.Error(err)
 				return NewConsensusError(UnExpectedError, err)
 			}
-		}
-		Vote.BLS = blsSig
-		Vote.BRI = bridgeSig
-		Vote.BlockHash = v.block.Hash().String()
 
-		userPk := userKey.GetPublicKey()
-		Vote.Validator = userPk.GetMiningKeyBase58(common.BlsConsensus)
-		Vote.PrevBlockHash = v.block.GetPrevHash().String()
-		err = Vote.signVote(&userKey)
-		if err != nil {
-			e.Logger.Error(err)
-			return NewConsensusError(UnExpectedError, err)
-		}
+			// blsSig, err := userKey.BLSSignData(v.block.Hash().GetBytes(), selfIdx, bytelist)
+			// if err != nil {
+			// 	e.Logger.Error(err)
+			// 	return NewConsensusError(UnExpectedError, err)
+			// }
+			// bridgeSig := []byte{}
+			// if metadata.HasBridgeInstructions(v.block.GetInstructions()) || metadata.HasPortalInstructions(v.block.GetInstructions()) {
+			// 	bridgeSig, err = userKey.BriSignData(v.block.Hash().GetBytes())
+			msg, err := MakeBFTVoteMsg(Vote, e.ChainKey, e.currentTimeSlot, v.block.GetHeight())
+			if err != nil {
+				e.Logger.Error(err)
+				return NewConsensusError(UnExpectedError, err)
+			}
 
-		msg, err := MakeBFTVoteMsg(Vote, e.ChainKey, e.currentTimeSlot, v.block.GetHeight())
-		if err != nil {
-			e.Logger.Error(err)
-			return NewConsensusError(UnExpectedError, err)
+			v.isValid = true
+			e.voteHistory[v.block.GetHeight()] = v.block
+			e.Logger.Info(e.ChainKey, "sending vote...")
+			go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
+			go e.Node.PushMessageToChain(msg, e.Chain)
 		}
-
-		v.isValid = true
-		e.voteHistory[v.block.GetHeight()] = v.block
-		e.Logger.Info(e.ChainKey, "sending vote...")
-		go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
-		go e.Node.PushMessageToChain(msg, e.Chain)
 	}
 
 	return nil
+}
+
+func CreateVote(userKey *signatureschemes2.MiningKey, block common.BlockInterface, committees []incognitokey.CommitteePublicKey) (*BFTVote, error) {
+	var Vote = new(BFTVote)
+	bytelist := []blsmultisig.PublicKey{}
+	selfIdx := 0
+	userBLSPk := userKey.GetPublicKey().GetMiningKeyBase58(common.BlsConsensus)
+	for i, v := range committees {
+		if v.GetMiningKeyBase58(common.BlsConsensus) == userBLSPk {
+			selfIdx = i
+		}
+		bytelist = append(bytelist, v.MiningPubKey[common.BlsConsensus])
+	}
+
+	blsSig, err := userKey.BLSSignData(block.Hash().GetBytes(), selfIdx, bytelist)
+	if err != nil {
+
+		return nil, NewConsensusError(UnExpectedError, err)
+	}
+	bridgeSig := []byte{}
+	if metadata.HasBridgeInstructions(block.GetInstructions()) || metadata.HasPortalInstructions(block.GetInstructions()) {
+		bridgeSig, err = userKey.BriSignData(block.Hash().GetBytes())
+		if err != nil {
+			return nil, NewConsensusError(UnExpectedError, err)
+		}
+	}
+	Vote.BLS = blsSig
+	Vote.BRI = bridgeSig
+	Vote.BlockHash = block.Hash().String()
+
+	userPk := userKey.GetPublicKey()
+	Vote.Validator = userPk.GetMiningKeyBase58(common.BlsConsensus)
+	Vote.PrevBlockHash = block.GetPrevHash().String()
+	err = Vote.signVote(userKey)
+	if err != nil {
+		return nil, NewConsensusError(UnExpectedError, err)
+	}
+	return Vote, nil
 }
 
 func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, proposerPk incognitokey.CommitteePublicKey, block common.BlockInterface) (common.BlockInterface, error) {
@@ -466,7 +513,7 @@ func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, prop
 	var err error
 	if block == nil {
 		ctx := context.Background()
-		ctx, cancel := context.WithTimeout(ctx, common.TIMESLOT/2)
+		ctx, cancel := context.WithTimeout(ctx, (time.Duration(common.TIMESLOT)*time.Second)/2)
 		defer cancel()
 		//block, _ = e.Chain.CreateNewBlock(ctx, e.currentTimeSlot, e.UserKeySet.GetPublicKeyBase58())
 		//e.Logger.Info("debug CreateNewBlock")

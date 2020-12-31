@@ -84,6 +84,7 @@ func mainMaster(serverChan chan<- *Server) error {
 	}
 	cfg = tempConfig
 	common.MaxShardNumber = activeNetParams.ActiveShards
+	common.TIMESLOT = activeNetParams.Timeslot
 	activeNetParams.CreateGenesisBlocks()
 	// Get a channel that will be closed when a shutdown signal has been
 	// triggered either from an OS signal such as SIGINT (Ctrl+C) or from

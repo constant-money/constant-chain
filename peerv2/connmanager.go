@@ -29,7 +29,7 @@ func NewConnManager(
 	ikey *incognitokey.CommitteePublicKey,
 	cd ConsensusData,
 	dispatcher *Dispatcher,
-	nodeMode string,
+	syncMode string, //netmonitor or default
 	relayShard []byte,
 ) *ConnManager {
 	pubkey, _ := ikey.ToBase58()
@@ -38,7 +38,7 @@ func NewConnManager(
 			consensusData: cd,
 			pubkey:        pubkey,
 			relayShard:    relayShard,
-			nodeMode:      nodeMode,
+			syncMode:      syncMode,
 			peerID:        host.Host.ID(),
 		},
 		keeper:               NewAddrKeeper(),
@@ -58,7 +58,7 @@ func (cm *ConnManager) PublishMessage(msg wire.Message) error {
 
 	// msgCrossShard := msg.(wire.MessageCrossShard)
 	msgType := msg.MessageType()
-	subs := cm.subscriber.GetMsgToTopics()
+	subs := cm.Subscriber.GetMsgToTopics()
 	for _, p := range publishable {
 		topic = ""
 		if msgType == p {
@@ -88,7 +88,7 @@ func (cm *ConnManager) PublishMessage(msg wire.Message) error {
 func (cm *ConnManager) PublishMessageToShard(msg wire.Message, shardID byte) error {
 	publishable := []string{wire.CmdPeerState, wire.CmdBlockShard, wire.CmdCrossShard, wire.CmdBFT, wire.CmdTx, wire.CmdPrivacyCustomToken}
 	msgType := msg.MessageType()
-	subs := cm.subscriber.GetMsgToTopics()
+	subs := cm.Subscriber.GetMsgToTopics()
 	for _, p := range publishable {
 		if msgType == p {
 			// Get topic for mess
@@ -119,7 +119,7 @@ func (cm *ConnManager) Start(bg BlockGetter) {
 	go cm.keepHighwayConnection()
 
 	cm.Requester = NewRequester(cm.LocalHost.GRPC)
-	cm.subscriber = NewSubManager(cm.info, cm.ps, cm.Requester, cm.messages, cm.disp)
+	cm.Subscriber = NewSubManager(cm.info, cm.ps, cm.Requester, cm.messages, cm.disp)
 	cm.Provider = NewBlockProvider(cm.LocalHost.GRPC, bg)
 	go cm.manageRoleSubscription()
 	cm.process()
@@ -161,12 +161,13 @@ func (cm *ConnManager) BroadcastCommittee(
 type ForcedSubscriber interface {
 	Subscribe(forced bool) error
 	GetMsgToTopics() msgToTopics
+	SetSyncMode(string)
 }
 
 type ConnManager struct {
 	info         // info of running node
 	LocalHost    *Host
-	subscriber   ForcedSubscriber
+	Subscriber   ForcedSubscriber
 	disconnected int
 	registered   bool
 
@@ -299,15 +300,17 @@ func (cm *ConnManager) manageRoleSubscription() {
 			target := cm.Requester.Target()
 			if hwID.Pretty() != target {
 				cm.Requester.UpdateTarget(hwID)
-				Logger.Errorf("Waiting to establish connection to highway: new highway = %v, current = %v", hwID.Pretty(), target)
+				Logger.Warnf("Waiting to establish connection to highway: new highway = %v, current = %v", hwID.Pretty(), target)
 				continue
 			}
 
-			err = cm.subscriber.Subscribe(forced)
-			if err != nil {
-				Logger.Errorf("Subscribe failed: forced = %v hwID = %s err = %+v", forced, hwID.String(), err)
-			} else {
-				forced = false
+			if hwID != peer.ID("") {
+				err = cm.Subscriber.Subscribe(forced)
+				if err != nil {
+					Logger.Errorf("Subscribe failed: forced = %v hwID = %s err = %+v", forced, hwID.String(), err)
+				} else {
+					forced = false
+				}
 			}
 
 		case newID := <-cm.registerRequests:

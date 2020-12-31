@@ -12,7 +12,7 @@ type View interface {
 	GetPreviousHash() *common.Hash
 	GetHeight() uint64
 	GetCommittee() []incognitokey.CommitteePublicKey
-	GetProposerByTimeSlot(ts int64, version int) incognitokey.CommitteePublicKey
+	GetProposerByTimeSlot(ts int64, version int) (incognitokey.CommitteePublicKey, int)
 	GetBlock() common.BlockInterface
 }
 

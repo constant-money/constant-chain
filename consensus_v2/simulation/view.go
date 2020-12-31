@@ -28,9 +28,9 @@ func (s *State) GetCommittee() []incognitokey.CommitteePublicKey {
 	return s.committee
 }
 
-func (s *State) GetProposerByTimeSlot(ts int64, version int) incognitokey.CommitteePublicKey {
+func (s *State) GetProposerByTimeSlot(ts int64, version int) (incognitokey.CommitteePublicKey, int) {
 	id := blockchain.GetProposerByTimeSlot(ts, len(s.committee))
-	return s.committee[id]
+	return s.committee[id], id
 }
 
 func (s *State) GetBlock() common.BlockInterface {

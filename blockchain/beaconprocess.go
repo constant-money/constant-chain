@@ -1086,8 +1086,6 @@ func (beaconBestState *BeaconBestState) processInstruction(instruction []string,
 				beaconStakingTx = []string{}
 			}
 		}
-		Logger.log.Infof("Len Candidate: %v; Len AutoStaking: %v, Len StakingTx: %v", len(beaconCandidatesStructs), len(beaconAutoReStaking), len(beaconStakingTx))
-		Logger.log.Infof("Candidate: %v; AutoStaking: %v, StakingTx: %v", beaconCandidatesStructs, beaconAutoReStaking, beaconStakingTx)
 		for index, candidate := range beaconCandidatesStructs {
 			wl, err := wallet.Base58CheckDeserialize(beaconRewardReceivers[index])
 			if err != nil {
@@ -1624,7 +1622,7 @@ func processBeaconForConfirmmingCrossShard(blockchain *BlockChain, beaconBlock *
 						beaconBlock.GetHeight(),
 						beaconBlock.Hash().String(),
 					}
-					Logger.log.Info("DEBUG: processBeaconForConfirmmingCrossShard ", fromShard, toShard, info)
+					Logger.log.Info("DEBUG: processBeaconForConfirmmingCrossShard ", fromShard, toShard, lastHeight, info)
 					b, _ := json.Marshal(info)
 
 					//not update if already exit

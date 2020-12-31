@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/peerv2"
 	"sync"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/peerv2"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 

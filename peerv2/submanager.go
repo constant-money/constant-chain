@@ -29,11 +29,9 @@ type SubManager struct {
 	registerer Registerer
 	subscriber Subscriber
 
-	//role   userRole
 	topics msgToTopics
 	subs   msgToTopics // mapping from message to topic's subscription
 
-	role     map[int]*consensus.Validator
 	rolehash string
 
 	disp *Dispatcher
@@ -41,11 +39,10 @@ type SubManager struct {
 
 type info struct {
 	consensusData ConsensusData
-
-	pubkey     string
-	nodeMode   string
-	relayShard []byte
-	peerID     peer.ID
+	pubkey        string
+	syncMode      string
+	relayShard    []byte
+	peerID        peer.ID
 }
 
 type Subscriber interface {
@@ -73,7 +70,6 @@ func NewSubManager(
 		//role:       newUserRole("dummyLayer", "dummyRole", -1000),
 		topics: msgToTopics{},
 		subs:   msgToTopics{},
-		role:   make(map[int]*consensus.Validator),
 		disp:   dispatcher,
 	}
 }
@@ -82,114 +78,121 @@ func (sub *SubManager) GetMsgToTopics() msgToTopics {
 	return sub.subs // no need to make a copy since topics rarely changed (when role changed)
 }
 
+func (sub *SubManager) SetSyncMode(s string) {
+	sub.syncMode = s
+}
+
 // Subscribe registers to proxy and save the list of new topics if needed
 func (sub *SubManager) Subscribe(forced bool) error {
-
 	rolehash := ""
-	shardIDs := []byte{}
-	newRole := sub.consensusData.GetOneValidatorForEachConsensusProcess()
+	relayShardIDs := sub.relayShard
 	var newTopics = make(msgToTopics)
 	var err error
-	if len(newRole) > 0 {
-		str := ""
+	shardIDs := []int{}
+	nodePK, _ := new(incognitokey.CommitteePublicKey).ToBase58()
 
-		shardIDs := []int{}
+	if sub.syncMode == "" {
+		newRole := sub.consensusData.GetOneValidatorForEachConsensusProcess()
+
+		for _, sid := range relayShardIDs {
+			if newRole[int(sid)] == nil {
+				newRole[int(sid)] = &consensus.Validator{}
+			}
+		}
+
+		//recalculate rolehash
 		for k := range newRole {
 			shardIDs = append(shardIDs, int(k))
 		}
 		sort.Ints(shardIDs)
+		str := ""
 		for _, chainID := range shardIDs {
-			str += fmt.Sprintf("%v-%v", chainID, newRole[chainID].State.Role)
+			if newRole[chainID] != nil {
+				str += fmt.Sprintf("%v-%v", chainID, newRole[chainID].State.Role)
+			} else {
+				str += fmt.Sprintf("%v-", chainID)
+			}
 		}
 		rolehash = common.HashH([]byte(str)).String()
 
-	} else {
-		shardIDs = getWantedShardIDs(userRole{}, sub.nodeMode, sub.relayShard)
-	}
+		//check if role hash is changed
+		if rolehash == sub.rolehash && !forced { // Not forced => no need to subscribe when role stays the same
+			return nil
+		}
 
-	if rolehash == sub.rolehash && !forced { // Not forced => no need to subscribe when role stays the same
-		return nil
-	}
+		Logger.Infof("Role changed %+v", rolehash)
 
-	//if (newRole.role != "") && (newRole.role != "dummyRole") {
-	//	if pubKey == "" {
-	//		return errors.Errorf("Can not load current mining key, pub key %v role %v", pubKey, sub.role.role)
-	//	} else {
-	//		sub.pubkey = pubKey
-	//	}
-	//}
+		// Registering relay
+		if len(relayShardIDs) == 0 {
+			relayShardIDs = []byte{255}
+		}
 
-	Logger.Infof("Role changed %+v", rolehash)
-
-	// Registering
-
-	if len(newRole) == 0 {
-		nodePK, _ := new(incognitokey.CommitteePublicKey).ToBase58()
 		validator := sub.consensusData.GetOneValidator()
 		if validator != nil {
 			nodePK = validator.MiningKey.GetPublicKeyBase58()
 		}
-
 		newTopics, _, err = sub.registerToProxy(
 			nodePK,
 			"",
 			"",
-			shardIDs,
+			relayShardIDs,
 		)
 		if err != nil {
 			return err
 		}
-	} else {
+
+		// Registering mining
 		for chainID, validator := range newRole {
-			topics, _, err := sub.registerToProxy(
-				validator.MiningKey.GetPublicKeyBase58(),
-				validator.State.Layer,
-				validator.State.Role,
-				[]byte{byte(chainID)},
-			)
-			if err != nil {
-				return err // Don't save new role and topics since we need to retry later
-			}
-			for msg, topic := range topics {
-				newTopics[msg] = append(newTopics[msg], topic...)
+			if validator.PrivateSeed != "" {
+				topics, _, err := sub.registerToProxy(
+					validator.MiningKey.GetPublicKeyBase58(),
+					validator.State.Layer,
+					validator.State.Role,
+					[]byte{byte(chainID)},
+				)
+				if err != nil {
+					return err // Don't save new role and topics since we need to retry later
+				}
+				for msg, topic := range topics {
+					newTopics[msg] = append(newTopics[msg], topic...)
+				}
 			}
 		}
+	} else if sub.syncMode == "netmonitor" {
+		rolehash = common.HashH([]byte("netmonitor")).String()
+
+		//check if role hash is changed
+		if rolehash == sub.rolehash && !forced { // Not forced => no need to subscribe when role stays the same
+			return nil
+		}
+
+		topics, _, err := sub.registerToProxy(
+			nodePK,
+			"",
+			"netmonitor",
+			[]byte{255},
+		)
+		if err != nil {
+			return err // Don't save new role and topics since we need to retry later
+		}
+		for msg, topic := range topics {
+			newTopics[msg] = append(newTopics[msg], topic...)
+		}
+
 	}
-	// Logger.Infof("[bftmsg] Regist", params ...interface{})
 
-	// NOTE: disabled, highway always return the same role
-	//_ = roleOfTopics
-	// if newRole != roleOfTopics {
-	// 	return role, topics, errors.Errorf("lole not matching with highway, local = %+v, highway = %+v", newRole, roleOfTopics)
-	// }
-
-	Logger.Debugf("Received topics = %+v, oldTopics = %+v", newTopics, sub.topics)
 	Logger.Infof("newTopics %v", newTopics)
 	Logger.Infof("sub topics %v", sub.topics)
+
 	// Subscribing
 	if err := sub.subscribeNewTopics(newTopics, sub.topics, forced); err != nil {
 		Logger.Error(err)
 		return err
 	}
 
-	sub.role = newRole
 	sub.topics = newTopics
 	sub.rolehash = rolehash
 	return nil
-}
-
-func getWantedShardIDs(role userRole, nodeMode string, relayShard []byte) []byte {
-	roleSID := role.shardID
-	if roleSID == -2 { // not waiting/pending/validator right now
-		roleSID = -1 // wanted only beacon chain (shardID == -1 == byte(255))
-	}
-	shardIDs := []byte{}
-	if nodeMode == common.NodeModeRelay {
-		shardIDs = append(relayShard, HighwayBeaconID)
-	} else {
-		shardIDs = append(shardIDs, byte(roleSID))
-	}
-	return shardIDs
 }
 
 type userRole struct {
@@ -339,9 +342,9 @@ func (sub *SubManager) registerToProxy(
 	role string,
 	shardID []byte,
 ) (msgToTopics, userRole, error) {
-	messagesWanted := getMessagesForLayer(sub.nodeMode, layer, shardID)
+	messagesWanted := getMessagesForLayer(layer, shardID)
 	Logger.Infof("Registering: message: %v", messagesWanted)
-	Logger.Infof("Registering: nodeMode: %v", sub.nodeMode)
+	// Logger.Infof("Registering: nodeMode: %v", sub.nodeMode)
 	Logger.Infof("Registering: layer: %v", layer)
 	Logger.Infof("Registering: role: %v", role)
 	Logger.Infof("Registering: shardID: %v", shardID)
@@ -378,46 +381,35 @@ func (sub *SubManager) registerToProxy(
 	return topics, r, nil
 }
 
-func getMessagesForLayer(mode, layer string, shardID []byte) []string {
-	switch mode {
-	case common.NodeModeAuto:
-		if layer == common.ShardRole {
-			return []string{
-				wire.CmdBlockShard,
-				wire.CmdBlockBeacon,
-				wire.CmdBFT,
-				wire.CmdPeerState,
-				wire.CmdCrossShard,
-				wire.CmdTx,
-				wire.CmdPrivacyCustomToken,
-			}
-		} else if layer == common.BeaconRole {
-			return []string{
-				wire.CmdBlockBeacon,
-				wire.CmdBFT,
-				wire.CmdPeerState,
-				wire.CmdBlockShard,
-			}
-		} else {
-			return []string{
-				wire.CmdBlockBeacon,
-				wire.CmdPeerState,
-				wire.CmdTx,
-				wire.CmdPrivacyCustomToken,
-			}
+func getMessagesForLayer(layer string, shardID []byte) []string {
+	if layer == common.ShardRole {
+		return []string{
+			wire.CmdBlockShard,
+			wire.CmdBlockBeacon,
+			wire.CmdBFT,
+			wire.CmdPeerState,
+			wire.CmdCrossShard,
+			wire.CmdTx,
+			wire.CmdPrivacyCustomToken,
 		}
-	case common.NodeModeRelay:
+	} else if layer == common.BeaconRole {
+		return []string{
+			wire.CmdBlockBeacon,
+			wire.CmdBFT,
+			wire.CmdPeerState,
+			wire.CmdBlockShard,
+		}
+	} else {
 		containShard := false
 		for _, s := range shardID {
 			if s != HighwayBeaconID {
 				containShard = true
 			}
 		}
-
 		msgs := []string{
-			wire.CmdTx,
 			wire.CmdBlockBeacon,
 			wire.CmdPeerState,
+			wire.CmdTx,
 			wire.CmdPrivacyCustomToken,
 		}
 		if containShard {
@@ -425,5 +417,6 @@ func getMessagesForLayer(mode, layer string, shardID []byte) []string {
 		}
 		return msgs
 	}
+
 	return []string{}
 }

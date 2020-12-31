@@ -94,8 +94,28 @@ func (c *BlockRequester) keepConnection() {
 			if hwID != currentHWID && c.conn != nil {
 				closeConnection()
 			}
-			currentHWID = hwID
+			if currentHWID == "" && c.conn == nil {
+				ctx, cancel := context.WithTimeout(context.Background(), DialTimeout)
+				if conn, err := c.prtc.Dial(
+					ctx,
+					hwID,
+					grpc.WithInsecure(),
+					grpc.WithBlock(),
+					grpc.WithKeepaliveParams(keepalive.ClientParameters{
+						Time:    RequesterKeepaliveTime,
+						Timeout: RequesterKeepaliveTimeout,
+					}),
+				); err != nil {
+					Logger.Error("Could not dial to highway grpc server:", err, currentHWID)
+				} else {
+					c.Lock()
+					c.conn = conn
+					c.Unlock()
+				}
+				cancel()
+			}
 
+			currentHWID = hwID
 		case <-c.stop:
 			Logger.Info("Stop keeping blockrequester connection to highway")
 			closeConnection()

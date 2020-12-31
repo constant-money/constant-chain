@@ -68,6 +68,7 @@ type Params struct {
 	ChainVersion                     string
 	AssignOffset                     int
 	ConsensusV2Epoch                 uint64
+	Timeslot                         uint64
 	BeaconHeightBreakPointBurnAddr   uint64
 	BNBRelayingHeaderChainID         string
 	BTCRelayingHeaderChainID         string
@@ -225,6 +226,7 @@ func SetupParam() {
 		CheckForce:                     false,
 		ChainVersion:                   "version-chain-test.json",
 		ConsensusV2Epoch:               16930,
+		Timeslot:                       10,
 		BeaconHeightBreakPointBurnAddr: 250000,
 		BNBRelayingHeaderChainID:       TestnetBNBChainID,
 		BTCRelayingHeaderChainID:       TestnetBTCChainID,
@@ -316,6 +318,7 @@ func SetupParam() {
 		CheckForce:                     false,
 		ChainVersion:                   "version-chain-test-2.json",
 		ConsensusV2Epoch:               1e9,
+		Timeslot:                       10,
 		BeaconHeightBreakPointBurnAddr: 1,
 		BNBRelayingHeaderChainID:       Testnet2BNBChainID,
 		BTCRelayingHeaderChainID:       Testnet2BTCChainID,
@@ -403,6 +406,7 @@ func SetupParam() {
 		CheckForce:                     false,
 		ChainVersion:                   "version-chain-main.json",
 		ConsensusV2Epoch:               1e9,
+		Timeslot:                       40,
 		BeaconHeightBreakPointBurnAddr: 150500,
 		BNBRelayingHeaderChainID:       MainnetBNBChainID,
 		BTCRelayingHeaderChainID:       MainnetBTCChainID,

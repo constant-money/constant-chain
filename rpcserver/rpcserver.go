@@ -71,10 +71,10 @@ type RpcServerConfig struct {
 	Wallet          *wallet.Wallet
 	ConnMgr         *connmanager.ConnManager
 	AddrMgr         *addrmanager.AddrManager
-	NodeMode        string
-	NetSync         *netsync.NetSync
-	Syncker         *syncker.SynckerManager
-	Server          interface {
+	// NodeMode        string
+	NetSync *netsync.NetSync
+	Syncker *syncker.SynckerManager
+	Server  interface {
 		// Push TxNormal Message
 		PushMessageToAll(message wire.Message) error
 		PushMessageToPeer(message wire.Message, id peer2.ID) error

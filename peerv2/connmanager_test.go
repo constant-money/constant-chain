@@ -175,7 +175,7 @@ func TestPeriodicManageSub(t *testing.T) {
 		Requester:        &BlockRequester{},
 		stop:             make(chan int),
 		registerRequests: make(chan peer.ID, 10),
-		subscriber:       sc,
+		Subscriber:       sc,
 		keeper:           NewAddrKeeper(),
 	}
 	go cm.manageRoleSubscription()
@@ -193,7 +193,7 @@ func TestForcedSub(t *testing.T) {
 		Requester:        &BlockRequester{},
 		stop:             make(chan int),
 		registerRequests: make(chan peer.ID, 10),
-		subscriber:       sc,
+		Subscriber:       sc,
 		keeper:           NewAddrKeeper(),
 	}
 	cm.registerRequests <- peer.ID("") // Sent forced, must sub with forced = True next time

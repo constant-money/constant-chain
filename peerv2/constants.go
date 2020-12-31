@@ -13,8 +13,8 @@ const (
 )
 
 var (
-	RegisterTimestep          = 1 * time.Second  // Re-register to highway
-	ReconnectHighwayTimestep  = 10 * time.Second // Check libp2p connection
+	RegisterTimestep          = 2 * time.Second  // Re-register to highway
+	ReconnectHighwayTimestep  = 1 * time.Second  // Check libp2p connection
 	UpdateHighwayListTimestep = 10 * time.Minute // RPC to update list of highways
 	RequesterDialTimestep     = 10 * time.Second // Check gRPC connection
 	MaxTimePerRequest         = 30 * time.Second // Time per request
