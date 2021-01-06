@@ -46,6 +46,8 @@ func ParseMetadata(raw json.RawMessage) (Metadata, error) {
 		md = &BeaconBlockSalaryRes{}
 	case BurningRequestMeta:
 		md = &BurningRequest{}
+	case BurningRequestMetaV2:
+		md = &BurningRequest{}
 	case ShardStakingMeta:
 		md = &StakingMetadata{}
 	case BeaconStakingMeta:
@@ -60,14 +62,24 @@ func ParseMetadata(raw json.RawMessage) (Metadata, error) {
 		md = &StopAutoStakingMetadata{}
 	case PDEContributionMeta:
 		md = &PDEContribution{}
+	case PDEPRVRequiredContributionRequestMeta:
+		md = &PDEContribution{}
 	case PDETradeRequestMeta:
 		md = &PDETradeRequest{}
 	case PDETradeResponseMeta:
 		md = &PDETradeResponse{}
+	case PDECrossPoolTradeRequestMeta:
+		md = &PDECrossPoolTradeRequest{}
+	case PDECrossPoolTradeResponseMeta:
+		md = &PDECrossPoolTradeResponse{}
 	case PDEWithdrawalRequestMeta:
 		md = &PDEWithdrawalRequest{}
 	case PDEWithdrawalResponseMeta:
 		md = &PDEWithdrawalResponse{}
+	case PDEFeeWithdrawalRequestMeta:
+		md = &PDEFeeWithdrawalRequest{}
+	case PDEFeeWithdrawalResponseMeta:
+		md = &PDEFeeWithdrawalResponse{}
 	case PDEContributionResponseMeta:
 		md = &PDEContributionResponse{}
 	case PortalCustodianDepositMeta:
@@ -117,6 +129,8 @@ func ParseMetadata(raw json.RawMessage) (Metadata, error) {
 	case PortalLiquidationCustodianDepositResponseMeta:
 		md = &PortalLiquidationCustodianDepositResponse{}
 	case BurningForDepositToSCRequestMeta:
+		md = &BurningRequest{}
+	case BurningForDepositToSCRequestMetaV2:
 		md = &BurningRequest{}
 	case PortalPortingResponseMeta:
 		md = &PortalFeeRefundResponse{}
