@@ -264,10 +264,16 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 	// 	return
 	// }
 	if isAdded := netSync.handleCacheTx(*msg.Transaction.Hash()); !isAdded {
-		hash, _, err := netSync.config.TxMemPool.MaybeAcceptTransaction(msg.Transaction, beaconHeight)
+		tx := msg.Transaction
+		sID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
+		tp, err := netSync.config.BlockChain.GetConfig().PoolManager.GetShardTxsPool(sID)
 		if err != nil {
 			Logger.log.Error(err)
 		} else {
+			if !tp.IsRunning() {
+				return
+			}
+			tp.GetInbox() <- tx
 			// Broadcast to network
 			/*go metrics.AnalyzeTimeSeriesMetricData(map[string]interface{}{
 				metrics.Measurement:      metrics.TxEnterNetSyncSuccess,
@@ -275,7 +281,7 @@ func (netSync *NetSync) handleMessageTx(msg *wire.MessageTx, beaconHeight int64)
 				metrics.Tag:              metrics.TxHashTag,
 				metrics.TagValue:         msg.Transaction.Hash().String(),
 			})*/
-			Logger.log.Debugf("there is hash of transaction %s", hash.String())
+			Logger.log.Debugf("there is hash of transaction %s", tx.Hash().String())
 			err := netSync.config.Server.PushMessageToAll(msg)
 			if err != nil {
 				Logger.log.Error(err)

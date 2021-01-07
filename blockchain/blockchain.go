@@ -22,6 +22,7 @@ import (
 	bnbrelaying "github.com/incognitochain/incognito-chain/relaying/bnb"
 	btcrelaying "github.com/incognitochain/incognito-chain/relaying/btc"
 	"github.com/incognitochain/incognito-chain/transaction"
+	"github.com/incognitochain/incognito-chain/txpool"
 	"github.com/pkg/errors"
 )
 
@@ -60,6 +61,7 @@ type Config struct {
 	ConsensusEngine   ConsensusEngine
 	Highway           Highway
 	OutcoinByOTAKeyDb *incdb.Database
+	PoolManager       *txpool.PoolManager
 }
 
 func NewBlockChain(config *Config, isTest bool) *BlockChain {
@@ -98,8 +100,8 @@ func (blockchain *BlockChain) Init(config *Config) error {
 	}
 	blockchain.cQuitSync = make(chan struct{})
 
-	EnableIndexingCoinByOTAKey = (config.OutcoinByOTAKeyDb!=nil)
-	if EnableIndexingCoinByOTAKey{
+	EnableIndexingCoinByOTAKey = (config.OutcoinByOTAKeyDb != nil)
+	if EnableIndexingCoinByOTAKey {
 		var err error
 		outcoinReindexer, err = NewOutcoinReindexer(OutcoinReindexerRoutines, *config.OutcoinByOTAKeyDb)
 		return err
@@ -135,7 +137,16 @@ func (blockchain *BlockChain) InitChainState() error {
 	blockchain.ShardChain = make([]*ShardChain, blockchain.GetBeaconBestState().ActiveShards)
 	for shard := 1; shard <= blockchain.GetBeaconBestState().ActiveShards; shard++ {
 		shardID := byte(shard - 1)
-		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID))
+		tp, err := blockchain.config.PoolManager.GetShardTxsPool(shardID)
+		if err != nil {
+			return err
+		}
+		tv := NewTxsVerifier(
+			nil,
+			tp,
+		)
+		tp.UpdateTxVerifier(tv)
+		blockchain.ShardChain[shardID] = NewShardChain(shard-1, multiview.NewMultiView(), blockchain.config.BlockGen, blockchain, common.GetShardChainKey(shardID), tp, tv)
 		blockchain.ShardChain[shardID].hashHistory, err = lru.New(1000)
 		if err != nil {
 			return err
@@ -148,6 +159,11 @@ func (blockchain *BlockChain) InitChainState() error {
 				return err
 			}
 		}
+		sBestState := blockchain.ShardChain[shardID].GetBestState()
+		txDB := sBestState.GetCopiedTransactionStateDB()
+		Logger.log.Infof("[testperformance] SHARD %v | Init txDB from block %v, txdb roothash %v\n", shardID, sBestState.BestBlock.Header.Height, txDB)
+
+		blockchain.ShardChain[shardID].TxsVerifier.UpdateTransactionStateDB(txDB)
 		Logger.log.Infof("Init Shard View shardID %+v, height %+v", shardID, blockchain.ShardChain[shardID].GetFinalViewHeight())
 	}
 
@@ -324,7 +340,7 @@ func (blockchain BlockChain) RandomCommitmentsAndPublicKeysProcess(numOutputs in
 	assetTags := make([][]byte, 0)
 	// these coins either all have asset tags or none does
 	var hasAssetTags bool = true
-	for i:=0;i<numOutputs;i++{
+	for i := 0; i < numOutputs; i++ {
 		idx, _ := common.RandBigIntMaxRange(lenOTA)
 		coinBytes, err := statedb.GetOTACoinByIndex(db, *tokenID, idx.Uint64(), shardID)
 		if err != nil {
@@ -332,7 +348,7 @@ func (blockchain BlockChain) RandomCommitmentsAndPublicKeysProcess(numOutputs in
 		}
 		coinDB := new(coin.CoinV2)
 		if err := coinDB.SetBytes(coinBytes); err != nil {
-			return nil, nil, nil, nil , err
+			return nil, nil, nil, nil, err
 		}
 		publicKey := coinDB.GetPublicKey()
 		commitment := coinDB.GetCommitment()
@@ -341,11 +357,11 @@ func (blockchain BlockChain) RandomCommitmentsAndPublicKeysProcess(numOutputs in
 		publicKeys = append(publicKeys, publicKey.ToBytesS())
 		commitments = append(commitments, commitment.ToBytesS())
 
-		if hasAssetTags{
+		if hasAssetTags {
 			assetTag := coinDB.GetAssetTag()
-			if assetTag!=nil{
+			if assetTag != nil {
 				assetTags = append(assetTags, assetTag.ToBytesS())
-			}else{
+			} else {
 				hasAssetTags = false
 			}
 		}

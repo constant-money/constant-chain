@@ -2,9 +2,10 @@ package consensus
 
 import (
 	"fmt"
-	"github.com/incognitochain/incognito-chain/metrics/monitor"
 	"sync"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/metrics/monitor"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/consensus/blsbft"
@@ -72,7 +73,8 @@ func (s *Engine) WatchCommitteeChange() {
 	//extract role, layer, chainID
 	role, chainID := s.config.Node.GetUserMiningState()
 	if s.curringMiningState.role != role || s.curringMiningState.chainID != chainID {
-		Logger.Log.Infof("Node state role: %v chainID: %v", role, chainID)
+		Logger.Log.Infof("Node state role: %v, current: %v; chainID: %v, current %v", role, s.curringMiningState.role, chainID, s.curringMiningState.chainID)
+		s.NotifyRoleDetail(s.curringMiningState.chainID, chainID, s.curringMiningState.role, role)
 	}
 
 	s.curringMiningState.chainID = chainID
@@ -237,4 +239,35 @@ func (engine *Engine) NotifyBeaconRole(beaconRole bool) {
 }
 func (engine *Engine) NotifyShardRole(shardRole int) {
 	engine.config.PubSubManager.PublishMessage(pubsub.NewMessage(pubsub.ShardRoleTopic, shardRole))
+}
+
+func (engine *Engine) NotifyRoleDetail(curCID, newCID int, curRole, newRole string) {
+	if curCID != newCID {
+		if curRole == common.CommitteeRole {
+			engine.config.PubSubManager.PublishMessage(
+				pubsub.NewMessage(pubsub.NodeRoleDetailTopic, &pubsub.NodeRole{
+					CID:  curCID,
+					Role: common.WaitingRole,
+				}),
+			)
+		}
+		if newRole == common.CommitteeRole {
+			engine.config.PubSubManager.PublishMessage(
+				pubsub.NewMessage(pubsub.NodeRoleDetailTopic, &pubsub.NodeRole{
+					CID:  newCID,
+					Role: newRole,
+				}),
+			)
+		}
+	} else {
+		if curRole == newRole {
+			return
+		}
+		engine.config.PubSubManager.PublishMessage(
+			pubsub.NewMessage(pubsub.NodeRoleDetailTopic, &pubsub.NodeRole{
+				CID:  newCID,
+				Role: newRole,
+			}),
+		)
+	}
 }

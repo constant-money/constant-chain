@@ -9,6 +9,7 @@ const (
 	TransactionHashEnterNodeTopic   = "transactionhashenternodetopic"
 	ShardRoleTopic                  = "shardroletopic"
 	BeaconRoleTopic                 = "beaconroletopic"
+	NodeRoleDetailTopic             = "noderoledetailtopic"
 	MempoolInfoTopic                = "mempoolinfotopic"
 	BeaconBeststateTopic            = "beaconbeststatetopic"
 	ShardBeststateTopic             = "shardbeststatetopic"
@@ -27,10 +28,16 @@ var Topics = []string{
 	TransactionHashEnterNodeTopic,
 	ShardRoleTopic,
 	BeaconRoleTopic,
+	NodeRoleDetailTopic,
 	BeaconBeststateTopic,
 	RequestBeaconBlockByHashTopic,
 	RequestBeaconBlockByHeightTopic,
 	RequestShardBlockByHeightTopic,
 	RequestShardBlockByHashTopic,
 	ShardBeststateTopic,
+}
+
+type NodeRole struct {
+	CID  int
+	Role string
 }

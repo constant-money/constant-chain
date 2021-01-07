@@ -2,6 +2,8 @@ package blockchain
 
 import (
 	"context"
+	"time"
+
 	"github.com/incognitochain/incognito-chain/multiview"
 
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -85,3 +87,17 @@ type ChainInterface interface {
 	GetBestView() multiview.View
 	GetFinalView() multiview.View
 }
+type TxsCrawler interface {
+	// RemoveTx remove tx from tx resource
+	RemoveTxs(txs []metadata.Transaction)
+	GetTxsTranferForNewBlock(sView interface{}, bcView interface{}, maxSize uint64, maxTime time.Duration) []metadata.Transaction
+	CheckValidatedTxs(txs []metadata.Transaction) (valid []metadata.Transaction, needValidate []metadata.Transaction)
+}
+
+// type TxsVerifier interface {
+// 	ValidateBlockTransactions(txP TxPool, sView interface{}, bcView interface{}, txs []metadata.Transaction) bool
+// 	ValidateBatchRangeProof([]metadata.Transaction) (bool, error)
+// 	ValidateAuthentications(metadata.Transaction) (bool, error)
+// 	ValidateDataCorrectness(metadata.Transaction) (bool, error)
+// 	ValidateTxZKProof(metadata.Transaction) (bool, error)
+// }

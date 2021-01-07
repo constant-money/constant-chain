@@ -10,6 +10,7 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/multiview"
+	"github.com/incognitochain/incognito-chain/txpool"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/incognitokey"
@@ -25,11 +26,30 @@ type ShardChain struct {
 	ChainName   string
 	Ready       bool
 
+	TxPool      txpool.TxPool
+	TxsVerifier txpool.TxVerifier
+
 	insertLock sync.Mutex
 }
 
-func NewShardChain(shardID int, multiView *multiview.MultiView, blockGen *BlockGenerator, blockchain *BlockChain, chainName string) *ShardChain {
-	return &ShardChain{shardID: shardID, multiView: multiView, BlockGen: blockGen, Blockchain: blockchain, ChainName: chainName}
+func NewShardChain(
+	shardID int,
+	multiView *multiview.MultiView,
+	blockGen *BlockGenerator,
+	blockchain *BlockChain,
+	chainName string,
+	tp txpool.TxPool,
+	tv txpool.TxVerifier,
+) *ShardChain {
+	return &ShardChain{
+		shardID:     shardID,
+		multiView:   multiView,
+		BlockGen:    blockGen,
+		Blockchain:  blockchain,
+		ChainName:   chainName,
+		TxPool:      tp,
+		TxsVerifier: tv,
+	}
 }
 
 func (chain *ShardChain) GetDatabase() incdb.Database {
@@ -210,7 +230,7 @@ func (chain *ShardChain) ValidateBlockSignatures(block common.BlockInterface, co
 }
 
 func (chain *ShardChain) InsertBlk(block common.BlockInterface, shouldValidate bool) error {
-	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), shouldValidate)
+	err := chain.Blockchain.InsertShardBlock(block.(*ShardBlock), true)
 	if err != nil {
 		Logger.log.Error(err)
 	}

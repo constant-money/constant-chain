@@ -3,10 +3,11 @@ package blockchain
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 
 	"github.com/incognitochain/incognito-chain/common"
 
@@ -137,8 +138,15 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 	Logger.log.Critical("Cross Transaction: ", crossTransactions)
 	// Get Transaction for new block
 	// // startStep = time.Now()
-	blockCreationLeftOver := curView.BlockMaxCreateTime.Nanoseconds() - time.Since(time1).Nanoseconds()
-	txsToAddFromBlock, err := blockchain.config.BlockGen.getTransactionForNewBlock(curView, &tempPrivateKey, shardID, beaconBlocks, blockCreationLeftOver, beaconHeight)
+	blockCreationLeftOver := curView.BlockMaxCreateTime - time.Since(start)
+	txsToAddFromBlock, err := blockchain.config.BlockGen.getTransactionForNewBlock(
+		curView,
+		&tempPrivateKey,
+		shardID,
+		beaconBlocks,
+		blockCreationLeftOver,
+		beaconHeight,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -271,31 +279,48 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 // 3. Build response Transaction For Shard
 // 4. Build response Transaction For Beacon
 // 5. Return valid transaction from pending, response transactions from shard and beacon
-func (blockGenerator *BlockGenerator) getTransactionForNewBlock(curView *ShardBestState, privatekey *privacy.PrivateKey, shardID byte, beaconBlocks []*BeaconBlock, blockCreation int64, beaconHeight uint64) ([]metadata.Transaction, error) {
-	txsToAdd, txToRemove, _ := blockGenerator.getPendingTransaction(shardID, beaconBlocks, blockCreation, beaconHeight, curView)
-	if len(txsToAdd) == 0 {
-		Logger.log.Info("Creating empty block...")
-	}
-	go blockGenerator.txPool.RemoveTx(txToRemove, false)
+func (blockGenerator *BlockGenerator) getTransactionForNewBlock(
+	curView *ShardBestState,
+	privatekey *privacy.PrivateKey,
+	shardID byte,
+	beaconBlocks []*BeaconBlock,
+	blockCreationLeftOver time.Duration,
+	beaconHeight uint64,
+) (
+	[]metadata.Transaction,
+	error,
+) {
+	var err error
+	st := time.Now()
+	chain := blockGenerator.chain.ShardChain[shardID]
+	maxSize := uint64(4096) //kB
 	var responseTxsBeacon []metadata.Transaction
 	var errInstructions [][]string
-	var cError chan error
-	cError = make(chan error)
-	go func() {
-		var err error
-		responseTxsBeacon, errInstructions, err = blockGenerator.buildResponseTxsFromBeaconInstructions(curView, beaconBlocks, privatekey, shardID)
-		cError <- err
-	}()
-	nilCount := 0
-	for {
-		err := <-cError
-		if err != nil {
-			return nil, err
-		}
-		nilCount++
-		if nilCount == 1 {
-			break
-		}
+	responseTxsBeacon, errInstructions, err = blockGenerator.buildResponseTxsFromBeaconInstructions(curView, beaconBlocks, privatekey, shardID)
+	if err != nil {
+		return nil, err
+	}
+	bView := &BeaconBestState{}
+	if len(beaconBlocks) == 0 {
+		bView, err = blockGenerator.chain.GetBeaconViewStateDataFromBlockHash(curView.BestBeaconHash)
+	} else {
+		bView, err = blockGenerator.chain.GetBeaconViewStateDataFromBlockHash(*beaconBlocks[len(beaconBlocks)-1].Hash())
+	}
+	if err != nil {
+		return nil, NewBlockChainError(CloneBeaconBestStateError, err)
+	}
+	blockCreationLeftOver = blockCreationLeftOver - time.Now().Sub(st)
+	st = time.Now()
+	txsToAdd := chain.TxPool.GetTxsTranferForNewBlock(
+		blockGenerator.chain,
+		curView,
+		bView,
+		maxSize,
+		24*time.Second,
+		blockCreationLeftOver,
+	)
+	if len(txsToAdd) > 0 {
+		Logger.log.Infof("[testperformance] SHARD %v | Crawling %v txs for block %v cost %v", shardID, len(txsToAdd), curView.ShardHeight+1, time.Since(st))
 	}
 	txsToAdd = append(txsToAdd, responseTxsBeacon...)
 	if len(errInstructions) > 0 {
@@ -340,7 +365,7 @@ func (blockGenerator *BlockGenerator) buildResponseTxsFromBeaconInstructions(cur
 				}
 			case metadata.PDECrossPoolTradeRequestMeta:
 				if len(l) >= 4 {
-					Logger.log.Errorf("%v - %v\n",l[2], l[3])
+					Logger.log.Errorf("%v - %v\n", l[2], l[3])
 					newTx, err = blockGenerator.buildPDECrossPoolTradeIssuanceTx(l[2], l[3], producerPrivateKey, shardID, curView, beaconView)
 				}
 			case metadata.PDEWithdrawalRequestMeta:

@@ -21,6 +21,7 @@ import (
 	"github.com/incognitochain/incognito-chain/metrics/monitor"
 	bnbrelaying "github.com/incognitochain/incognito-chain/relaying/bnb"
 	"github.com/incognitochain/incognito-chain/syncker"
+	"github.com/incognitochain/incognito-chain/txpool"
 
 	"github.com/incognitochain/incognito-chain/peerv2"
 
@@ -310,7 +311,10 @@ func (serverObj *Server) NewServer(
 		cfg.NodeMode,
 		relayShards,
 	)
-
+	poolManager, _ := txpool.NewPoolManager(
+		common.MaxShardNumber,
+		serverObj.pusubManager,
+	)
 	err = serverObj.blockChain.Init(&blockchain.Config{
 		BTCChain:      btcChain,
 		BNBChainState: bnbChainState,
@@ -324,14 +328,15 @@ func (serverObj *Server) NewServer(
 		Server:      serverObj,
 		Syncker:     serverObj.syncker,
 		// UserKeySet:        serverObj.userKeySet,
-		NodeMode:        cfg.NodeMode,
-		FeeEstimator:    make(map[byte]blockchain.FeeEstimator),
-		PubSubManager:   pubsubManager,
-		RandomClient:    randomClient,
-		ConsensusEngine: serverObj.consensusEngine,
-		Highway:         serverObj.highway,
-		GenesisParams:   blockchain.GenesisParam,
+		NodeMode:          cfg.NodeMode,
+		FeeEstimator:      make(map[byte]blockchain.FeeEstimator),
+		PubSubManager:     pubsubManager,
+		RandomClient:      randomClient,
+		ConsensusEngine:   serverObj.consensusEngine,
+		Highway:           serverObj.highway,
+		GenesisParams:     blockchain.GenesisParam,
 		OutcoinByOTAKeyDb: dboc,
+		PoolManager:       poolManager,
 	})
 	if err != nil {
 		return err
@@ -340,6 +345,7 @@ func (serverObj *Server) NewServer(
 	if err != nil {
 		return err
 	}
+	go poolManager.Start()
 
 	//set bc obj for monitor
 	monitor.SetBlockChainObj(serverObj.blockChain)
@@ -1034,12 +1040,17 @@ func (serverObj *Server) OnGetCrossShard(_ *peer.PeerConn, msg *wire.MessageGetC
 // handler this does not serialize all transactions through a single thread
 // transactions don't rely on the previous one in a linear fashion like blocks.
 func (serverObj *Server) OnTx(peer *peer.PeerConn, msg *wire.MessageTx) {
-	Logger.log.Debug("Receive a new transaction START")
+	Logger.log.Infof("Receive a new transaction START")
 	var txProcessed chan struct{}
+	// txBytes, _ := json.Marshal(msg.Transaction)
+	// err := json.Unmarshal(txBytes, msg.Transaction)
+	// if err != nil {
+	// 	panic("dd")
+	// }
 	serverObj.netSync.QueueTx(nil, msg, txProcessed)
 	//<-txProcessed
 
-	Logger.log.Debug("Receive a new transaction END")
+	Logger.log.Infof("Receive a new transaction END")
 }
 
 func (serverObj *Server) OnTxPrivacyToken(peer *peer.PeerConn, msg *wire.MessageTxPrivacyToken) {

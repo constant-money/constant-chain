@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 	"github.com/incognitochain/incognito-chain/transaction"
-	"sort"
 )
 
 type ShardBlock struct {
@@ -301,6 +302,25 @@ func (shardBlock *ShardBlock) UnmarshalJSON(data []byte) error {
 	shardBlock.Header = tempShardBlock.Header
 	if shardBlock.Body.Transactions == nil {
 		shardBlock.Body.Transactions = []metadata.Transaction{}
+	}
+	for _, tx := range shardBlock.Body.Transactions {
+		valEnv := tx.GetValidationEnv()
+		valEnv = transaction.
+			WithConfirmedTime(
+				transaction.WithBeaconHeight(
+					transaction.WithShardHeight(
+						transaction.WithShardID(
+							valEnv,
+							shardBlock.GetShardID(),
+						),
+						shardBlock.GetHeight(),
+					),
+					shardBlock.Header.BeaconHeight,
+				),
+				shardBlock.GetProduceTime(),
+			)
+		tx.SetValidationEnv(valEnv)
+		// fmt.Printf("[testNewPool] Unmarshal ShardBlk %v, tx %v, env %v\n", shardBlock.Header.Height, tx.Hash().String(), tx.GetValidationEnv())
 	}
 	if shardBlock.Body.Instructions == nil {
 		shardBlock.Body.Instructions = [][]string{}

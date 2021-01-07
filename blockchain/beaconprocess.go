@@ -837,7 +837,7 @@ func (beaconBestState *BeaconBestState) initBeaconBestState(genesisBeaconBlock *
 	beaconBestState.BestShardHeight = make(map[byte]uint64)
 	for i := 0; i < beaconBestState.ActiveShards; i++ {
 		shardID := byte(i)
-		beaconBestState.BestShardHeight[shardID] = 0
+		beaconBestState.BestShardHeight[shardID] = 1
 	}
 	// Update new best new block hash
 	for shardID, shardStates := range genesisBeaconBlock.Body.ShardState {

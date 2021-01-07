@@ -119,7 +119,8 @@ func (e *BLSBFT) Start() error {
 					continue
 				}
 				blockRoundKey := getRoundKey(block.GetHeight(), block.GetRound())
-				e.logger.Info("receive block", blockRoundKey, getRoundKey(e.RoundData.NextHeight, e.RoundData.Round))
+				// e.logger.Info("receive block", blockRoundKey, getRoundKey(e.RoundData.NextHeight, e.RoundData.Round))
+				e.logger.Info("[testperformance] Receive block ", block.Hash().String(), "height", block.GetHeight(), ",block timeslot ", common.CalculateTimeSlot(block.GetProposeTime()), " size ", float64(len(proposeMsg.Block))/1024)
 				if block.GetHeight() == e.RoundData.NextHeight {
 					if e.RoundData.Round == block.GetRound() {
 						if e.RoundData.Block == nil {

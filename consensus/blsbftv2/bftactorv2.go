@@ -125,7 +125,7 @@ func (e *BLSBFT_V2) Start() error {
 						votes:      make(map[string]BFTVote),
 						hasNewVote: false,
 					}
-					e.Logger.Info("Receive block ", block.Hash().String(), "height", block.GetHeight(), ",block timeslot ", common.CalculateTimeSlot(block.GetProposeTime()))
+					e.Logger.Info("[testperformance] Receive block ", block.Hash().String(), "height", block.GetHeight(), ",block timeslot ", common.CalculateTimeSlot(block.GetProposeTime()), " size ", float64(len(proposeMsg.Block))/1024)
 					e.receiveBlockByHeight[block.GetHeight()] = append(e.receiveBlockByHeight[block.GetHeight()], e.receiveBlockByHash[blkHash])
 					e.Logger.Infof("Current ticker: %v\n", ticker)
 				} else {
