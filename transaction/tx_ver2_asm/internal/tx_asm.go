@@ -246,7 +246,7 @@ func (params *InitParamsAsm) GetGenericParams() *TxPrivacyInitParams{
 	if err!=nil{
 		println(string(params.Metadata))
 		println(err.Error())
-		panic("BAD MD. END")
+		println("BAD MD")
 		md = nil
 	}
 	var info []byte = []byte("")
@@ -801,7 +801,7 @@ func createPrivKeyMlsag(inputCoins []privacy.PlainCoin, outputCoins []*privacy.C
 	commitmentToZeroRecomputed := new(privacy.Point).ScalarMult(privacy.PedCom.G[privacy.PedersenRandomnessIndex], sumRand)
 	match := privacy.IsPointEqual(commitmentToZeroRecomputed, commitmentToZero)
 	if !match{
-		panic("FOUND IT. END")
+		println("asset tag sum or commitment sum mismatch")
 		return nil, errors.Errorf("Error : asset tag sum or commitment sum mismatch")
 	}
 	privKeyMlsag[len(inputCoins)] = sumRand

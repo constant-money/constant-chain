@@ -212,7 +212,7 @@ func (params *InitParamsAsm) GetCompatTxTokenParams() *TxTokenParams{
 	if err!=nil{
 		println(string(params.Metadata))
 		println(err.Error())
-		panic("BAD MD. END")
+		println("BAD MD")
 		md = nil
 	}
 	shardID := byte(0)
