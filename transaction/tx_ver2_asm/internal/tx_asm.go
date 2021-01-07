@@ -247,7 +247,7 @@ func (params *InitParamsAsm) GetGenericParams() *TxPrivacyInitParams{
 		println(string(params.Metadata))
 		println(err.Error())
 		println("BAD MD")
-		md = nil
+		return nil
 	}
 	var info []byte = []byte("")
 	if len(params.Info)>0{
@@ -723,6 +723,9 @@ func (tx *Tx) signMetadata(privateKey *privacy.PrivateKey) error {
 
 func (tx *Tx) InitASM(params *InitParamsAsm, theirTime int64) error {
 	gParams := params.GetGenericParams()
+	if gParams==nil{
+		return errors.Errorf("Invalid parameters")
+	}
 	// Init tx and params (tx and params will be changed)
 	if err := tx.initializeTxAndParams(gParams, &params.PaymentInfo); err != nil {
 		return err

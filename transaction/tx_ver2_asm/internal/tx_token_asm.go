@@ -213,7 +213,7 @@ func (params *InitParamsAsm) GetCompatTxTokenParams() *TxTokenParams{
 		println(string(params.Metadata))
 		println(err.Error())
 		println("BAD MD")
-		md = nil
+		return nil
 	}
 	shardID := byte(0)
 	if len(ics)>0{
@@ -491,6 +491,9 @@ func (tx *Tx) signCA(inp []privacy.PlainCoin, inputIndexes []uint64, out []*priv
 // this signs only on the hash of the data in it
 func (tx *Tx) proveToken(params *InitParamsAsm) (bool, error) {
 	temp := params.GetCompatTxTokenParams()
+	if temp==nil{
+		return false, errors.Errorf("Error parsing parameters")
+	}
 	tid, err := getTokenIDFromString(params.TokenParams.TokenID)
 	if err!=nil{
 		return false, errors.Errorf("Error parsing token id")
@@ -531,6 +534,9 @@ func (txToken *TxToken) initToken(txNormal *Tx, params *InitParamsAsm) error {
 		temp.Proof = new(privacy.ProofV2)
 		temp.Proof.Init()
 		params_compat := params.GetCompatTxTokenParams()
+		if params_compat==nil{
+			return errors.Errorf("Error parsing parameters")
+		}
 		// set output coins; hash everything but commitment; save the hash to compute the new token ID later
 		message := []byte{}
 		if len(params_compat.TokenParams.Receiver[0].Message) > 0 {
@@ -641,6 +647,9 @@ func (txToken *TxToken) initPRV(feeTx * Tx, params *InitParamsAsm) ([]privacy.Pl
 
 func (txToken *TxToken) InitASM(params *InitParamsAsm, theirTime int64) error {
 	params_compat := params.GetCompatTxTokenParams()
+	if params_compat==nil{
+		return errors.Errorf("Error parsing parameters")
+	}
 	txPrivacyParams := NewTxParams(params_compat.SenderKey, params_compat.PaymentInfo, params_compat.InputCoin, params_compat.FeeNativeCoin, false, nil, params_compat.Metadata, params_compat.Info)
 	// Init tx and params (tx and params will be changed)
 	tx := new(Tx)
