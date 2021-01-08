@@ -103,6 +103,23 @@ func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version i
 
 	tempShardState, stakeInstructions, swapInstructions, bridgeInstructions, acceptedRewardInstructions, stopAutoStakingInstructions := blockchain.GetShardState(beaconBestState, rewardForCustodianByEpoch, portalParams)
 
+	if len(stakeInstructions) > 0{
+		Logger.log.Infof("BUGLOG stakeInstructions: %v\n", stakeInstructions)
+	}
+	if len(swapInstructions) > 0{
+		Logger.log.Infof("BUGLOG swapInstructions: %v\n", swapInstructions)
+	}
+	if len(bridgeInstructions) > 0{
+		Logger.log.Infof("BUGLOG bridgeInstructions: %v\n", bridgeInstructions)
+	}
+	if len(acceptedRewardInstructions) > 0{
+		Logger.log.Infof("BUGLOG acceptedRewardInstructions: %v\n", acceptedRewardInstructions)
+	}
+	if len(stopAutoStakingInstructions) > 0{
+		Logger.log.Infof("BUGLOG stopAutoStakingInstructions: %v\n", stopAutoStakingInstructions)
+	}
+
+
 	Logger.log.Infof("In NewBlockBeacon tempShardState: %+v", tempShardState)
 	tempInstruction, err := beaconBestState.GenerateInstruction(
 		beaconBlock.Header.Height, stakeInstructions, swapInstructions, stopAutoStakingInstructions,

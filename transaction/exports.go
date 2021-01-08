@@ -1,13 +1,11 @@
 package transaction
 
 import (
-
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/transaction/tx_generic"
-	"github.com/incognitochain/incognito-chain/transaction/tx_ver1"
 	"github.com/incognitochain/incognito-chain/transaction/tx_ver2"
 	"github.com/incognitochain/incognito-chain/transaction/utils"
 )
@@ -44,10 +42,6 @@ func RandomCommitmentsProcess(param *tx_generic.RandomCommitmentsProcessParam) (
 
 func NewTxTokenParams(senderKey *privacy.PrivateKey, paymentInfo []*privacy.PaymentInfo, inputCoin []privacy.PlainCoin,feeNativeCoin uint64, tokenParams *TokenParam, transactionStateDB *statedb.StateDB, metaData metadata.Metadata, hasPrivacyCoin bool,	hasPrivacyToken bool, shardID byte,	info []byte, bridgeStateDB *statedb.StateDB) *TxTokenParams{
 	return tx_generic.NewTxTokenParams(senderKey, paymentInfo, inputCoin, feeNativeCoin, tokenParams, transactionStateDB, metaData, hasPrivacyCoin, hasPrivacyToken, shardID, info, bridgeStateDB)
-}
-
-func CreateCustomTokenPrivacyReceiverArray(dataReceiver interface{}) ([]*privacy.PaymentInfo, int64, error) {
-	return tx_ver1.CreateCustomTokenPrivacyReceiverArray(dataReceiver)
 }
 
 func EstimateTxSize(estimateTxSizeParam *tx_generic.EstimateTxSizeParam) uint64 {
@@ -105,10 +99,6 @@ func NewTxPrivacyInitParams(senderSK *privacy.PrivateKey,
 	metaData metadata.Metadata,
 	info []byte) *TxPrivacyInitParams {
 	return tx_generic.NewTxPrivacyInitParams(senderSK, paymentInfo, inputCoins,	fee, hasPrivacy, stateDB, tokenID, metaData, info)
-}
-
-func CreateCustomTokenPrivacyReceiverArrayV2(dataReceiver interface{}) ([]*privacy.PaymentInfo, int64, error) {
-	return tx_ver1.CreateCustomTokenPrivacyReceiverArray(dataReceiver)
 }
 
 func GetTxVersionFromCoins(coins []privacy.PlainCoin) (int8, error){

@@ -1,6 +1,7 @@
 package statedb
 
 import (
+	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject"
 )
@@ -61,11 +62,16 @@ func PrivacyTokenIDExisted(stateDB *StateDB, tokenID common.Hash) bool {
 	key := GenerateTokenObjectKey(tokenID)
 	tokenState, has, err := stateDB.getTokenState(key)
 	if err != nil {
+		fmt.Errorf("BUGLOG getTokenState error. Error %v\n", err)
 		return false
 	}
 	tempTokenID := tokenState.TokenID()
 	if has && !tempTokenID.IsEqual(&tokenID) {
 		panic("same key wrong value")
+	}
+	if !has {
+		fmt.Errorf("BUGLOG getTokenState return false. Error %v. Has %v\n", err, has)
+		return false
 	}
 	return has
 }

@@ -74,19 +74,25 @@ func (iRes *PDEContributionResponse) CalculateSize() uint64 {
 
 func (iRes PDEContributionResponse) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *MintData, shardID byte, tx Transaction, chainRetriever ChainRetriever, ac *AccumulatedValues, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever) (bool, error) {
 	idx := -1
+	Logger.log.Infof("Currently verifying ins: %v\n", iRes)
+	Logger.log.Infof("BUGLOG There are %v inst\n", len(mintData.Insts))
 	for i, inst := range mintData.Insts {
 		if len(inst) < 4 { // this is not PDEContribution instruction
 			continue
 		}
+
+		Logger.log.Infof("BUGLOG currently processing inst: %v\n", inst)
+
 		instMetaType := inst[0]
 		if mintData.InstsUsed[i] > 0 ||
-			instMetaType != strconv.Itoa(PDEContributionMeta) {
+			(instMetaType != strconv.Itoa(PDEContributionMeta) && instMetaType != strconv.Itoa(PDEPRVRequiredContributionRequestMeta)) {
 			continue
 		}
 		instContributionStatus := inst[2]
 		if instContributionStatus != iRes.ContributionStatus || (instContributionStatus != common.PDEContributionRefundChainStatus && instContributionStatus != common.PDEContributionMatchedNReturnedChainStatus) {
 			continue
 		}
+
 
 		var shardIDFromInst byte
 		var txReqIDFromInst common.Hash
@@ -126,6 +132,7 @@ func (iRes PDEContributionResponse) VerifyMinerCreatedTxBeforeGettingInBlock(min
 
 		if !bytes.Equal(iRes.RequestedTxID[:], txReqIDFromInst[:]) ||
 			shardID != shardIDFromInst {
+			Logger.log.Infof("BUGLOG shardID: %v, %v\n", shardID, shardIDFromInst)
 			continue
 		}
 
@@ -148,6 +155,7 @@ func (iRes PDEContributionResponse) VerifyMinerCreatedTxBeforeGettingInBlock(min
 		break
 	}
 	if idx == -1 { // not found the issuance request tx for this response
+		Logger.log.Infof("BUGLOG Instruction not found for res: %v\n", iRes)
 		return false, fmt.Errorf(fmt.Sprintf("no PDEContribution or PDEPRVRequiredContributionRequestMeta instruction found for PDEContributionResponse tx %s", tx.Hash().String()))
 	}
 	mintData.InstsUsed[idx] = 1

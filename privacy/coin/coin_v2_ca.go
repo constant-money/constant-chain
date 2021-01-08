@@ -129,6 +129,9 @@ func NewCoinCA(info *key.PaymentInfo, tokenID *common.Hash) (*CoinV2, *operation
 	// Increase index until have the right shardID
 	index := uint32(0)
 	publicOTA := info.PaymentAddress.GetOTAPublicKey() //For generating one-time-address
+	if publicOTA == nil {
+		return nil, nil, errors.New("public OTA from payment address is nil")
+	}
 	publicSpend := info.PaymentAddress.GetPublicSpend() //General public key
 	//publicView := info.PaymentAddress.GetPublicView() //For generating asset tag and concealing output coin
 

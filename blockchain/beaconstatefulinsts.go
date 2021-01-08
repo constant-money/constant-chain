@@ -334,7 +334,9 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 	if len(relayingInsts) > 0 {
 		instructions = append(instructions, relayingInsts...)
 	}
-
+	for _, item := range instructions {
+		Logger.log.Errorf("%v\n", item)
+	}
 	return instructions
 }
 

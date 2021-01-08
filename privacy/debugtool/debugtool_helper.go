@@ -2,10 +2,11 @@ package debugtool
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	"github.com/incognitochain/incognito-chain/rpcserver"
-	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 )
 
 func EncodeBase58Check(data []byte) string {
@@ -33,40 +34,9 @@ func ParseResponse(respondInBytes []byte) (*rpcserver.JsonResponse, error) {
 		return nil, err
 	}
 
+	if respond.Error != nil{
+		return nil, errors.New(fmt.Sprintf("RPC returns an error: %v", respond.Error))
+	}
+
 	return &respond, nil
-}
-
-func ParseCoinFromJsonResponse(b []byte) ([]jsonresult.ICoinInfo, error){
-	respond, err := ParseResponse(b)
-	if err != nil{
-		panic(err)
-	}
-
-	var msg json.RawMessage
-	err = json.Unmarshal(respond.Result, &msg)
-	if err != nil {
-		panic(err)
-	}
-
-	var tmp jsonresult.ListOutputCoins
-	err = json.Unmarshal(msg, &tmp)
-	if err != nil {
-		panic(err)
-	}
-
-	resultOutCoins := make([]jsonresult.ICoinInfo, 0)
-
-	listOutputCoins := tmp.Outputs
-	for _, value := range listOutputCoins {
-		for _, outCoin := range value {
-			out, err := jsonresult.NewCoinFromJsonOutCoin(outCoin)
-			if err != nil {
-				return nil, err
-			}
-
-			resultOutCoins = append(resultOutCoins, out)
-		}
-	}
-
-	return resultOutCoins, nil
 }

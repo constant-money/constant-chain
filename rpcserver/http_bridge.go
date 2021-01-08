@@ -300,7 +300,15 @@ func processBurningReq(
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("remote address is invalid"))
 	}
 
-	meta, err := rpcservice.NewBurningRequestMetadata(senderPrivateKeyParam, tokenReceivers, tokenID, tokenName, remoteAddress, burningMetaType, httpServer.GetBlockchain(), httpServer.GetBlockchain().BeaconChain.CurrentHeight())
+	meta, err := rpcservice.NewBurningRequestMetadata(
+		senderPrivateKeyParam,
+		tokenReceivers,
+		tokenID,
+		tokenName,
+		remoteAddress,
+		burningMetaType,
+		httpServer.GetBlockchain(),
+		httpServer.GetBlockchain().BeaconChain.CurrentHeight())
 	if err != nil {
 		return nil, err
 	}

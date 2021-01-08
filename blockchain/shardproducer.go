@@ -313,6 +313,7 @@ func (blockGenerator *BlockGenerator) buildResponseTxsFromBeaconInstructions(cur
 	//TODO: Please check this logic again, why PDE, Bridge build from old beacon block but get info from beacon final view
 	for _, beaconBlock := range beaconBlocks {
 		for _, l := range beaconBlock.Body.Instructions {
+			Logger.log.Errorf("%v\n", l)
 			if l[0] == StakeAction || l[0] == RandomAction || l[0] == AssignAction || l[0] == SwapAction {
 				continue
 			}
@@ -339,6 +340,7 @@ func (blockGenerator *BlockGenerator) buildResponseTxsFromBeaconInstructions(cur
 				}
 			case metadata.PDECrossPoolTradeRequestMeta:
 				if len(l) >= 4 {
+					Logger.log.Errorf("%v - %v\n",l[2], l[3])
 					newTx, err = blockGenerator.buildPDECrossPoolTradeIssuanceTx(l[2], l[3], producerPrivateKey, shardID, curView, beaconView)
 				}
 			case metadata.PDEWithdrawalRequestMeta:

@@ -1,13 +1,10 @@
 package metadata
 
 import (
-	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/pkg/errors"
-	"reflect"
 )
 
 type ReturnStakingMetadata struct {
@@ -65,62 +62,6 @@ func (sbsRes ReturnStakingMetadata) Hash() *common.Hash {
 	record += sbsRes.MetadataBase.Hash().String()
 	hash := common.HashH([]byte(record))
 	return &hash
-}
-
-func (sbsRes ReturnStakingMetadata) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *MintData, shardID byte,
-	tx Transaction, chainRetriever ChainRetriever, ac *AccumulatedValues, shardViewRetriever ShardViewRetriever,
-	beaconViewRetriever BeaconViewRetriever) (bool, error) {
-
-	stakingTx := shardViewRetriever.GetStakingTx()
-	for key, value := range stakingTx {
-		committeePublicKey := incognitokey.CommitteePublicKey{}
-		err := committeePublicKey.FromString(key)
-		if err != nil {
-			return false, err
-		}
-		if reflect.DeepEqual(sbsRes.StakerAddress.Pk, committeePublicKey.IncPubKey) && (sbsRes.TxID == value) {
-			autoStakingList := beaconViewRetriever.GetAutoStakingList()
-			if autoStakingList[key] {
-				return false, errors.New("Can not return staking amount for candidate: AutoStaking = true.")
-			}
-
-			if _, ok := mintData.ReturnStaking[sbsRes.TxID]; !ok {
-				mintData.ReturnStaking[sbsRes.TxID] = true
-			} else {
-				return false, errors.New("Return Staking: Double mint transaction return staking.")
-			}
-
-			isMinted, mintCoin, coinID, err := tx.GetTxMintData()
-			//check tx mint
-			if err != nil || !isMinted {
-				return false, errors.Errorf("Return Staking: It is not tx mint with error: %v", err)
-			}
-			if cmp, err := coinID.Cmp(&common.PRVCoinID); err != nil || cmp != 0 {
-				return false, errors.Errorf("Return Staking: Must mint PRV only")
-			}
-
-			txIDReq, err := common.Hash{}.NewHashFromStr(value)
-			if err != nil {
-				return false, errors.New("Return Staking: Cannot Convert TxID from string to common.Hash")
-			}
-			_, _, _, _, txReq, err := chainRetriever.GetTransactionByHash(*txIDReq)
-			if err != nil {
-				return false, errors.Errorf("Return Staking: Cannot get tx request from tx hash %v", value)
-			}
-			_, burnCoin, _, err := txReq.GetTxBurnData()
-			if err != nil {
-				return false, errors.Errorf("Return Staking: Cannot get burn data from Tx Staking")
-			}
-			if ok := mintCoin.CheckCoinValid(sbsRes.StakerAddress, sbsRes.SharedRandom, burnCoin.GetValue()); !ok {
-				return false, errors.New("Return Staking: Mint Coin is invalid for corresponding Staker Payment Address")
-			}
-			fmt.Print("Check Mint Return Staking Valid OK OK OK")
-
-			return true, nil
-		}
-
-	}
-	return false, errors.New("Can not find any staking information of this publickey")
 }
 
 func (sbsRes *ReturnStakingMetadata) SetSharedRandom(r []byte) {

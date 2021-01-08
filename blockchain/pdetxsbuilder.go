@@ -152,6 +152,10 @@ func (blockGenerator *BlockGenerator) buildPDETradeRefundTx(
 		return nil, nil
 	}
 
+	if shardID != pdeTradeRequestAction.ShardID {
+		return nil, nil
+	}
+
 	meta := metadata.NewPDETradeResponse(
 		instStatus,
 		pdeTradeRequestAction.TxReqID,
@@ -195,6 +199,10 @@ func (blockGenerator *BlockGenerator) buildPDECrossPoolTradeAcceptedTx(
 
 	finalCrossPoolTradeAcceptedContent := crossPoolTradeAcceptedContents[len - 1]
 
+	if shardID != finalCrossPoolTradeAcceptedContent.ShardID {
+		return nil, nil
+	}
+
 	meta := metadata.NewPDECrossPoolTradeResponse(
 		instStatus,
 		finalCrossPoolTradeAcceptedContent.RequestedTxID,
@@ -228,6 +236,10 @@ func (blockGenerator *BlockGenerator) buildPDETradeAcceptedTx(
 ) (metadata.Transaction, error) {
 	pdeTradeAcceptedContent, err := parseTradeAcceptedContent(contentStr)
 	if err != nil {
+		return nil, nil
+	}
+
+	if shardID != pdeTradeAcceptedContent.ShardID {
 		return nil, nil
 	}
 

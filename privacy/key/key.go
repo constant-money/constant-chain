@@ -138,6 +138,9 @@ func (addr PaymentAddress) GetPublicView() *operation.Point {
 }
 
 func(addr PaymentAddress) GetOTAPublicKey() *operation.Point{
+	if len(addr.OTAPublic)  == 0 {
+		return nil
+	}
 	encryptionKey, _ := new(operation.Point).FromBytesS(addr.OTAPublic)
 	return  encryptionKey
 }

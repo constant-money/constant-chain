@@ -29,6 +29,9 @@ func (blockchain *BlockChain) verifyMinerCreatedTxBeforeGettingInBlock(
 	mintData.WithdrawReward = make(map[string]bool)
 
 	for _, tx := range txs {
+		if tx.GetMetadata() != nil{
+			Logger.log.Infof("BUGLOG currently processing metadata: %v\n", tx.GetMetadata())
+		}
 		shardViewRetriever := blockchain.GetBestStateShard(shardID)
 		beaconViewRetriever := blockchain.GetBeaconBestState()
 		ok, err := tx.VerifyMinerCreatedTxBeforeGettingInBlock(mintData, shardID, blockchain, accumulatedValues, shardViewRetriever, beaconViewRetriever)

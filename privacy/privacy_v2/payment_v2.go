@@ -101,18 +101,22 @@ func (proof PaymentProofV2) MarshalJSON() ([]byte, error) {
 }
 
 func (proof *PaymentProofV2) UnmarshalJSON(data []byte) error {
+	Logger.Log.Infof("Unmarshalling PaymentProofV2: %v\n", string(data))
 	dataStr := common.EmptyString
 	errJson := json.Unmarshal(data, &dataStr)
 	if errJson != nil {
+		Logger.Log.Errorf("PaymentProofV2 unmarshalling dataStr error: %v\n", errJson)
 		return errJson
 	}
 	temp, err := base64.StdEncoding.DecodeString(dataStr)
 	if err != nil {
+		Logger.Log.Errorf("PaymentProofV2 decodeing string dataStr error: %v\n", err)
 		return err
 	}
 
 	errSetBytes := proof.SetBytes(temp)
 	if errSetBytes != nil {
+		Logger.Log.Errorf("PaymentProofV2 setbytes error: %v\n", errSetBytes)
 		return errSetBytes
 	}
 	return nil
@@ -167,6 +171,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 		return errhandler.NewPrivacyErr(errhandler.InvalidInputToSetBytesErr, errors.New("Proof bytes is zero"))
 	}
 	if proofbytes[0] != proof.GetVersion() {
+		Logger.Log.Errorf("proof bytes version is incorrect: %v != %v\n", proofbytes[0], proof.GetVersion())
 		return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Proof bytes version is incorrect"))
 	}
 	proof.SetVersion()
@@ -174,6 +179,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 
 	//ComOutputMultiRangeProofSize *aggregatedRangeProof
 	if offset+common.Uint32Size >= len(proofbytes) {
+		Logger.Log.Errorf("out of range aggregated range proof: %v + %v >= %v\n", offset, common.Uint32Size, len(proofbytes))
 		return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range aggregated range proof"))
 	}
 	lenComOutputMultiRangeUint32, _ := common.BytesToUint32(proofbytes[offset : offset+common.Uint32Size])
@@ -181,6 +187,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 	offset += common.Uint32Size
 
 	if offset+lenComOutputMultiRangeProof > len(proofbytes) {
+		Logger.Log.Errorf("out of range aggregated range proof: %v + %v >= %v\n", offset, lenComOutputMultiRangeProof, len(proofbytes))
 		return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range aggregated range proof"))
 	}
 	if lenComOutputMultiRangeProof > 0 {
@@ -189,6 +196,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 		proof.aggregatedRangeProof = bulletproof
 		err := proof.aggregatedRangeProof.SetBytes(proofbytes[offset : offset+lenComOutputMultiRangeProof])
 		if err != nil {
+			Logger.Log.Errorf("aggregated range proof setbytes error: %v\n", err)
 			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, err)
 		}
 		offset += lenComOutputMultiRangeProof
@@ -196,6 +204,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 
 	//InputCoins  []*coin.PlainCoinV1
 	if offset >= len(proofbytes) {
+		Logger.Log.Errorf("out of range input coin: %v >= %v\n", offset, len(proofbytes))
 		return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 	}
 	lenInputCoinsArray := int(proofbytes[offset])
@@ -205,29 +214,34 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 	for i := 0; i < lenInputCoinsArray; i++ {
 		// try get 1-byte for len
 		if offset >= len(proofbytes) {
-			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
+			Logger.Log.Errorf("out of range input coin: %v >= %v\n", offset, len(proofbytes))
+			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 		}
 		lenInputCoin := int(proofbytes[offset])
 		offset += 1
 
 		if offset+lenInputCoin > len(proofbytes) {
-			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
+			Logger.Log.Errorf("out of range input coin: %v + %v >= %v\n", offset, lenInputCoin, len(proofbytes))
+			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 		}
 		proof.inputCoins[i], err = coin.NewPlainCoinFromByte(proofbytes[offset : offset+lenInputCoin])
 		if err != nil {
 			// 1-byte is wrong
 			// try get 2-byte for len
 			if offset+1 > len(proofbytes) {
-				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
+				Logger.Log.Error("out of range input coin")
+				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 			}
 			lenInputCoin = common.BytesToInt(proofbytes[offset-1 : offset+1])
 			offset += 1
 
 			if offset+lenInputCoin > len(proofbytes) {
-				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
+				Logger.Log.Error("out of range input coin")
+				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range input coins"))
 			}
 			proof.inputCoins[i], err = coin.NewPlainCoinFromByte(proofbytes[offset : offset+lenInputCoin])
 			if err != nil {
+				Logger.Log.Errorf("input coin setbytes error: %v\n", err)
 				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, err)
 			}
 		}
@@ -236,6 +250,7 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 
 	//OutputCoins []*privacy.OutputCoin
 	if offset >= len(proofbytes) {
+		Logger.Log.Error("out of range output coin: %v >= %v\n", offset, len(proofbytes))
 		return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
 	}
 	lenOutputCoinsArray := int(proofbytes[offset])
@@ -245,12 +260,14 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 		proof.outputCoins[i] = new(coin.CoinV2)
 		// try get 1-byte for len
 		if offset >= len(proofbytes) {
+			Logger.Log.Error("out of range output coin: %v >= %v\n", offset, len(proofbytes))
 			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
 		}
 		lenOutputCoin := int(proofbytes[offset])
 		offset += 1
 
 		if offset+lenOutputCoin > len(proofbytes) {
+			Logger.Log.Error("out of range output coin: %v + %v >= %v\n", offset, lenOutputCoin, len(proofbytes))
 			return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, errors.New("Out of range output coins"))
 		}
 		err := proof.outputCoins[i].SetBytes(proofbytes[offset : offset+lenOutputCoin])
@@ -268,7 +285,8 @@ func (proof *PaymentProofV2) SetBytes(proofbytes []byte) *errhandler.PrivacyErro
 			}
 			err1 := proof.outputCoins[i].SetBytes(proofbytes[offset : offset+lenOutputCoin])
 			if err1 != nil {
-				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, err)
+				Logger.Log.Errorf("output coin setbytes error: %v\n", err1)
+				return errhandler.NewPrivacyErr(errhandler.SetBytesProofErr, err1)
 			}
 		}
 		offset += lenOutputCoin

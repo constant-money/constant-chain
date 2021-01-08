@@ -198,6 +198,8 @@ func proveConversion(tx *Tx, params *TxConvertVer1ToVer2InitParams) error {
 }
 
 func validateConversionVer1ToVer2(tx metadata.Transaction, db *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
+	jsb, _ := json.Marshal(tx)
+	utils.Logger.Log.Infof("Begin verifying TX %s", string(jsb))
 	if valid, err := tx_generic.VerifySigNoPrivacy(tx.GetSig(), tx.GetSigPubKey(), tx.Hash()[:]); !valid {
 		if err != nil {
 			utils.Logger.Log.Errorf("Error verifying signature conversion with tx hash %s: %+v \n", tx.Hash().String(), err)

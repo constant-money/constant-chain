@@ -13,7 +13,7 @@ const (
 	otaKeySerializedBytesLen	  = 71 // bytes
 
 	privKeyBase58CheckSerializedBytesLen     = 107 // len string
-	paymentAddrBase58CheckSerializedBytesLen = 103 // len string
+	paymentAddrBase58CheckSerializedBytesLen = 148 // len string
 	readOnlyKeyBase58CheckSerializedBytesLen = 103 // len string
 	otaKeyBase58CheckSerializedBytesLen 	 = 103 // len string
 )

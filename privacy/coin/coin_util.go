@@ -152,6 +152,9 @@ func NewCoinFromPaymentInfo(info *key.PaymentInfo) (*CoinV2, error) {
 	// Increase index until have the right shardID
 	index := uint32(0)
 	publicOTA := info.PaymentAddress.GetOTAPublicKey()
+	if publicOTA == nil {
+		return nil, errors.New("public OTA from payment address is nil")
+	}
 	publicSpend := info.PaymentAddress.GetPublicSpend()
 	rK := new(operation.Point).ScalarMult(publicOTA, c.GetSharedRandom())
 	for {

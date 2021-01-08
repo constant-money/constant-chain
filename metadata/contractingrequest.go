@@ -69,21 +69,20 @@ func (cReq ContractingRequest) ValidateSanityData(chainRetriever ChainRetriever,
 	if len(cReq.BurnerAddress.Pk) == 0 {
 		return false, false, errors.New("Wrong request info's burner address")
 	}
-	if cReq.BurnedAmount == 0 {
+
+	isBurned, burnCoin, burnedTokenID, err := tx.GetTxBurnData()
+	if err != nil || !isBurned {
+		return false, false, errors.New("Error This is not Tx Burn")
+	}
+
+	if cReq.BurnedAmount == 0 || cReq.BurnedAmount != burnCoin.GetValue() {
 		return false, false, errors.New("Wrong request info's burned amount")
 	}
-	if !tx.IsCoinsBurning(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight) {
-		return false, false, errors.New("Must send coin to burning address")
-	}
-	if cReq.BurnedAmount != tx.CalculateTxValue() {
-		return false, false, errors.New("BurnedAmount incorrect")
-	}
-	if !bytes.Equal(tx.GetTokenID()[:], cReq.TokenID[:]) {
+
+	if !bytes.Equal(burnedTokenID[:], cReq.TokenID[:]) {
 		return false, false, errors.New("Wrong request info's token id, it should be equal to tx's token id.")
 	}
-	if !bytes.Equal(tx.GetSigPubKey()[:], cReq.BurnerAddress.Pk[:]) {
-		return false, false, errors.New("BurnerAddress incorrect")
-	}
+
 	return true, true, nil
 }
 

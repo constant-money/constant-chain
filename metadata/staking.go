@@ -147,6 +147,12 @@ func (stakingMetadata StakingMetadata) ValidateSanityData(chainRetriever ChainRe
 	if !CommitteePublicKey.CheckSanityData() {
 		return false, false, errors.New("Invalid Commitee Public Key of Candidate who join consensus")
 	}
+
+	if !bytes.Equal(CommitteePublicKey.IncPubKey, rewardReceiverWallet.KeySet.PaymentAddress.Pk){
+		Logger.log.Infof("BUGLOG IncPubkey != funder.PK: %v != %v\n", CommitteePublicKey.IncPubKey, rewardReceiverWallet.KeySet.PaymentAddress.Pk)
+		return false, false, errors.New("IncPubkey must equal the public key of the funder")
+	}
+
 	return true, true, nil
 }
 func (stakingMetadata StakingMetadata) GetType() int {

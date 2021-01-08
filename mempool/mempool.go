@@ -515,6 +515,9 @@ func (tp *TxPool) validateTransaction(shardView *blockchain.ShardBestState, beac
 	validated := false
 	if !isNewTransaction {
 		// need to use beacon height from
+		if tx.Hash().String() == "bb5a65759486d762d33063f7d46c3bbc29b3603da93282dd75ed1428c895fa09"{ //Some previous hotfix
+			return nil
+		}
 		validated, err = tx.ValidateSanityData(tp.config.BlockChain, shardView, beaconView, uint64(beaconHeight))
 	} else {
 		validated, err = tx.ValidateSanityData(tp.config.BlockChain, shardView, beaconView, 0)

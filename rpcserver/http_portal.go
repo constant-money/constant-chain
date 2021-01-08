@@ -54,7 +54,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianDeposit(params inter
 		remoteAddresses[pTokenID] = remoteAddressesMap[pTokenID].(string)
 	}
 
-	depositedAmount, err := common.AssertAndConvertStrToNumber(data["DepositedAmount"])
+	depositedAmount, err := common.AssertAndConvertNumber(data["DepositedAmount"])
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
 	}
@@ -67,7 +67,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianDeposit(params inter
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -156,7 +156,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPToken(params interface{},
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -346,7 +346,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithRedeemReq(params interface{},
 	meta, _ := metadata.NewPortalRedeemRequest(metadata.PortalRedeemRequestMeta, uniqueRedeemID,
 		redeemTokenID, redeemAmount, redeemerIncAddressStr, remoteAddress, redeemFee)
 
-	customTokenTx, rpcErr := httpServer.txService.BuildRawPrivacyCustomTokenTransactionV2(params, meta)
+	customTokenTx, rpcErr := httpServer.txService.BuildRawPrivacyCustomTokenTransaction(params, meta)
 	if rpcErr != nil {
 		Logger.log.Error(rpcErr)
 		return nil, rpcErr
@@ -408,7 +408,7 @@ func (httpServer *HttpServer) handleCustodianWithdrawRequest(params interface{},
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -496,7 +496,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqUnlockCollateral(params in
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -679,7 +679,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqWithdrawRewardPortal(param
 		*tokenID)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -833,7 +833,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqMatchingRedeem(params inte
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}

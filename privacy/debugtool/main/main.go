@@ -49,10 +49,10 @@ func ListTokens(tool *debugtool.DebugTool) *debugtool.ListCustomToken {
 }
 
 func GetOutputToken(tool *debugtool.DebugTool, privKey string, tokenID string, height uint64) {
-	fmt.Println("========== GET OUTPUT TOKEN ==========")
-	b, _ := tool.GetListOutputCoins(privKey, tokenID, height)
-	fmt.Println(string(b))
-	fmt.Println("========== END OUTPUT TOKEN ==========")
+	//fmt.Println("========== GET OUTPUT TOKEN ==========")
+	//b, _ := tool.GetListOutputCoins(privKey, tokenID, height)
+	//fmt.Println(string(b))
+	//fmt.Println("========== END OUTPUT TOKEN ==========")
 }
 
 func GetUnspentOutputToken(tool *debugtool.DebugTool, privKey string, tokenID string) {
@@ -108,7 +108,23 @@ func ConvertTokenCoinVersion(tool *debugtool.DebugTool, privKey string, tokenID 
 
 func GetPRVOutPutCoin(tool *debugtool.DebugTool, privkey string, height uint64) {
 	fmt.Println("========== GET PRV OUTPUT COIN ==========")
-	b, _ := tool.GetListOutputCoins(privkey, common.PRVIDStr, height)
+	outCoinKey, err := debugtool.NewOutCoinKeyFromPrivateKey(privkey)
+	if err != nil{
+		fmt.Println(err)
+		return
+	}
+	//outCoinKey.SetReadonlyKey("")
+	////outCoinKey.SetOTAKey("")
+
+	b, err := tool.GetListOutputCoins(outCoinKey, common.PRVIDStr, height)
+	//fmt.Printf("number of coins: %v\n", len(b))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	//for _, outCoin := range b{
+	//	fmt.Println(outCoin.GetValue())
+	//}
 	fmt.Println(string(b))
 	fmt.Println("========== END GET PRV OUTPUT COIN ==========")
 }
@@ -313,67 +329,6 @@ func PDETradeToken(tool *debugtool.DebugTool, privKey, token, amount string) {
 	fmt.Println("========== END PDE TRADE TOKEN  ==========")
 }
 
-// func sendRawTxNoPrivacy(tool *debugtool.DebugTool, privKey, tokenID, paymentString string, txType int64){
-// 	fmt.Println("========== FAKE TRANSACTION ==========")
-// 	if len(paymentString) < 2{
-// 		keyWallet, _ := wallet.Base58CheckDeserialize(privKey)
-// 		keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
-// 		paymentString = keyWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-
-// 	}
-// 	b, _ := tool.SendTxNoPrivacyFake(privKey, tokenID, paymentString, txType, 1)
-// 	fmt.Println(string(b))
-// 	fmt.Println("========== FAKE TRANSACTION FINISH ==========")
-// }
-
-// func sendRawTxPrivacy(tool *debugtool.DebugTool, privKey, tokenID, paymentString string, txType int64){
-// 	fmt.Println("========== FAKE TRANSACTION ==========")
-// 	b, err := tool.SendTxPrivacyFake(privKey, tokenID, paymentString, txType, 1)
-// 	//if err != nil{
-// 	//	return
-// 	//}
-// 	fmt.Println("err =", err)
-// 	fmt.Println(string(b))
-// 	fmt.Println("========== FAKE TRANSACTION FINISH ==========")
-// }
-
-func GetListRandomCommitments(tool *debugtool.DebugTool, privKey, tokenID string) {
-	fmt.Println("========== GET LIST RANDOM COMMITMENTS ==========")
-	outCoins, _, err := tool.GetPlainOutputCoin(privKey, tokenID)
-	if err != nil {
-		panic(err)
-	}
-
-	keyWallet, _ := wallet.Base58CheckDeserialize(privKey)
-	keyWallet.KeySet.InitFromPrivateKey(&keyWallet.KeySet.PrivateKey)
-	paymentString := keyWallet.Base58CheckSerialize(wallet.PaymentAddressType)
-
-	if err != nil {
-		panic(err)
-	}
-
-	b, err := tool.GetRandomCommitment(common.PRVIDStr, paymentString, outCoins)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(b))
-
-	fmt.Println("========== GET LIST RANDOM COMMITMENT FINISH ==========")
-}
-
-func GetListRandomCommitmentsAndPublicKeys(tool *debugtool.DebugTool, paymentAddress, tokenID string, numOutputs int) {
-	fmt.Println("========== GET LIST RANDOM COMMITMENTS AND PUBLIC KEYS ==========")
-
-	b, err := tool.GetRandomCommitmentsAndPublicKeys(tokenID, paymentAddress, numOutputs)
-	if err != nil {
-		panic(err)
-	}
-
-	fmt.Println(string(b))
-
-	fmt.Println("========== GET LIST RANDOM COMMITMENTS AND PUBLIC KEYS FINISH ==========")
-}
 
 //Blockchain
 func GetBlockchainInfo(tool *debugtool.DebugTool) {
@@ -1058,43 +1013,6 @@ func main() {
 		// 		sendRawTxPrivacy(tool, privateKeys[idxSender], tokenID, paymentAddress, txType)
 		// 	}
 		// }
-
-		if args[0] == "cmtandpubkey" {
-			if len(args) < 3 {
-				fmt.Println("Need at least 3 arguments")
-				continue
-			}
-
-			//#1 - paymentAddress
-			paymentAddress := args[1]
-			if len(args[1]) < 2 {
-				idx, err := strconv.ParseInt(args[1], 10, 32)
-				if err != nil {
-					fmt.Println(err)
-					continue
-				}
-				if idx > int64(len(privateKeys)-1) {
-					fmt.Println("Privatekey index out of range")
-					continue
-				}
-				paymentAddress = privateKeyToPaymentAddress(privateKeyToPaymentAddress(privateKeys[idx]))
-			}
-
-			//#2 - numOutputs
-			numOutputs, err := strconv.ParseInt(args[2], 10, 32)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			//#3- TokenID
-			tokenID := common.PRVIDStr
-			if len(args) > 3 {
-				tokenID = args[3]
-			}
-
-			GetListRandomCommitmentsAndPublicKeys(tool, paymentAddress, tokenID, int(numOutputs))
-		}
 
 		if args[0] == "genkeyset" {
 			privateKey, payment, _ := GenKeySet([]byte(args[1]))

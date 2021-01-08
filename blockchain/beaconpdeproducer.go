@@ -459,6 +459,8 @@ func (blockchain *BlockChain) buildInstsForSortedTradableActions(
 			beaconHeight,
 			tradeAction.Meta.TraderAddressStr,
 			tradeAction.Meta.TxRandomStr,
+			tradeAction.Meta.SubTraderAddressStr,
+			tradeAction.Meta.SubTxRandomStr,
 			tradeAction.TxReqID,
 			tradingFeeByPair,
 		)
@@ -480,6 +482,7 @@ func (blockchain *BlockChain) buildInstsForUntradableActions(
 	for _, tradeAction := range untradableActions {
 		refundTradingFeeInst := buildCrossPoolTradeRefundInst(
 			tradeAction.Meta.TraderAddressStr,
+			tradeAction.Meta.TxRandomStr,
 			common.PRVCoinID.String(),
 			tradeAction.Meta.TradingFee,
 			metadata.PDECrossPoolTradeRequestMeta,
@@ -489,7 +492,8 @@ func (blockchain *BlockChain) buildInstsForUntradableActions(
 		)
 		untradableInsts = append(untradableInsts, refundTradingFeeInst)
 		refundSellingTokenInst := buildCrossPoolTradeRefundInst(
-			tradeAction.Meta.TraderAddressStr,
+			tradeAction.Meta.SubTraderAddressStr,
+			tradeAction.Meta.SubTxRandomStr,
 			tradeAction.Meta.TokenIDToSellStr,
 			tradeAction.Meta.SellAmount,
 			metadata.PDECrossPoolTradeRequestMeta,
@@ -504,6 +508,7 @@ func (blockchain *BlockChain) buildInstsForUntradableActions(
 
 func buildCrossPoolTradeRefundInst(
 	traderAddressStr string,
+	txRandomStr string,
 	tokenIDStr string,
 	amount uint64,
 	metaType int,
@@ -513,6 +518,7 @@ func buildCrossPoolTradeRefundInst(
 ) []string {
 	refundCrossPoolTrade := metadata.PDERefundCrossPoolTrade{
 		TraderAddressStr: traderAddressStr,
+		TxRandomStr: txRandomStr,
 		TokenIDStr:       tokenIDStr,
 		Amount:           amount,
 		ShardID:          shardID,
@@ -537,13 +543,17 @@ func (blockchain *BlockChain) buildInstructionsForPDECrossPoolTrade(
 	beaconHeight uint64,
 	traderAddressStr string,
 	txRandomStr string,
+	subTraderAddressStr string,
+	subTxRandomStr string,
 	txReqID common.Hash,
 	tradingFeeByPair map[string]uint64,
 ) ([][]string, error) {
 	if currentPDEState == nil ||
 		(currentPDEState.PDEPoolPairs == nil || len(currentPDEState.PDEPoolPairs) == 0) {
+
 		refundTradingFeeInst := buildCrossPoolTradeRefundInst(
 			traderAddressStr,
+			txRandomStr,
 			common.PRVCoinID.String(),
 			tradingFee,
 			metaType,
@@ -552,7 +562,8 @@ func (blockchain *BlockChain) buildInstructionsForPDECrossPoolTrade(
 			txReqID,
 		)
 		refundSellingTokenInst := buildCrossPoolTradeRefundInst(
-			traderAddressStr,
+			subTraderAddressStr,
+			subTxRandomStr,
 			sequentialTrades[0].tokenIDToSellStr,
 			sequentialTrades[0].sellAmount,
 			metaType,
@@ -578,6 +589,7 @@ func (blockchain *BlockChain) buildInstructionsForPDECrossPoolTrade(
 	if minAcceptableAmount > amt {
 		refundTradingFeeInst := buildCrossPoolTradeRefundInst(
 			traderAddressStr,
+			txRandomStr,
 			common.PRVCoinID.String(),
 			tradingFee,
 			metaType,
@@ -586,7 +598,8 @@ func (blockchain *BlockChain) buildInstructionsForPDECrossPoolTrade(
 			txReqID,
 		)
 		refundSellingTokenInst := buildCrossPoolTradeRefundInst(
-			traderAddressStr,
+			subTraderAddressStr,
+			subTxRandomStr,
 			sequentialTrades[0].tokenIDToSellStr,
 			sequentialTrades[0].sellAmount,
 			metaType,

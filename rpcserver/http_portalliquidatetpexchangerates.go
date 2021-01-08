@@ -158,7 +158,7 @@ func (httpServer *HttpServer) createRawRedeemLiquidationExchangeRates(params int
 
 	meta, _ := metadata.NewPortalRedeemLiquidateExchangeRates(metadata.PortalRedeemLiquidateExchangeRatesMeta, redeemTokenID, redeemAmount, redeemerIncAddressStr)
 
-	customTokenTx, rpcErr := httpServer.txService.BuildRawPrivacyCustomTokenTransactionV2(params, meta)
+	customTokenTx, rpcErr := httpServer.txService.BuildRawPrivacyCustomTokenTransaction(params, meta)
 	if rpcErr != nil {
 		Logger.log.Error(rpcErr)
 		return nil, rpcErr
@@ -242,7 +242,7 @@ func (httpServer *HttpServer) createLiquidationCustodianDeposit(params interface
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}
@@ -339,7 +339,7 @@ func (httpServer *HttpServer) createTopUpWaitingPorting(params interface{}, clos
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}

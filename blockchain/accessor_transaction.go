@@ -440,6 +440,9 @@ func (blockchain *BlockChain) GetListDecryptedOutputCoinsVer1ByKeyset(keyset *in
 //in case payment-address: return all outputcoin tx with no amount value
 //- Param #2: coinType - which type of joinsplitdesc(COIN or BOND)
 func (blockchain *BlockChain) GetListDecryptedOutputCoinsByKeyset(keyset *incognitokey.KeySet, shardID byte, tokenID *common.Hash, shardHeight uint64) ([]privacy.PlainCoin, []privacy.Coin, uint64, error) {
+	if keyset.OTAKey.GetPublicSpend() == nil || keyset.OTAKey.GetOTASecretKey() == nil{
+		return blockchain.getOutputCoins(keyset, shardID, tokenID, shardHeight, map[int]bool{1:true})
+	}
 	return blockchain.getOutputCoins(keyset, shardID, tokenID, shardHeight, map[int]bool{1:true, 2:true})
 }
 

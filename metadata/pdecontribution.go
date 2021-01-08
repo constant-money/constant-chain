@@ -127,11 +127,6 @@ func (pc PDEContribution) ValidateSanityData(chainRetriever ChainRetriever, shar
 		return false, false, errors.New("Contributed Amount is not valid ")
 	}
 
-	// No need to check this condition ...
-	//if !bytes.Equal(tx.GetSigPubKey()[:], contributorAddr.Pk[:]) {
-	//	return false, false, errors.New("ContributorAddress incorrect")
-	//}
-
 	tokenID, err := common.Hash{}.NewHashFromStr(pc.TokenIDStr)
 	if err != nil {
 		return false, false, NewMetadataTxError(IssuingRequestNewIssuingRequestFromMapEror, errors.New("TokenIDStr incorrect"))
@@ -141,12 +136,10 @@ func (pc PDEContribution) ValidateSanityData(chainRetriever ChainRetriever, shar
 	}
 
 	if tx.GetType() == common.TxNormalType && pc.TokenIDStr != common.PRVCoinID.String() {
-		panic("OK")
 		return false, false, errors.New("With tx normal privacy, the tokenIDStr should be PRV, not custom token.")
 	}
 
 	if tx.GetType() == common.TxCustomTokenPrivacyType && pc.TokenIDStr == common.PRVCoinID.String() {
-		panic("OK")
 		return false, false, errors.New("With tx custome token privacy, the tokenIDStr should not be PRV, but custom token.")
 	}
 

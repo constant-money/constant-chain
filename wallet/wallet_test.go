@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -770,7 +769,7 @@ func TestWalletContainPubKeyWithNotExistedPubKey(t *testing.T) {
 		wallet.CreateNewAccount(item.accountName, &item.shardID)
 	}
 
-	randPubKey := privacy.RandBytes(common.PublicKeySize)
+	randPubKey := common.RandBytes(common.PublicKeySize)
 	res := wallet.ContainPublicKey(randPubKey)
 	assert.Equal(t, false, res)
 }

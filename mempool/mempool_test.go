@@ -519,7 +519,7 @@ func CreateAndSaveTestInitCustomTokenTransactionPrivacy(privateKey string, fee i
 		TokenInput:     nil,
 		Fee:            uint64(tokenParamsRaw["TokenFee"].(float64)),
 	}
-	tokenParams.Receiver, _, _ = transaction.CreateCustomTokenPrivacyReceiverArray(tokenParamsRaw["TokenReceivers"])
+	tokenParams.Receiver, _, _ = common.CreateCustomTokenPrivacyReceiverArray(tokenParamsRaw["TokenReceivers"])
 	estimateTxSizeInKb := transaction.EstimateTxSize(transaction.NewEstimateTxSizeParam(len(candidatePlainCoins), len(paymentInfos), hasPrivacyCoin, nil, tokenParams, 0))
 	realFee := uint64(estimateFeeCoinPerKb) * uint64(estimateTxSizeInKb)
 	needToPayFee := int64((totalAmmount + realFee) - candidateOutputCoinAmount)

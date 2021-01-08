@@ -93,7 +93,7 @@ func (iRes PDECrossPoolTradeResponse) VerifyMinerCreatedTxBeforeGettingInBlock(m
 		var receivingAmtFromInst uint64
 		var receivingTokenIDStr string
 		if instTradeStatus == common.PDECrossPoolTradeFeeRefundChainStatus ||
-			instTradeStatus == common.PDECrossPoolTradeSellingTokenRefundChainStatus {
+			instTradeStatus == common.PDECrossPoolTradeSellingTokenRefundChainStatus { // trade refund
 			contentBytes := []byte(inst[3])
 			var pdeRefundCrossPoolTrade PDERefundCrossPoolTrade
 			err := json.Unmarshal(contentBytes, &pdeRefundCrossPoolTrade)

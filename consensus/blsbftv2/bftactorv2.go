@@ -127,6 +127,7 @@ func (e *BLSBFT_V2) Start() error {
 					}
 					e.Logger.Info("Receive block ", block.Hash().String(), "height", block.GetHeight(), ",block timeslot ", common.CalculateTimeSlot(block.GetProposeTime()))
 					e.receiveBlockByHeight[block.GetHeight()] = append(e.receiveBlockByHeight[block.GetHeight()], e.receiveBlockByHash[blkHash])
+					e.Logger.Infof("Current ticker: %v\n", ticker)
 				} else {
 					e.receiveBlockByHash[blkHash].block = block
 				}
@@ -149,6 +150,7 @@ func (e *BLSBFT_V2) Start() error {
 						b.votes[voteMsg.Validator] = voteMsg // store it
 						e.Logger.Infof("Receive vote for block %s (%d) from %v", voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes), voteMsg.Validator)
 						b.hasNewVote = true
+						e.Logger.Infof("New vote Current ticker: %v\n", ticker)
 					}
 				} else {
 					e.receiveBlockByHash[voteMsg.BlockHash] = &ProposeBlockInfo{
@@ -163,7 +165,9 @@ func (e *BLSBFT_V2) Start() error {
 				// e.Logger.Infof("receive vote for block %s (%d)", voteMsg.BlockHash, len(e.receiveBlockByHash[voteMsg.BlockHash].votes))
 
 			case <-ticker:
+				e.Logger.Info("Entering ticker")
 				if !e.Chain.IsReady() {
+					e.Logger.Infof("Chain not ready\n")
 					continue
 				}
 				e.currentTime = time.Now().Unix()
@@ -171,7 +175,6 @@ func (e *BLSBFT_V2) Start() error {
 				newTimeSlot := false
 				if e.currentTimeSlot != common.CalculateTimeSlot(e.currentTime) {
 					newTimeSlot = true
-
 				}
 
 				e.currentTimeSlot = common.CalculateTimeSlot(e.currentTime)
@@ -193,6 +196,8 @@ func (e *BLSBFT_V2) Start() error {
 						e.Logger.Infof("TS: %v , LISTEN BLOCK %v", common.CalculateTimeSlot(e.currentTime), bestView.GetHeight()+1)
 					}
 				}
+
+				e.Logger.Infof("Passing newTimeSlot\n")
 
 				if proposerPk.GetMiningKeyBase58(common.BlsConsensus) == userPk && common.CalculateTimeSlot(bestView.GetBlock().GetProduceTime()) != e.currentTimeSlot { // current timeslot is not add to view, and this user is proposer of this timeslot
 					//using block hash as key of best view -> check if this best view we propose or not
@@ -221,6 +226,8 @@ func (e *BLSBFT_V2) Start() error {
 					}
 				}
 
+				e.Logger.Infof("Passing Get mining key\n")
+
 				/*
 					Check for valid block to vote
 				*/
@@ -228,6 +235,7 @@ func (e *BLSBFT_V2) Start() error {
 				//get all block that has height = bestview height  + 1(rule 2 & rule 3) (
 				for h, proposeBlockInfo := range e.receiveBlockByHash {
 					if proposeBlockInfo.block == nil {
+						e.Logger.Infof("ProposeBlock empty")
 						continue
 					}
 					bestViewHeight := bestView.GetHeight()
@@ -262,6 +270,7 @@ func (e *BLSBFT_V2) Start() error {
 				/*
 					Check for 2/3 vote to commit
 				*/
+				e.Logger.Infof("Processing get enough vote: %v\n", e.receiveBlockByHash)
 				for k, v := range e.receiveBlockByHash {
 					e.processIfBlockGetEnoughVote(k, v)
 				}
@@ -285,23 +294,27 @@ func NewInstance(chain ChainInterface, chainKey string, chainID int, node NodeIn
 func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBlockInfo) {
 	//no vote
 	if v.hasNewVote == false {
+		e.Logger.Infof("No vote\n")
 		return
 	}
 
 	//no block
 	if v.block == nil {
+		e.Logger.Infof("No block\n")
 		return
 	}
 
 	//already in chain
 	view := e.Chain.GetViewByHash(*v.block.Hash())
 	if view != nil {
+		e.Logger.Infof("Already in chain\n")
 		return
 	}
 
 	//not connected previous block
 	view = e.Chain.GetViewByHash(v.block.GetPrevHash())
 	if view == nil {
+		e.Logger.Infof("Not connected previous block\n")
 		return
 	}
 
@@ -334,6 +347,7 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 	}
 	//e.Logger.Debug(validVote, len(view.GetCommittee()), errVote)
 	v.hasNewVote = false
+	e.Logger.Infof("validVote = %v, committee = %v\n", validVote, len(view.GetCommittee()))
 	if validVote > 2*len(view.GetCommittee())/3 {
 		e.Logger.Infof("Commit block %v , height: %v", blockHash, v.block.GetHeight())
 		committeeBLSString, err := incognitokey.ExtractPublickeysFromCommitteeKeyList(view.GetCommittee(), common.BlsConsensus)

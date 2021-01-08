@@ -75,7 +75,7 @@ func (httpServer *HttpServer) createPortalExchangeRate(params interface{}, close
 	)
 
 	// create new param to build raw tx from param interface
-	createRawTxParam, errNewParam := bean.NewCreateRawTxParamV2(params)
+	createRawTxParam, errNewParam := bean.NewCreateRawTxParam(params)
 	if errNewParam != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errNewParam)
 	}

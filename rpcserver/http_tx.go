@@ -823,7 +823,7 @@ func (httpServer *HttpServer) handleCreateRawPrivacyCustomTokenTransaction(param
 }
 
 // handleSendRawTransaction...
-func (httpServer *HttpServer) handleSendRawPrivacyCustomTokenTransaction(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+func (httpServer *HttpServer) 	handleSendRawPrivacyCustomTokenTransaction(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if arrayParams == nil || len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 1 element"))
@@ -960,6 +960,7 @@ func (httpServer *HttpServer) handleCreateRawStakingTransaction(params interface
 		return nil, rpcservice.NewRPCError(rpcservice.CreateTxDataError, err)
 	}
 
+	Logger.log.Infof("BUGLOG creating staking transaction: txHash = %v, shardID = %v, stakingMeta = %v", txID.String(), txShardID, *stakingMetadata)
 	result := jsonresult.CreateTransactionResult{
 		TxID:            txID.String(),
 		Base58CheckData: base58.Base58Check{}.Encode(txBytes, common.ZeroByte),

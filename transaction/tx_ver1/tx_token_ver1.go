@@ -289,6 +289,7 @@ func (txToken *TxToken) UnmarshalJSON(data []byte) error {
 	var err error
 	txToken.Tx = &Tx{}
 	if err = json.Unmarshal(data, txToken.Tx); err != nil {
+		utils.Logger.Log.Errorf("error unmarshalling txFre ver1: %v\n", err)
 		return err
 	}
 	temp := &struct {
@@ -297,7 +298,7 @@ func (txToken *TxToken) UnmarshalJSON(data []byte) error {
 	temp.TxTokenData.TxNormal = &Tx{}
 	err = json.Unmarshal(data, &temp)
 	if err != nil {
-		utils.Logger.Log.Error(err)
+		utils.Logger.Log.Errorf("error unmarshalling txNormal ver1: %v\n", err)
 		return utils.NewTransactionErr(utils.PrivacyTokenJsonError, err)
 	}
 	txToken.TxTokenData = temp.TxTokenData
