@@ -120,9 +120,17 @@ func (pc PDECrossPoolTradeRequest) ValidateSanityData(chainRetriever ChainRetrie
 	}
 
 	// check ota address string and tx random is valid
-	_, err1 := checkTraderAddress(pc.TraderAddressStr, pc.TxRandomStr)
-	_, err2 := checkTraderAddress(pc.SubTraderAddressStr, pc.SubTxRandomStr)
-	if err1 != nil || err2 != nil {
+	var isValid bool = false
+	isValid, _ = checkTraderAddress(pc.TraderAddressStr, pc.TxRandomStr)
+	if isValid{
+		if len(pc.SubTraderAddressStr)==0 && len(pc.SubTxRandomStr)==0{
+			isValid = true
+		}else{
+			isValid, _ = checkTraderAddress(pc.SubTraderAddressStr, pc.SubTxRandomStr)		
+		}
+	}
+	
+	if !isValid {
 		return false, false, fmt.Errorf("trader address string or txrandom is not corrrect format")
 	}
 
