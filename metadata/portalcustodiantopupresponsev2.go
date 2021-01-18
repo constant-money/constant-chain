@@ -1,26 +1,26 @@
 package metadata
 
-// type PortalLiquidationCustodianDepositResponse struct {
+// type PortalLiquidationCustodianDepositResponseV2 struct {
 // 	MetadataBase
 // 	DepositStatus    string
 // 	ReqTxID          common.Hash
 // 	CustodianAddrStr string
 // 	DepositedAmount  uint64
-// 	SharedRandom       []byte
+// 	SharedRandom     []byte
 // }
 
-// func NewPortalLiquidationCustodianDepositResponse(
+// func NewPortalLiquidationCustodianDepositResponseV2(
 // 	depositStatus string,
 // 	reqTxID common.Hash,
 // 	custodianAddressStr string,
 // 	depositedAmount uint64,
 // 	metaType int,
-// ) *PortalLiquidationCustodianDepositResponse {
+// ) *PortalLiquidationCustodianDepositResponseV2 {
 // 	metadataBase := MetadataBase{
 // 		Type: metaType,
 // 	}
 
-// 	return &PortalLiquidationCustodianDepositResponse{
+// 	return &PortalLiquidationCustodianDepositResponseV2{
 // 		DepositStatus:    depositStatus,
 // 		ReqTxID:          reqTxID,
 // 		MetadataBase:     metadataBase,
@@ -29,26 +29,26 @@ package metadata
 // 	}
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) CheckTransactionFee(tr Transaction, minFee uint64, beaconHeight int64, db *statedb.StateDB) bool {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) CheckTransactionFee(tr Transaction, minFee uint64, beaconHeight int64, db *statedb.StateDB) bool {
 // 	// no need to have fee for this tx
 // 	return true
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) ValidateTxWithBlockChain(txr Transaction, chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, db *statedb.StateDB) (bool, error) {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) ValidateTxWithBlockChain(txr Transaction, chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, db *statedb.StateDB) (bool, error) {
 // 	// no need to validate tx with blockchain, just need to validate with requested tx (via RequestedTxID)
 // 	return false, nil
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, txr Transaction) (bool, bool, error) {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, txr Transaction) (bool, bool, error) {
 // 	return false, true, nil
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) ValidateMetadataByItself() bool {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) ValidateMetadataByItself() bool {
 // 	// The validation just need to check at tx level, so returning true here
-// 	return iRes.Type == PortalLiquidationCustodianDepositResponseMeta
+// 	return iRes.Type == PortalCustodianTopupResponseMetaV2
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) Hash() *common.Hash {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) Hash() *common.Hash {
 // 	record := iRes.DepositStatus
 // 	record += strconv.FormatUint(iRes.DepositedAmount, 10)
 // 	record += iRes.ReqTxID.String()
@@ -59,11 +59,11 @@ package metadata
 // 	return &hash
 // }
 
-// func (iRes *PortalLiquidationCustodianDepositResponse) CalculateSize() uint64 {
+// func (iRes *PortalLiquidationCustodianDepositResponseV2) CalculateSize() uint64 {
 // 	return calculateSize(iRes)
 // }
 
-// func (iRes PortalLiquidationCustodianDepositResponse) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *MintData, shardID byte, tx Transaction, chainRetriever ChainRetriever, ac *AccumulatedValues, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever) (bool, error) {
+// func (iRes PortalLiquidationCustodianDepositResponseV2) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *MintData, shardID byte, tx Transaction, chainRetriever ChainRetriever, ac *AccumulatedValues, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever) (bool, error) {
 // 	idx := -1
 
 // 	for i, inst := range mintData.Insts {
@@ -72,12 +72,12 @@ package metadata
 // 		}
 // 		instMetaType := inst[0]
 // 		if mintData.InstsUsed[i] > 0 ||
-// 			instMetaType != strconv.Itoa(PortalLiquidationCustodianDepositMeta) {
+// 			instMetaType != strconv.Itoa(PortalLiquidationCustodianDepositMetaV2) {
 // 			continue
 // 		}
 // 		instDepositStatus := inst[2]
 // 		if instDepositStatus != iRes.DepositStatus ||
-// 			(instDepositStatus != common.PortalLiquidationCustodianDepositRejectedChainStatus) {
+// 			(instDepositStatus != common.PortalCustodianTopupRejectedChainStatus) {
 // 			continue
 // 		}
 
@@ -87,7 +87,7 @@ package metadata
 // 		var depositedAmountFromInst uint64
 
 // 		contentBytes := []byte(inst[3])
-// 		var custodianDepositContent PortalLiquidationCustodianDepositContent
+// 		var custodianDepositContent PortalLiquidationCustodianDepositContentV2
 // 		err := json.Unmarshal(contentBytes, &custodianDepositContent)
 // 		if err != nil {
 // 			Logger.log.Error("WARNING - VALIDATION: an error occured while parsing portal liquidation custodian deposit content: ", err)
@@ -113,8 +113,9 @@ package metadata
 // 			Logger.log.Info("WARNING - VALIDATION: Error occured while validate tx mint.  ", err)
 // 			continue
 // 		}
+
 // 		if coinID.String() != common.PRVCoinID.String() {
-// 			Logger.log.Info("WARNING - VALIDATION: Receive Token ID in tx mint maybe not correct. Must be PRV")
+// 			Logger.log.Info("WARNING - VALIDATION: Receive Token ID in tx mint maybe not correct.")
 // 			continue
 // 		}
 // 		if ok := mintCoin.CheckCoinValid(key.KeySet.PaymentAddress, iRes.SharedRandom, depositedAmountFromInst); !ok {
@@ -127,12 +128,12 @@ package metadata
 // 	}
 
 // 	if idx == -1 { // not found the issuance request tx for this response
-// 		return false, fmt.Errorf(fmt.Sprintf("no PortalLiquidationCustodianDeposit instruction found for PortalLiquidationCustodianDepositResponse tx %s", tx.Hash().String()))
+// 		return false, fmt.Errorf(fmt.Sprintf("no PortalLiquidationCustodianDepositV2 instruction found for PortalLiquidationCustodianDepositResponseV2 tx %s", tx.Hash().String()))
 // 	}
 // 	mintData.InstsUsed[idx] = 1
 // 	return true, nil
 // }
 
-// func (iRes *PortalLiquidationCustodianDepositResponse) SetSharedRandom(r []byte) {
+// func (iRes *PortalLiquidationCustodianDepositResponseV2) SetSharedRandom(r []byte) {
 // 	iRes.SharedRandom = r
 // }

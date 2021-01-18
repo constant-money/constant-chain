@@ -13,9 +13,9 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
+	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
 	"github.com/incognitochain/incognito-chain/transaction/tx_generic"
 	"github.com/incognitochain/incognito-chain/transaction/utils"
-	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
 )
 
 type Tx struct {
@@ -340,8 +340,8 @@ func (tx *Tx) sign() error {
 	return nil
 }
 
-func (tx *Tx) Sign(sigPrivakey []byte) error {//For testing-purpose only, remove when deploy
-	if sigPrivakey != nil{
+func (tx *Tx) Sign(sigPrivakey []byte) error { //For testing-purpose only, remove when deploy
+	if sigPrivakey != nil {
 		tx.SetPrivateKey(sigPrivakey)
 	}
 	return tx.sign()
@@ -493,7 +493,7 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 	outputCoinsAsV1 := make([]*privacy.CoinV1, len(outputCoins))
 	for i := 0; i < len(outputCoins); i += 1 {
 		c, ok := outputCoins[i].(*privacy.CoinV1)
-		if !ok{
+		if !ok {
 			return false, utils.NewTransactionErr(utils.UnexpectedError, nil, fmt.Sprintf("Error when casting a coin to ver1"))
 		}
 		outputCoinsAsV1[i] = c
@@ -517,7 +517,7 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 	if !hasPrivacy {
 		// Check input coins' commitment is exists in cm list (Database)
 		for i := 0; i < len(inputCoins); i++ {
-			if inputCoins[i].GetCommitment()==nil{
+			if inputCoins[i].GetCommitment() == nil {
 				return false, utils.NewTransactionErr(utils.InputCommitmentIsNotExistedError, err)
 			}
 			ok, err := statedb.HasCommitment(transactionStateDB, *tokenID, inputCoins[i].GetCommitment().ToBytesS(), shardID)
@@ -531,7 +531,7 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 	}
 	// Verify the payment proof
 	txProofV1, ok := tx.Proof.(*privacy.ProofV1)
-	if !ok{
+	if !ok {
 		return false, utils.NewTransactionErr(utils.RejectTxVersion, errors.New("Wrong proof version"))
 	}
 
@@ -569,10 +569,10 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 }
 
 func (tx Tx) VerifyMinerCreatedTxBeforeGettingInBlock(mintdata *metadata.MintData,
-		shardID byte, bcr metadata.ChainRetriever,
-		accumulatedValues *metadata.AccumulatedValues,
-		retriever metadata.ShardViewRetriever,
-		viewRetriever metadata.BeaconViewRetriever) (bool, error) {
+	shardID byte, bcr metadata.ChainRetriever,
+	accumulatedValues *metadata.AccumulatedValues,
+	retriever metadata.ShardViewRetriever,
+	viewRetriever metadata.BeaconViewRetriever) (bool, error) {
 	return tx_generic.VerifyTxCreatedByMiner(&tx, mintdata, shardID, bcr, accumulatedValues, retriever, viewRetriever)
 }
 
@@ -662,7 +662,7 @@ func (tx Tx) ValidateTxSalary(
 		return false, utils.NewTransactionErr(utils.UnexpectedError, errors.New("length outputCoins of proof is not 1"))
 	}
 	coin := outputCoins[0]
-	if coin.GetPublicKey()==nil || coin.GetSNDerivator()==nil || coin.GetRandomness()==nil || coin.GetCommitment()==nil{
+	if coin.GetPublicKey() == nil || coin.GetSNDerivator() == nil || coin.GetRandomness() == nil || coin.GetCommitment() == nil {
 		return false, utils.NewTransactionErr(utils.UnexpectedError, errors.New("output coin is corrupted"))
 	}
 	if ok, err := checkSNDerivatorExistence(tokenID, coin.GetSNDerivator(), db); ok || err != nil {
@@ -691,19 +691,22 @@ func (tx Tx) ValidateTxSalary(
 
 // =========== SHARED FUNCTIONS ==========
 
-func (tx Tx) GetTxMintData() (bool, privacy.Coin, *common.Hash, error) { return tx_generic.GetTxMintData(&tx, &common.PRVCoinID) }
+func (tx Tx) GetTxMintData() (bool, privacy.Coin, *common.Hash, error) {
+	return tx_generic.GetTxMintData(&tx, &common.PRVCoinID)
+}
 
-func (tx Tx) GetTxBurnData() (bool, privacy.Coin, *common.Hash, error) { return tx_generic.GetTxBurnData(&tx) }
+func (tx Tx) GetTxBurnData() (bool, privacy.Coin, *common.Hash, error) {
+	return tx_generic.GetTxBurnData(&tx)
+}
 
 func (tx Tx) GetTxFullBurnData() (bool, privacy.Coin, privacy.Coin, *common.Hash, error) {
 	isBurn, burnedCoin, burnedTokenID, err := tx.GetTxBurnData()
 	return isBurn, burnedCoin, nil, burnedTokenID, err
 }
 
-
 func (tx Tx) ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, shardID byte, stateDB *statedb.StateDB) error {
 	err := tx_generic.MdValidateWithBlockChain(&tx, chainRetriever, shardViewRetriever, beaconViewRetriever, shardID, stateDB)
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	return tx.TxBase.ValidateDoubleSpendWithBlockchain(shardID, stateDB, nil)
@@ -727,8 +730,8 @@ func (tx Tx) ValidateTransaction(boolParams map[string]bool, transactionStateDB 
 		if !ok {
 			isBatch = false
 		}
-		if isBatch && hasPrivacy{
-			if tx.GetProof()!=nil{
+		if isBatch && hasPrivacy {
+			if tx.GetProof() != nil {
 				resultProofs = append(resultProofs, tx.GetProof())
 			}
 		}

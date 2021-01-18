@@ -1,13 +1,14 @@
-   package metadata
+package metadata
 
 import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/wallet"
-	"strconv"
 )
 
 type PortalLiquidationCustodianDepositResponseV2 struct {
@@ -16,7 +17,7 @@ type PortalLiquidationCustodianDepositResponseV2 struct {
 	ReqTxID          common.Hash
 	CustodianAddrStr string
 	DepositedAmount  uint64
-	SharedRandom       []byte
+	SharedRandom     []byte
 }
 
 func NewPortalLiquidationCustodianDepositResponseV2(
