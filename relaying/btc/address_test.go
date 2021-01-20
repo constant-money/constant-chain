@@ -2,6 +2,7 @@ package btcrelaying
 
 import (
 	"bytes"
+	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -9,6 +10,8 @@ import (
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
+	ethcrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/incognitochain/incognito-chain/wallet"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -269,10 +272,15 @@ func TestBTCTestnetAddress(t *testing.T) {
 }
 
 func TestBTCMultiSigRawTx(t *testing.T) {
-	btcPrivateKey1 := "cMp1fNCAXg59DTehiGAJKKsR2ydVdoJXr5z1Yjg4RMGgkbvWUj3d"
-	btcPrivateKey2 := "cRYGyQfT7pqNn6C674CBaCLREkzeE8qLH4ZRQ15vuruSSTWDa1Ar"
-	btcPrivateKey3 := "cSucG9KK6QAXdEoQCQoX64GkRaQXUnvtzbf2ahHuHm2GMqBogxHo"
-	redeemScript, bitcoinKeys, err := BuildMultiSigP2SHAddr([]string{btcPrivateKey1, btcPrivateKey2, btcPrivateKey3}, 2)
+	incKey1 := "112t8rnXRDT21fsx5UYR1kGd8yjiygUS3tXfhcRfXy2nmJS3U39vkf76wbQsXguwhHwN2EtBF4YZJ8o1i7MMF9BsKngcgxfkCZBa5P3Fq9xp"
+	incKey2 := "112t8rnXLn4sD7rP98ALejLKoTJm4N9uwavXE2m98h9hcMN9fC7Lp1MRoZJ4G4aXd3ShpaaSzna8s3V8xkvDaKHBBD9mzx9ToDHk6gz5nTnf"
+	incKey3 := "112t8rnXQoMqs6hcf36qSzyypndZFxRSPQEjoq8AqV7DBM14TY66CdVRTxHwaMSTQ4XCBPEXF5zfwE4wEPSqeD1MaacWa9DwYNcxr16bMFSR"
+	incKey4 := "112t8rnXMK3U2VNDaHhxLx9FrS75wVq5YupVk99YenYTYGU2KXJg4iR1j7KDGesi7ju1btmELbPqxtMni1gNHUp6HmYTapBd6Bq4WcjvqdoG"
+	incKey5 := "112t8rnXL7kKwhkeZurgPAyJqjwrsWLWHMXzmFJS5XimqFFMxtv94ZiQ9YhriGdNvNA7JQckVoMjfrkzhzSoeRdNZAhRJKNfXbreZ22yBzLB"
+	incKey6 := "112t8rnXUAuUsefZK35qVWrtvQpZn9RqX9LSLT5XxGyvNF5VyKrjAZXy7ZZg1qrC1v18j81p5ckDukMFgpPVxSeLopKwCw7KoUWkYPWuPXJ5"
+	incKey7 := "112t8rnXbYudqWAujTBJMFjf4DtEK7Hs8vVsSM7588svyrs1mYjFMYEwpc7roxdZLbZUmjwiru85q19die3dhUvFePuccEmUWkbfCNXeU2vU"
+
+	redeemScript, bitcoinKeys, err := BuildMultiSigP2SHAddr([]string{incKey1, incKey2, incKey3, incKey4, incKey5, incKey6, incKey7}, 5)
 	require.Equal(t, err, nil)
 	multiAddress := btcutil.Hash160(redeemScript)
 
@@ -282,22 +290,14 @@ func TestBTCMultiSigRawTx(t *testing.T) {
 	fmt.Println(addr)
 	utxos := []*Outputs{
 		{
-			txHash: "3731f9dbc2d0c6b8c0a681e6541b77830c6839bb9bfb15818bd5fab0c5c91bfd",
-			index:  0,
-		},
-		{
-			txHash: "3731f9dbc2d0c6b8c0a681e6541b77830c6839bb9bfb15818bd5fab0c5c91bfd",
+			txHash: "48175851f91decc5afaa86e014d0fb64905de6c4f872cf3de14415a7bac09be4",
 			index:  1,
-		},
-		{
-			txHash: "3731f9dbc2d0c6b8c0a681e6541b77830c6839bb9bfb15818bd5fab0c5c91bfd",
-			index:  2,
 		},
 	}
 	recievers := []*Receiver{
 		{
-			to:     "2NEN96Bn2pERFNgyB29A4iFU5egWP6bDKcw",
-			amount: 8000,
+			to:     "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X",
+			amount: 95000,
 		},
 	}
 
@@ -306,8 +306,8 @@ func TestBTCMultiSigRawTx(t *testing.T) {
 	fmt.Println(hexSignedTx)
 }
 
-func BuildMultiSigP2SHAddr(wifPrvStrs []string, required int) ([]byte, []*btcec.PrivateKey, error) {
-	if len(wifPrvStrs) < required || required < 0 {
+func BuildMultiSigP2SHAddr(incPrvStrs []string, required int) ([]byte, []*btcec.PrivateKey, error) {
+	if len(incPrvStrs) < required || required < 0 {
 		return nil, nil, errors.New("Invalid signature requirment")
 	}
 	bitcoinPrvs := make([]*btcec.PrivateKey, 0)
@@ -315,19 +315,21 @@ func BuildMultiSigP2SHAddr(wifPrvStrs []string, required int) ([]byte, []*btcec.
 	builder := txscript.NewScriptBuilder()
 	// add the minimum number of needed signatures
 	builder.AddOp(byte(txscript.OP_1 - 1 + required))
-	for _, v := range wifPrvStrs {
-		wif, err := btcutil.DecodeWIF(v)
+	for _, v := range incPrvStrs {
+		keyWallet, err := wallet.Base58CheckDeserialize(v)
 		if err != nil {
 			return nil, nil, err
 		}
-		// public key extracted from wif.PrivKey
-		pk := wif.PrivKey.PubKey().SerializeCompressed()
+		IncKeyBytes := keyWallet.KeySet.PrivateKey
+		BTCKeyBytes := GenBTCPrivateKey(IncKeyBytes)
+		prvBtc, pubKey := btcec.PrivKeyFromBytes(ethcrypto.S256(), BTCKeyBytes)
+		pk := pubKey.SerializeCompressed()
 		// add the 3 public key
 		builder.AddData(pk)
-		bitcoinPrvs = append(bitcoinPrvs, wif.PrivKey)
+		bitcoinPrvs = append(bitcoinPrvs, prvBtc)
 	}
 	// add the total number of public keys in the multi-sig screipt
-	builder.AddOp(byte(txscript.OP_1 - 1 + len(wifPrvStrs)))
+	builder.AddOp(byte(txscript.OP_1 - 1 + len(incPrvStrs)))
 	// add the check-multi-sig op-code
 	builder.AddOp(txscript.OP_CHECKMULTISIG)
 	// redeem script is the script program in the format of []byte
@@ -409,4 +411,9 @@ func SpendMultiSig(utxos []*Outputs, recievers []*Receiver, beaconKeys []*btcec.
 	hexSignedTx := hex.EncodeToString(signedTx.Bytes())
 
 	return hexSignedTx, nil
+}
+
+func GenBTCPrivateKey(IncKeyBytes []byte) []byte {
+	BTCKeyBytes := ed25519.NewKeyFromSeed(IncKeyBytes)[32:]
+	return BTCKeyBytes
 }
