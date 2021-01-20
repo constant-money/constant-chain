@@ -12,6 +12,11 @@ func (httpServer *HttpServer) handleGetPortalWithdrawCollateralProof(
 	params interface{},
 	closeChan <-chan struct{},
 ) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	listParams, ok := params.([]interface{})
 	if !ok || len(listParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 1 element"))

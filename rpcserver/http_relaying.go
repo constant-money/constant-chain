@@ -24,6 +24,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithRelayingBTCHeader(params inte
 }
 
 func (httpServer *HttpServer) handleCreateRawTxWithRelayingBNBHeader(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	return httpServer.handleCreateRawTxWithRelayingHeader(
 		basemeta.RelayingBNBHeaderMeta,
 		params,
@@ -95,6 +100,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithRelayingHeader(
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithRelayingBNBHeader(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithRelayingBNBHeader(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -129,6 +139,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithRelayingBTCHeader(params 
 }
 
 func (httpServer *HttpServer) handleGetRelayingBNBHeaderState(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	bc := httpServer.config.BlockChain
 	relayingState, err := bc.InitRelayingHeaderChainStateFromDB()
 	if err != nil {
@@ -150,6 +165,11 @@ func (httpServer *HttpServer) handleGetRelayingBNBHeaderState(params interface{}
 }
 
 func (httpServer *HttpServer) handleGetRelayingBNBHeaderByBlockHeight(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -181,6 +201,11 @@ func (httpServer *HttpServer) handleGetBTCRelayingBestState(params interface{}, 
 }
 
 func (httpServer *HttpServer) handleGetLatestBNBHeaderBlockHeight(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	bc := httpServer.config.BlockChain
 	result, err := bc.GetLatestBNBBlockHeight()
 	if err != nil {

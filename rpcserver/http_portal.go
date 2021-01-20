@@ -16,10 +16,22 @@ import (
 	"strings"
 )
 
+func (httpServer *HttpServer) checkEnablePortalV3() *rpcservice.RPCError {
+	if !httpServer.config.ChainParams.EnablePortalV3 {
+		return rpcservice.NewRPCError(rpcservice.UnexpectedError, errors.New("This RPC wasn't supported on this chain version"))
+	}
+	return nil
+}
+
 /*
 ====== Portal state
 */
 func (httpServer *HttpServer) handleGetPortalState(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -79,6 +91,11 @@ func (httpServer *HttpServer) handleGetPortalState(params interface{}, closeChan
 ====== Porting request
 */
 func (httpServer *HttpServer) handleGetPortingRequestFees(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -138,6 +155,11 @@ func (httpServer *HttpServer) handleGetPortingRequestFees(params interface{}, cl
 }
 
 func (httpServer *HttpServer) handleCreateRawTxWithPortingRequest(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -219,6 +241,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithPortingRequest(params interfa
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxPortingRequest(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithPortingRequest(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -236,6 +263,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxPortingRequest(params interfa
 }
 
 func (httpServer *HttpServer) handleGetPortingRequestStatusByTxID(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -267,6 +299,11 @@ func (httpServer *HttpServer) handleGetPortingRequestStatusByTxID(params interfa
 }
 
 func (httpServer *HttpServer) handleGetPortingRequestStatusByPortingId(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -301,6 +338,11 @@ func (httpServer *HttpServer) handleGetPortingRequestStatusByPortingId(params in
 ====== Request ptoken
 */
 func (httpServer *HttpServer) handleCreateRawTxWithReqPToken(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -373,6 +415,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPToken(params interface{},
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithReqPToken(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithReqPToken(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -390,6 +437,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqPToken(params interfac
 }
 
 func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -413,6 +465,11 @@ func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{},
 ====== Redeem request
 */
 func (httpServer *HttpServer) handleCreateRawTxWithRedeemReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) >= 7 {
@@ -490,6 +547,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithRedeemReq(params interface{},
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithRedeemReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithRedeemReq(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -508,6 +570,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithRedeemReq(params interfac
 }
 
 func (httpServer *HttpServer) handleGetReqRedeemStatusByRedeemID(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -528,6 +595,11 @@ func (httpServer *HttpServer) handleGetReqRedeemStatusByRedeemID(params interfac
 }
 
 func (httpServer *HttpServer) handleGetReqRedeemStatusByTxID(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -551,6 +623,11 @@ func (httpServer *HttpServer) handleGetReqRedeemStatusByTxID(params interface{},
 ====== Request matching waiting redeem request
 */
 func (httpServer *HttpServer) handleCreateRawTxWithReqMatchingRedeem(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -603,6 +680,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqMatchingRedeem(params inte
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithReqMatchingRedeem(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithReqMatchingRedeem(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -620,6 +702,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqMatchingRedeem(params 
 }
 
 func (httpServer *HttpServer) handleGetReqMatchingRedeemStatusByTxID(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -644,6 +731,11 @@ func (httpServer *HttpServer) handleGetReqMatchingRedeemStatusByTxID(params inte
 ====== Request unlock collaterals
 */
 func (httpServer *HttpServer) handleCreateRawTxWithReqUnlockCollateral(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -716,6 +808,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqUnlockCollateral(params in
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithReqUnlockCollateral(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithReqUnlockCollateral(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -733,6 +830,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqUnlockCollateral(param
 }
 
 func (httpServer *HttpServer) handleGetPortalReqUnlockCollateralStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -756,6 +858,11 @@ func (httpServer *HttpServer) handleGetPortalReqUnlockCollateralStatus(params in
 ====== Portal exchange rates
 */
 func (httpServer *HttpServer) handleCreateRawTxWithPortalExchangeRate(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -832,6 +939,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithPortalExchangeRate(params int
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithPortalExchangeRate(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithPortalExchangeRate(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -849,6 +961,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithPortalExchangeRate(params
 }
 
 func (httpServer *HttpServer) handleGetPortalFinalExchangeRates(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -889,6 +1006,11 @@ func (httpServer *HttpServer) handleGetPortalFinalExchangeRates(params interface
 }
 
 func (httpServer *HttpServer) handleConvertExchangeRates(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -956,6 +1078,11 @@ func (httpServer *HttpServer) handleConvertExchangeRates(params interface{}, clo
 ====== Custodian unlock collaterals
 */
 func (httpServer *HttpServer) handleCreateRawTxWithPortalCusUnlockOverRateCollaterals(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -1012,6 +1139,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithPortalCusUnlockOverRateCollat
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithPortalCusUnlockOverRateCollaterals(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithPortalCusUnlockOverRateCollaterals(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -1029,6 +1161,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithPortalCusUnlockOverRateCo
 }
 
 func (httpServer *HttpServer) handleGetPortalReqUnlockOverRateCollateralStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))

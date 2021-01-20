@@ -236,6 +236,12 @@ func (tp *TxPool) MaybeAcceptTransaction(tx basemeta.Transaction, beaconHeight i
 	if uint64(len(tp.pool)) >= tp.config.MaxTx {
 		return nil, nil, NewMempoolTxError(MaxPoolSizeError, errors.New("Pool reach max number of transaction"))
 	}
+
+	if tx.GetMetadata() != nil {
+		if !tp.config.ChainParams.EnablePortalV3 && basemeta.IsPortalMetadata(tx.GetMetadataType()) {
+			return nil, nil, NewMempoolTxError(UnexpectedTransactionError, errors.New("This tx wasn't supported on this chain version"))
+		}
+	}
 	if tx.GetType() == common.TxReturnStakingType{
 		return &common.Hash{}, &TxDesc{}, NewMempoolTxError(RejectInvalidTx, fmt.Errorf("%+v is a return staking tx", tx.Hash().String()))
 	}

@@ -16,6 +16,53 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 )
 
+var portalStatefulInstTypes = []int{
+	basemeta.PortalCustodianDepositMeta,
+	basemeta.PortalRequestPortingMeta,
+	basemeta.PortalUserRequestPTokenMeta,
+	basemeta.PortalExchangeRatesMeta,
+	basemeta.RelayingBNBHeaderMeta,
+	basemeta.PortalCustodianWithdrawRequestMeta,
+	basemeta.PortalRedeemRequestMeta,
+	basemeta.PortalRequestUnlockCollateralMeta,
+	basemeta.PortalRequestUnlockCollateralMetaV3,
+	basemeta.PortalLiquidateCustodianMeta,
+	basemeta.PortalLiquidateCustodianMetaV3,
+	basemeta.PortalRequestWithdrawRewardMeta,
+	basemeta.PortalRedeemFromLiquidationPoolMeta,
+	basemeta.PortalCustodianTopupMetaV2,
+	basemeta.PortalCustodianTopupResponseMeta,
+	basemeta.PortalReqMatchingRedeemMeta,
+	basemeta.PortalTopUpWaitingPortingRequestMeta,
+	basemeta.PortalCustodianDepositMetaV3,
+	basemeta.PortalCustodianWithdrawRequestMetaV3,
+	basemeta.PortalRedeemFromLiquidationPoolMetaV3,
+	basemeta.PortalCustodianTopupMetaV3,
+	basemeta.PortalTopUpWaitingPortingRequestMetaV3,
+	basemeta.PortalRequestPortingMetaV3,
+	basemeta.PortalRedeemRequestMetaV3,
+}
+var statefulInstTypes = []int {
+	basemeta.IssuingRequestMeta,
+	basemeta.IssuingETHRequestMeta,
+	basemeta.PDEContributionMeta,
+	basemeta.PDETradeRequestMeta,
+	basemeta.PDEWithdrawalRequestMeta,
+	basemeta.PDEFeeWithdrawalRequestMeta,
+	basemeta.PDEPRVRequiredContributionRequestMeta,
+	basemeta.PDECrossPoolTradeRequestMeta,
+	basemeta.RelayingBTCHeaderMeta,
+}
+
+func (blockchain *BlockChain) isStatefulInstType(metaType int) bool {
+	instTypes := statefulInstTypes
+	if blockchain.config.ChainParams.EnablePortalV3 {
+		instTypes = append(instTypes, portalStatefulInstTypes...)
+	}
+	isExist, _ := common.SliceExists(instTypes, metaType)
+	return isExist
+}
+
 // build instructions at beacon chain before syncing to shards
 func (blockchain *BlockChain) collectStatefulActions(
 	shardBlockInstructions [][]string,
@@ -35,44 +82,8 @@ func (blockchain *BlockChain) collectStatefulActions(
 			Logger.log.Error(err)
 			continue
 		}
-		switch metaType {
-		case basemeta.IssuingRequestMeta,
-			basemeta.IssuingETHRequestMeta,
-			basemeta.PDEContributionMeta,
-			basemeta.PDETradeRequestMeta,
-			basemeta.PDEWithdrawalRequestMeta,
-			basemeta.PDEFeeWithdrawalRequestMeta,
-			basemeta.PDEPRVRequiredContributionRequestMeta,
-			basemeta.PDECrossPoolTradeRequestMeta,
-			basemeta.PortalCustodianDepositMeta,
-			basemeta.PortalRequestPortingMeta,
-			basemeta.PortalUserRequestPTokenMeta,
-			basemeta.PortalExchangeRatesMeta,
-			basemeta.RelayingBNBHeaderMeta,
-			basemeta.RelayingBTCHeaderMeta,
-			basemeta.PortalCustodianWithdrawRequestMeta,
-			basemeta.PortalRedeemRequestMeta,
-			basemeta.PortalRequestUnlockCollateralMeta,
-			basemeta.PortalRequestUnlockCollateralMetaV3,
-			basemeta.PortalLiquidateCustodianMeta,
-			basemeta.PortalLiquidateCustodianMetaV3,
-			basemeta.PortalRequestWithdrawRewardMeta,
-			basemeta.PortalRedeemFromLiquidationPoolMeta,
-			basemeta.PortalCustodianTopupMetaV2,
-			basemeta.PortalCustodianTopupResponseMeta,
-			basemeta.PortalReqMatchingRedeemMeta,
-			basemeta.PortalTopUpWaitingPortingRequestMeta,
-			basemeta.PortalCustodianDepositMetaV3,
-			basemeta.PortalCustodianWithdrawRequestMetaV3,
-			basemeta.PortalRedeemFromLiquidationPoolMetaV3,
-			basemeta.PortalCustodianTopupMetaV3,
-			basemeta.PortalTopUpWaitingPortingRequestMetaV3,
-			basemeta.PortalRequestPortingMetaV3,
-			basemeta.PortalRedeemRequestMetaV3:
+		if blockchain.isStatefulInstType(metaType) {
 			statefulInsts = append(statefulInsts, inst)
-
-		default:
-			continue
 		}
 	}
 	return statefulInsts

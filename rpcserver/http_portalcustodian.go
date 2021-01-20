@@ -21,6 +21,11 @@ import (
 ====== Custodian deposit collateral (PRV)
 */
 func (httpServer *HttpServer) handleCreateRawTxWithCustodianDeposit(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -98,6 +103,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianDeposit(params inter
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianDeposit(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithCustodianDeposit(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -115,6 +125,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianDeposit(params i
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianDepositStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -140,6 +155,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianDepositStatus(params inter
 ====== Custodian deposit collateral v3 (ETH/ERC20)
 */
 func (httpServer *HttpServer) handleCreateRawTxWithCustodianDepositV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -183,6 +203,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianDepositV3(params int
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianDepositV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithCustodianDepositV3(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -200,6 +225,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianDepositV3(params
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianDepositStatusV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -225,6 +255,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianDepositStatusV3(params int
 ====== Custodian request withdraw collateral (PRV)
 */
 func (httpServer *HttpServer) handleCreateRawTxWithCustodianWithdrawRequest(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	// get meta data from params
@@ -275,6 +310,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianWithdrawRequest(para
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianWithdrawRequest(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithCustodianWithdrawRequest(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -292,6 +332,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianWithdrawRequest(
 }
 
 func (httpServer *HttpServer) handleGetCustodianWithdrawRequestStatusByTxId(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	// get meta data from params
@@ -319,6 +364,11 @@ func (httpServer *HttpServer) handleGetCustodianWithdrawRequestStatusByTxId(para
 ====== Custodian request withdraw collateral v3 (ETH/ERC20)
 */
 func (httpServer *HttpServer) handleCreateRawTxWithCustodianWithdrawRequestV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	// get meta data from params
@@ -384,6 +434,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithCustodianWithdrawRequestV3(pa
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianWithdrawRequestV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithCustodianWithdrawRequestV3(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -401,6 +456,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithCustodianWithdrawRequestV
 }
 
 func (httpServer *HttpServer) handleGetCustodianWithdrawRequestStatusV3ByTxId(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	// get meta data from params
@@ -427,6 +487,11 @@ func (httpServer *HttpServer) handleGetCustodianWithdrawRequestStatusV3ByTxId(pa
 ====== Portal rewards
 */
 func (httpServer *HttpServer) handleCreateRawTxWithReqWithdrawRewardPortal(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -485,6 +550,11 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqWithdrawRewardPortal(param
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxWithReqWithdrawRewardPortal(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.handleCreateRawTxWithReqWithdrawRewardPortal(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -502,6 +572,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqWithdrawRewardPortal(p
 }
 
 func (httpServer *HttpServer) handleGetRequestWithdrawPortalRewardStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -523,6 +598,11 @@ func (httpServer *HttpServer) handleGetRequestWithdrawPortalRewardStatus(params 
 }
 
 func (httpServer *HttpServer) handleGetPortalReward(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -559,6 +639,11 @@ func (httpServer *HttpServer) handleGetPortalReward(params interface{}, closeCha
 }
 
 func (httpServer *HttpServer) handleGetRewardFeature(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -590,6 +675,11 @@ func (httpServer *HttpServer) handleGetRewardFeature(params interface{}, closeCh
 ====== Check external txHash submitted or not
 */
 func (httpServer *HttpServer) handleCheckPortalExternalHashSubmitted(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if arrayParams == nil || len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 1 element"))

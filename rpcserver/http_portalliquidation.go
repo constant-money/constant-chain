@@ -20,6 +20,11 @@ import (
 ====== Portal liquidation pool
 */
 func (httpServer *HttpServer) handleGetLiquidationExchangeRatesPool(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -71,6 +76,11 @@ func (httpServer *HttpServer) handleGetLiquidationExchangeRatesPool(params inter
 ====== Redeem request from liquidation pool v3
 */
 func (httpServer *HttpServer) createRawTxRedeemFromLiquidationPoolV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 
 	if len(arrayParams) == 0 {
@@ -140,6 +150,11 @@ func (httpServer *HttpServer) createRawTxRedeemFromLiquidationPoolV3(params inte
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTxRedeemFromLiquidationPoolV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.createRawTxRedeemFromLiquidationPoolV3(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -158,6 +173,11 @@ func (httpServer *HttpServer) handleCreateAndSendTxRedeemFromLiquidationPoolV3(p
 }
 
 func (httpServer *HttpServer) handleGetReqRedeemFromLiquidationPoolByTxIDStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -178,6 +198,11 @@ func (httpServer *HttpServer) handleGetReqRedeemFromLiquidationPoolByTxIDStatus(
 }
 
 func (httpServer *HttpServer) handleGetReqRedeemFromLiquidationPoolByTxIDStatusV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -201,6 +226,11 @@ func (httpServer *HttpServer) handleGetReqRedeemFromLiquidationPoolByTxIDStatusV
 ====== Topup collateral (PRV)
 */
 func (httpServer *HttpServer) createCustodianTopup(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) == 0 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Params should be not empty"))
@@ -274,6 +304,11 @@ func (httpServer *HttpServer) createCustodianTopup(params interface{}, closeChan
 }
 
 func (httpServer *HttpServer) handleCreateAndSendCustodianTopup(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.createCustodianTopup(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -292,6 +327,11 @@ func (httpServer *HttpServer) handleCreateAndSendCustodianTopup(params interface
 }
 
 func (httpServer *HttpServer) createTopUpWaitingPorting(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) == 0 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Params should be not empty"))
@@ -371,6 +411,11 @@ func (httpServer *HttpServer) createTopUpWaitingPorting(params interface{}, clos
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTopUpWaitingPorting(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.createTopUpWaitingPorting(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -389,6 +434,11 @@ func (httpServer *HttpServer) handleCreateAndSendTopUpWaitingPorting(params inte
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianTopupStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -410,6 +460,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianTopupStatus(params interfa
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianTopupWaitingPortingStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -434,6 +489,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianTopupWaitingPortingStatus(
 ====== Topup collateral v3 (ETH/ERC20)
 */
 func (httpServer *HttpServer) createCustodianTopupV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) == 0 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Params should be not empty"))
@@ -542,6 +602,11 @@ func (httpServer *HttpServer) createCustodianTopupV3(params interface{}, closeCh
 }
 
 func (httpServer *HttpServer) handleCreateAndSendCustodianTopupV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.createCustodianTopupV3(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -560,6 +625,11 @@ func (httpServer *HttpServer) handleCreateAndSendCustodianTopupV3(params interfa
 }
 
 func (httpServer *HttpServer) createTopUpWaitingPortingV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) == 0 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Params should be not empty"))
@@ -673,6 +743,11 @@ func (httpServer *HttpServer) createTopUpWaitingPortingV3(params interface{}, cl
 }
 
 func (httpServer *HttpServer) handleCreateAndSendTopUpWaitingPortingV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	data, err := httpServer.createTopUpWaitingPortingV3(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -691,6 +766,11 @@ func (httpServer *HttpServer) handleCreateAndSendTopUpWaitingPortingV3(params in
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianTopupStatusV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -713,6 +793,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianTopupStatusV3(params inter
 }
 
 func (httpServer *HttpServer) handleGetPortalCustodianTopupWaitingPortingStatusV3(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -734,6 +819,11 @@ func (httpServer *HttpServer) handleGetPortalCustodianTopupWaitingPortingStatusV
 }
 
 func (httpServer *HttpServer) handleGetTopupAmountForCustodianState(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) == 0 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Params should be not empty"))
@@ -797,6 +887,11 @@ func (httpServer *HttpServer) handleGetTopupAmountForCustodianState(params inter
 }
 
 func (httpServer *HttpServer) handleGetAmountTopUpWaitingPorting(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -842,6 +937,11 @@ func (httpServer *HttpServer) handleGetAmountTopUpWaitingPorting(params interfac
 
 
 func (httpServer *HttpServer) handleGetCustodianLiquidationStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV3Error := httpServer.checkEnablePortalV3()
+	if checkPortalV3Error != nil {
+		return nil, checkPortalV3Error
+	}
+
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))

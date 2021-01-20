@@ -52,6 +52,7 @@ type Params struct {
 	ConsensusV2Epoch                 uint64
 	BeaconHeightBreakPointBurnAddr   uint64
 	PortalParams                     map[uint64]portal.PortalParams
+	EnablePortalV3                   bool
 	EpochBreakPointSwapNewKey        []uint64
 	IsBackup                         bool
 	PreloadAddress                   string
@@ -204,6 +205,7 @@ func SetupParam() {
 		ConsensusV2Epoch:               16930,
 		BeaconHeightBreakPointBurnAddr: 250000,
 
+		EnablePortalV3: false,
 		PortalParams: map[uint64]portal.PortalParams{
 			0: {
 				TimeOutCustodianReturnPubToken:       1 * time.Hour,
@@ -299,6 +301,7 @@ func SetupParam() {
 		ConsensusV2Epoch:               1e9,
 		BeaconHeightBreakPointBurnAddr: 1,
 
+		EnablePortalV3: false,
 		PortalParams: map[uint64]portal.PortalParams{
 			0: {
 				TimeOutCustodianReturnPubToken:       5 * time.Minute,
@@ -391,6 +394,7 @@ func SetupParam() {
 		ConsensusV2Epoch:               1e9,
 		BeaconHeightBreakPointBurnAddr: 150500,
 
+		EnablePortalV3: false,
 		PortalParams: map[uint64]portal.PortalParams{
 			0: {
 				TimeOutCustodianReturnPubToken:       24 * time.Hour,
