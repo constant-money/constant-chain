@@ -39,10 +39,53 @@ func (ws MultisigWalletState) SetListUTXO(l []UTXO) {
 }
 
 func (ws *MultisigWalletState) MarshalJSON() ([]byte, error) {
-	return nil, nil
+	type TmpUTXO struct {
+		TxHash       string
+		OutputIdx    []int
+		OutputAmount []uint64
+	}
+	temp := struct {
+		ListUTXO []TmpUTXO
+	}{}
+
+	for _, utxo := range ws.listUTXO {
+		temp.ListUTXO = append(temp.ListUTXO, TmpUTXO{
+			TxHash:       utxo.txHash,
+			OutputIdx:    utxo.outputIdx,
+			OutputAmount: utxo.outputAmount,
+		})
+	}
+	data, err := json.Marshal(temp)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
 }
 
 func (ws *MultisigWalletState) UnmarshalJSON(data []byte) error {
+	type TmpUTXO struct {
+		TxHash       string
+		OutputIdx    []int
+		OutputAmount []uint64
+	}
+	temp := struct {
+		ListUTXO []TmpUTXO
+	}{}
+
+	err := json.Unmarshal(data, &temp)
+	if err != nil {
+		return err
+	}
+
+	ws.listUTXO = []UTXO{}
+	for _, utxo := range temp.ListUTXO {
+		ws.listUTXO = append(ws.listUTXO, UTXO{
+			txHash:       utxo.TxHash,
+			outputIdx:    utxo.OutputIdx,
+			outputAmount: utxo.OutputAmount,
+		})
+	}
+
 	return nil
 }
 
