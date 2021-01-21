@@ -2,12 +2,14 @@ package peerv2
 
 import (
 	"context"
+	"time"
 
 	p2pgrpc "github.com/incognitochain/go-libp2p-grpc"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/peerv2/proto"
 	"github.com/incognitochain/incognito-chain/peerv2/wrapper"
 	"github.com/incognitochain/incognito-chain/wire"
+	"github.com/pkg/errors"
 )
 
 func NewBlockProvider(p *p2pgrpc.GRPCProtocol, ns NetSync) *BlockProvider {
@@ -88,25 +90,29 @@ func (bp *BlockProvider) StreamBlockByHeight(
 	stream proto.HighwayService_StreamBlockByHeightServer,
 ) error {
 	uuid := req.GetUUID()
-	cnt := 0
 	Logger.Infof("[stream] Block provider received request stream block type %v, spec %v, height [%v..%v] len %v, from %v to %v, uuid = %s ", req.Type, req.Specific, req.Heights[0], req.Heights[len(req.Heights)-1], len(req.Heights), req.From, req.To, uuid)
 	blkRecv := bp.NetSync.StreamBlockByHeight(false, req)
-	for blk := range blkRecv {
-		cnt++
-		rdata, err := wrapper.EnCom(blk)
-		blkData := append([]byte{byte(req.Type)}, rdata...)
-		if err != nil {
-			Logger.Infof("[stream] block channel return error when marshal %v, uuid = %s", err, uuid)
-			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
-			return err
-		}
-		if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
-			Logger.Infof("[stream] Server send block to client return err %v, uuid = %s", err, uuid)
-			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
-			return err
-		}
+	// for blk := range blkRecv {
+	// 	cnt++
+	// 	rdata, err := wrapper.EnCom(blk)
+	// 	blkData := append([]byte{byte(req.Type)}, rdata...)
+	// 	if err != nil {
+	// 		Logger.Infof("[stream] block channel return error when marshal %v, uuid = %s", err, uuid)
+	// 		Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	// 		return err
+	// 	}
+	// 	if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
+	// 		Logger.Infof("[stream] Server send block to client return err %v, uuid = %s", err, uuid)
+	// 		Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	// 		return err
+	// 	}
+	// }
+	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, req.Type, uuid, stream.Send)
+	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v, err %v", sent, uuid, err)
+	if err != nil {
+		return err
 	}
-	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	// Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
 	return nil
 }
 
@@ -116,25 +122,72 @@ func (bp *BlockProvider) StreamBlockByHash(
 ) error {
 	uuid := req.GetUUID()
 	Logger.Infof("[stream] Block provider received request stream block type %v, hashes [%v..%v] len %v, from %v to %v, uuid = %s ", req.Type, req.Hashes[0], req.Hashes[len(req.Hashes)-1], len(req.Hashes), req.From, req.To, uuid)
-	cnt := 0
+	// cnt := 0
 	blkRecv := bp.NetSync.StreamBlockByHash(false, req)
-	for blk := range blkRecv {
+	sent, err := SendWithTimeout(blkRecv, common.MaxTimeForSend, req.Type, uuid, stream.Send)
+	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v, err %v", sent, uuid, err)
+	if err != nil {
+		return err
+	}
+	// for blk := range blkRecv {
+	// 	cnt++
+	// 	rdata, err := wrapper.EnCom(blk)
+	// 	blkData := append([]byte{byte(req.Type)}, rdata...)
+	// 	if err != nil {
+	// 		Logger.Infof("[stream] blkbyhash block channel return error when marshal %v, uuid = %s", err, uuid)
+	// 		Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	// 		return err
+	// 	}
+	// 	if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
+	// 		Logger.Infof("[stream] blkbyhash Server send block to client return err %v, uuid = %s", err, uuid)
+	// 		Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	// 		return err
+	// 	}
+	// }
+	// Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
+	return nil
+}
+
+func SendWithTimeout(
+	blkChan chan interface{},
+	timeout time.Duration,
+	blkType proto.BlkType,
+	uuid string,
+	send func(*proto.BlockData) error,
+) (
+	uint,
+	error,
+) {
+	errChan := make(chan error, 10)
+	cnt := uint(0)
+	// defer close(errChan)
+	t := time.NewTimer(timeout)
+	defer t.Stop()
+	numOfSentBlk := uint(0)
+	for blk := range blkChan {
 		cnt++
 		rdata, err := wrapper.EnCom(blk)
-		blkData := append([]byte{byte(req.Type)}, rdata...)
+		blkData := append([]byte{byte(blkType)}, rdata...)
 		if err != nil {
-			Logger.Infof("[stream] blkbyhash block channel return error when marshal %v, uuid = %s", err, uuid)
-			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
-			return err
+			return cnt, err
 		}
-		if err := stream.Send(&proto.BlockData{Data: blkData}); err != nil {
-			Logger.Infof("[stream] blkbyhash Server send block to client return err %v, uuid = %s", err, uuid)
-			Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
-			return err
+		if len(blkData) == 0 {
+			return numOfSentBlk, nil
+		}
+		go func() {
+			errChan <- send(&proto.BlockData{Data: blkData})
+		}()
+		select {
+		case <-t.C:
+			return numOfSentBlk, errors.Errorf("[stream] Trying send to client but timeout")
+		case err := <-errChan:
+			if err != nil {
+				return numOfSentBlk, err
+			}
+			numOfSentBlk++
 		}
 	}
-	Logger.Infof("[stream] Successfully sent %v blocks to client, uuid %v", cnt, uuid)
-	return nil
+	return numOfSentBlk, nil
 }
 
 type BlockProvider struct {

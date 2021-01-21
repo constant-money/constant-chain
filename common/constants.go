@@ -1,5 +1,7 @@
 package common
 
+import "time"
+
 // for common
 const (
 	EmptyString       = ""
@@ -56,6 +58,8 @@ const (
 var (
 	MaxTxSize    = uint64(100)  // unit KB = 100KB
 	MaxBlockSize = uint64(2000) //unit kilobytes = 2 Megabyte
+
+	MaxTimeForSend = 12 * time.Second
 )
 
 // special token ids (aka. PropertyID in custom token)
@@ -80,7 +84,7 @@ const (
 	PendingRole   = "pending"
 	SyncingRole   = "syncing" //this is for shard case - when beacon tell it is committee, but its state not
 	WaitingRole   = "waiting"
-	UnstakeRole    = "unstake" // for unstake node
+	UnstakeRole   = "unstake" // for unstake node
 
 	BlsConsensus    = "bls"
 	BridgeConsensus = "dsa"
