@@ -217,6 +217,7 @@ const (
 	// portal
 	createAndSendTxWithCustodianDeposit           = "createandsendtxwithcustodiandeposit"
 	createAndSendTxWithReqPToken                  = "createandsendtxwithreqptoken"
+	createAndSendTxWithReqPTokenV4                = "createandsendtxwithreqptokenv4"
 	getPortalState                                = "getportalstate"
 	getPortalCustodianDepositStatus               = "getportalcustodiandepositstatus"
 	createAndSendRegisterPortingPublicTokens      = "createandsendregisterportingpublictokens"

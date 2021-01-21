@@ -3,15 +3,16 @@ package portalprocess
 import (
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/big"
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	portalMeta "github.com/incognitochain/incognito-chain/portal/metadata"
 	"github.com/pkg/errors"
-	"math"
-	"math/big"
-	"sort"
 )
 
 type CurrentPortalState struct {
@@ -25,6 +26,7 @@ type CurrentPortalState struct {
 	LockedCollateralForRewards *statedb.LockedCollateralState
 	//Store temporary exchange rates requests
 	ExchangeRatesRequests map[string]*portalMeta.ExchangeRatesRequestStatus // key : hash(beaconHeight | TxID)
+	MultisigWalletState   map[string]*statedb.MultisigWalletState           // key: hash(wallet address | TokenID)
 }
 
 type CustodianStateSlice struct {
@@ -118,7 +120,7 @@ func calMatchedPubTokenAmountAndLockCollateralsForPorting(
 	portingAmount uint64,
 	totalLockCollateralInUSDT uint64, matchLockCollateralInUSDT uint64,
 	convertRateTool *PortalExchangeRateTool, custodianState *statedb.CustodianState,
-	) (uint64, uint64, map[string]uint64, error) {
+) (uint64, uint64, map[string]uint64, error) {
 	// matched public token amount is calculated by percent matchLockCollateralInUSDT of totalLockCollateralInUSDT
 	tmp := new(big.Int).Mul(new(big.Int).SetUint64(matchLockCollateralInUSDT), new(big.Int).SetUint64(portingAmount))
 	pubTokenAmountCanBeHold := tmp.Div(tmp, new(big.Int).SetUint64(totalLockCollateralInUSDT)).Uint64()
@@ -326,6 +328,23 @@ func UpdateCustodianStateAfterMatchingPortingRequest(
 
 	// Note: don't update holding public tokens to avoid this custodian match to redeem request before receiving pubtokens from users
 	currentPortalState.CustodianPoolState[custodianKey] = custodian
+
+	return nil
+}
+
+// UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken
+func UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState *CurrentPortalState, multiWalletKey string, utxo statedb.UTXO) error {
+	wallet, ok := currentPortalState.MultisigWalletState[multiWalletKey]
+	if !ok {
+		return errors.New("[UpdateMultisigWalletStateAfterUserRequestPToken] MultisigWallet not found")
+	}
+
+	curListUTXO := wallet.GetListUTXO()
+	if curListUTXO == nil {
+		curListUTXO = []statedb.UTXO{}
+	}
+	curListUTXO = append(curListUTXO, utxo)
+	currentPortalState.MultisigWalletState[multiWalletKey].SetListUTXO(curListUTXO)
 
 	return nil
 }

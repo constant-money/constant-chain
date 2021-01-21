@@ -51,6 +51,9 @@ const (
 	PortalExternalTxObjectType
 	PortalConfirmProofObjectType
 	PortalUnlockOverRateCollateralsType
+
+	// Portal v4
+	PortalMultisigWalletObjectType
 )
 
 // Prefix length

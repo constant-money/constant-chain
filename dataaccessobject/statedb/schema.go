@@ -66,6 +66,7 @@ var (
 	portalMatchedRedeemRequestsPrefix                    = []byte("portalmatchedredeemrequest-")
 	portalUnlockOverRateCollateralsRequestStatusPrefix   = []byte("portalunlockoverratecollateralsstatus-")
 	portalUnlockOverRateCollateralsRequestTxStatusPrefix = []byte("portalunlockoverratecollateralstxstatus-")
+	portalMultisigWalletStatePrefix                      = []byte("portalmultisigwallet-")
 
 	portalStatusPrefix                           = []byte("portalstatus-")
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
@@ -371,6 +372,11 @@ func GetPortalLiquidationPoolPrefix() []byte {
 
 func GetPortalCustodianStatePrefix() []byte {
 	h := common.HashH(portalCustodianStatePrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetPortalMultisigWalletStatePrefix() []byte {
+	h := common.HashH(portalMultisigWalletStatePrefix)
 	return h[:][:prefixHashKeyLength]
 }
 
