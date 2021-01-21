@@ -227,6 +227,7 @@ const (
 	getPortalPortingRequestByPortingId            = "getportalportingrequestbyportingid"
 	convertExchangeRates                          = "convertexchangerates"
 	getPortalReqPTokenStatus                      = "getportalreqptokenstatus"
+	getPortalReqPTokenStatusV4                    = "getportalreqptokenstatusv4"
 	getPortingRequestFees                         = "getportingrequestfees"
 	createAndSendTxWithRedeemReq                  = "createandsendtxwithredeemreq"
 	createAndSendTxWithReqUnlockCollateral        = "createandsendtxwithrequnlockcollateral"

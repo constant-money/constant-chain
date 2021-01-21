@@ -82,6 +82,7 @@ const (
 
 	GetCustodianWithdrawError
 	GetReqPTokenStatusError
+	GetReqPTokenStatusV4Error
 	GetCustodianDepositError
 	GetPortalStateError
 	GetReqUnlockCollateralStatusError

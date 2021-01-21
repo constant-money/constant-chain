@@ -390,6 +390,26 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqPToken(params interfac
 	return result, nil
 }
 
+func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	if len(arrayParams) < 1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
+	}
+	data, ok := arrayParams[0].(map[string]interface{})
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Payload data is invalid"))
+	}
+	reqTxID, ok := data["ReqTxID"].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param ReqTxID is invalid"))
+	}
+	status, err := httpServer.blockService.GetPortalReqPTokenStatus(reqTxID)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetReqPTokenStatusError, err)
+	}
+	return status, nil
+}
+
 func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
@@ -474,7 +494,7 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqPTokenV4(params interf
 	return result, nil
 }
 
-func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+func (httpServer *HttpServer) handleGetPortalReqPTokenStatusV4(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -487,9 +507,9 @@ func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{},
 	if !ok {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param ReqTxID is invalid"))
 	}
-	status, err := httpServer.blockService.GetPortalReqPTokenStatus(reqTxID)
+	status, err := httpServer.blockService.GetPortalReqPTokenStatusV4(reqTxID)
 	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.GetReqPTokenStatusError, err)
+		return nil, rpcservice.NewRPCError(rpcservice.GetReqPTokenStatusV4Error, err)
 	}
 	return status, nil
 }

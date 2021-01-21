@@ -3,6 +3,7 @@ package statedb
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/incognitochain/incognito-chain/common"
 )
 
@@ -670,6 +671,17 @@ func GetRequestPTokenStatus(stateDB *StateDB, txID string) ([]byte, error) {
 	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
 	if err != nil {
 		return []byte{}, NewStatedbError(GetPortalRequestPTokenStatusError, err)
+	}
+
+	return data, nil
+}
+
+func GetRequestPTokenStatusV4(stateDB *StateDB, txID string) ([]byte, error) {
+	statusType := PortalRequestPTokenStatusPrefixV4()
+	statusSuffix := []byte(txID)
+	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
+	if err != nil {
+		return []byte{}, NewStatedbError(GetPortalRequestPTokenStatusV4Error, err)
 	}
 
 	return data, nil

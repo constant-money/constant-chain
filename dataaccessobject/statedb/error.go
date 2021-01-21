@@ -144,6 +144,7 @@ const (
 	GetPortalCustodianDepositStatusError
 	StorePortalRequestPTokenStatusError
 	GetPortalRequestPTokenStatusError
+	GetPortalRequestPTokenStatusV4Error
 	GetPortalRedeemRequestByTxIDStatusError
 	StorePortalRedeemRequestByTxIDStatusError
 	GetPortalRequestUnlockCollateralStatusError

@@ -812,8 +812,6 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	}
 
 	expectedMemo := portalTokenProcessor.GetExpectedMemoForPorting(meta.IncogAddressStr)
-
-	// TODO: change hard-coded multisig payment address
 	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
 	expectedAmount := meta.PortingAmount
 	isValid, UTXO, err := portalTokenProcessor.ParseAndVerifyProofV4(meta.PortingProof, bc, expectedMemo, expectedMultisigAddress, expectedAmount)
@@ -822,16 +820,15 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	// TODO: update list of holding UTXOs
 	multisigWalletKey := statedb.GenerateMultisigWalletStateObjectKey(expectedMultisigAddress, meta.TokenID)
-	UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), UTXO)
+	UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), *UTXO)
 
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
 		actionData.Meta.IncogAddressStr,
 		actionData.Meta.PortingAmount,
 		actionData.Meta.PortingProof,
-		UTXO,
+		*UTXO,
 		actionData.Meta.Type,
 		shardID,
 		actionData.TxReqID,
@@ -868,7 +865,6 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
-		// TODO: update list of holding UTXOs
 		expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
 		multisigWalletKey := statedb.GenerateMultisigWalletStateObjectKey(expectedMultisigAddress, actionData.TokenID)
 		UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), actionData.PortingUTXO)
