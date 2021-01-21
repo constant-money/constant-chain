@@ -780,7 +780,7 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 		Logger.log.Errorf("ERROR: an error occured while decoding content string of portal request ptoken action: %+v", err)
 		return [][]string{}, nil
 	}
-	var actionData portalMeta.PortalRequestPTokensAction
+	var actionData portalMeta.PortalRequestPTokensActionV4
 	err = json.Unmarshal(actionContentBytes, &actionData)
 	if err != nil {
 		Logger.log.Errorf("ERROR: an error occured while unmarshal portal request ptoken action: %+v", err)
