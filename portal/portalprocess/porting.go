@@ -820,8 +820,8 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	multisigWalletKey := statedb.GenerateMultisigWalletStateObjectKey(expectedMultisigAddress, meta.TokenID)
-	UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), *UTXO)
+	multisigWalletKey := statedb.GenerateMultisigWalletsStateObjectKey(meta.TokenID)
+	UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), expectedMultisigAddress, *UTXO)
 
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
@@ -866,8 +866,8 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
 		expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
-		multisigWalletKey := statedb.GenerateMultisigWalletStateObjectKey(expectedMultisigAddress, actionData.TokenID)
-		UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), actionData.PortingUTXO)
+		multisigWalletKey := statedb.GenerateMultisigWalletsStateObjectKey(actionData.TokenID)
+		UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, multisigWalletKey.String(), expectedMultisigAddress, actionData.PortingUTXO)
 
 		// track reqPToken status by txID into DB
 		reqPTokenTrackData := portalMeta.PortalRequestPTokensStatusV4{

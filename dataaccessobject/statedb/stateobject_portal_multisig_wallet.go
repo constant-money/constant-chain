@@ -10,50 +10,53 @@ import (
 
 type UTXO struct {
 	txHash       string
-	outputIdx    []int
-	outputAmount []uint64
+	outputIdx    int
+	outputAmount uint64
 }
 
-type MultisigWalletState struct {
-	listUTXO []UTXO
+type MultisigWalletsState struct {
+	wallets map[string][]UTXO
 }
 
-func NewMultisigWalletState() *MultisigWalletState {
-	return &MultisigWalletState{
-		listUTXO: []UTXO{},
+func NewMultisigWalletsState() *MultisigWalletsState {
+	return &MultisigWalletsState{
+		wallets: map[string][]UTXO{},
 	}
 }
 
-func NewMultisigWalletStateWithValue(listUTXO []UTXO) *MultisigWalletState {
-	return &MultisigWalletState{
-		listUTXO: listUTXO,
+func NewMultisigWalletsStateWithValue(w map[string][]UTXO) *MultisigWalletsState {
+	return &MultisigWalletsState{
+		wallets: w,
 	}
 }
 
-func (ws MultisigWalletState) GetListUTXO() []UTXO {
-	return ws.listUTXO
+func (ws MultisigWalletsState) GetWallets() map[string][]UTXO {
+	return ws.wallets
 }
 
-func (ws MultisigWalletState) SetListUTXO(l []UTXO) {
-	ws.listUTXO = l
+func (ws MultisigWalletsState) SetWallets(w map[string][]UTXO) {
+	ws.wallets = w
 }
 
-func (ws *MultisigWalletState) MarshalJSON() ([]byte, error) {
+func (ws *MultisigWalletsState) MarshalJSON() ([]byte, error) {
 	type TmpUTXO struct {
 		TxHash       string
-		OutputIdx    []int
-		OutputAmount []uint64
+		OutputIdx    int
+		OutputAmount uint64
 	}
 	temp := struct {
-		ListUTXO []TmpUTXO
+		Wallets map[string][]TmpUTXO
 	}{}
 
-	for _, utxo := range ws.listUTXO {
-		temp.ListUTXO = append(temp.ListUTXO, TmpUTXO{
-			TxHash:       utxo.txHash,
-			OutputIdx:    utxo.outputIdx,
-			OutputAmount: utxo.outputAmount,
-		})
+	for wallet_address, list_utxo := range ws.wallets {
+		temp.Wallets[wallet_address] = []TmpUTXO{}
+		for _, utxo := range list_utxo {
+			temp.Wallets[wallet_address] = append(temp.Wallets[wallet_address], TmpUTXO{
+				TxHash:       utxo.txHash,
+				OutputIdx:    utxo.outputIdx,
+				OutputAmount: utxo.outputAmount,
+			})
+		}
 	}
 	data, err := json.Marshal(temp)
 	if err != nil {
@@ -62,14 +65,14 @@ func (ws *MultisigWalletState) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-func (ws *MultisigWalletState) UnmarshalJSON(data []byte) error {
+func (ws *MultisigWalletsState) UnmarshalJSON(data []byte) error {
 	type TmpUTXO struct {
 		TxHash       string
-		OutputIdx    []int
-		OutputAmount []uint64
+		OutputIdx    int
+		OutputAmount uint64
 	}
 	temp := struct {
-		ListUTXO []TmpUTXO
+		Wallets map[string][]TmpUTXO
 	}{}
 
 	err := json.Unmarshal(data, &temp)
@@ -77,28 +80,31 @@ func (ws *MultisigWalletState) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	ws.listUTXO = []UTXO{}
-	for _, utxo := range temp.ListUTXO {
-		ws.listUTXO = append(ws.listUTXO, UTXO{
-			txHash:       utxo.TxHash,
-			outputIdx:    utxo.OutputIdx,
-			outputAmount: utxo.OutputAmount,
-		})
+	ws.wallets = map[string][]UTXO{}
+	for wallet_address, list_utxo := range temp.Wallets {
+		ws.wallets[wallet_address] = []UTXO{}
+		for _, utxo := range list_utxo {
+			ws.wallets[wallet_address] = append(ws.wallets[wallet_address], UTXO{
+				txHash:       utxo.TxHash,
+				outputIdx:    utxo.OutputIdx,
+				outputAmount: utxo.OutputAmount,
+			})
+		}
 	}
 
 	return nil
 }
 
-type MultisigWalletStateObject struct {
+type MultisigWalletsStateObject struct {
 	db *StateDB
 	// Write caches.
 	trie Trie // storage trie, which becomes non-nil on first access
 
-	version                 int
-	multisigWalletStateHash common.Hash
-	multisigWalletState     *MultisigWalletState
-	objectType              int
-	deleted                 bool
+	version                  int
+	MultisigWalletsStateHash common.Hash
+	MultisigWalletsState     *MultisigWalletsState
+	objectType               int
+	deleted                  bool
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -108,113 +114,113 @@ type MultisigWalletStateObject struct {
 	dbErr error
 }
 
-func newMultisigWalletStateObject(db *StateDB, hash common.Hash) *MultisigWalletStateObject {
-	return &MultisigWalletStateObject{
-		version:                 defaultVersion,
-		db:                      db,
-		multisigWalletStateHash: hash,
-		multisigWalletState:     NewMultisigWalletState(),
-		objectType:              PortalMultisigWalletObjectType,
-		deleted:                 false,
+func newMultisigWalletsStateObject(db *StateDB, hash common.Hash) *MultisigWalletsStateObject {
+	return &MultisigWalletsStateObject{
+		version:                  defaultVersion,
+		db:                       db,
+		MultisigWalletsStateHash: hash,
+		MultisigWalletsState:     NewMultisigWalletsState(),
+		objectType:               PortalMultisigWalletObjectType,
+		deleted:                  false,
 	}
 }
 
-func newMultisigWalletObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*MultisigWalletStateObject, error) {
-	var multisigWalletState = NewMultisigWalletState()
+func newMultisigWalletObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*MultisigWalletsStateObject, error) {
+	var multisigWalletsState = NewMultisigWalletsState()
 	var ok bool
 	var dataBytes []byte
 	if dataBytes, ok = data.([]byte); ok {
-		err := json.Unmarshal(dataBytes, multisigWalletState)
+		err := json.Unmarshal(dataBytes, multisigWalletsState)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		multisigWalletState, ok = data.(*MultisigWalletState)
+		multisigWalletsState, ok = data.(*MultisigWalletsState)
 		if !ok {
-			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidPortalMultisigWalletStateType, reflect.TypeOf(data))
+			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidPortalMultisigWalletsStateType, reflect.TypeOf(data))
 		}
 	}
-	return &MultisigWalletStateObject{
-		version:                 defaultVersion,
-		multisigWalletStateHash: key,
-		multisigWalletState:     multisigWalletState,
-		db:                      db,
-		objectType:              PortalMultisigWalletObjectType,
-		deleted:                 false,
+	return &MultisigWalletsStateObject{
+		version:                  defaultVersion,
+		MultisigWalletsStateHash: key,
+		MultisigWalletsState:     multisigWalletsState,
+		db:                       db,
+		objectType:               PortalMultisigWalletObjectType,
+		deleted:                  false,
 	}, nil
 }
 
-func GenerateMultisigWalletStateObjectKey(walletAddress string, tokenIDStr string) common.Hash {
-	prefixHash := GetPortalMultisigWalletStatePrefix()
-	valueHash := common.HashH([]byte(walletAddress + "-" + tokenIDStr))
+func GenerateMultisigWalletsStateObjectKey(tokenIDStr string) common.Hash {
+	prefixHash := GetPortalMultisigWalletsStatePrefix()
+	valueHash := common.HashH([]byte(tokenIDStr))
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
 }
 
-func (t MultisigWalletStateObject) GetVersion() int {
+func (t MultisigWalletsStateObject) GetVersion() int {
 	return t.version
 }
 
 // setError remembers the first non-nil error it is called with.
-func (t *MultisigWalletStateObject) SetError(err error) {
+func (t *MultisigWalletsStateObject) SetError(err error) {
 	if t.dbErr == nil {
 		t.dbErr = err
 	}
 }
 
-func (t MultisigWalletStateObject) GetTrie(db DatabaseAccessWarper) Trie {
+func (t MultisigWalletsStateObject) GetTrie(db DatabaseAccessWarper) Trie {
 	return t.trie
 }
 
-func (t *MultisigWalletStateObject) SetValue(data interface{}) error {
-	newMultisigWalletState, ok := data.(*MultisigWalletState)
+func (t *MultisigWalletsStateObject) SetValue(data interface{}) error {
+	newMultisigWalletsState, ok := data.(*MultisigWalletsState)
 	if !ok {
-		return fmt.Errorf("%+v, got type %+v", ErrInvalidPortalMultisigWalletStateType, reflect.TypeOf(data))
+		return fmt.Errorf("%+v, got type %+v", ErrInvalidPortalMultisigWalletsStateType, reflect.TypeOf(data))
 	}
-	t.multisigWalletState = newMultisigWalletState
+	t.MultisigWalletsState = newMultisigWalletsState
 	return nil
 }
 
-func (t MultisigWalletStateObject) GetValue() interface{} {
-	return t.multisigWalletState
+func (t MultisigWalletsStateObject) GetValue() interface{} {
+	return t.MultisigWalletsState
 }
 
-func (t MultisigWalletStateObject) GetValueBytes() []byte {
-	multisigWalletState, ok := t.GetValue().(*MultisigWalletState)
+func (t MultisigWalletsStateObject) GetValueBytes() []byte {
+	MultisigWalletsState, ok := t.GetValue().(*MultisigWalletsState)
 	if !ok {
 		panic("wrong expected value type")
 	}
-	value, err := json.Marshal(multisigWalletState)
+	value, err := json.Marshal(MultisigWalletsState)
 	if err != nil {
 		panic("failed to marshal multisigWallet state")
 	}
 	return value
 }
 
-func (t MultisigWalletStateObject) GetHash() common.Hash {
-	return t.multisigWalletStateHash
+func (t MultisigWalletsStateObject) GetHash() common.Hash {
+	return t.MultisigWalletsStateHash
 }
 
-func (t MultisigWalletStateObject) GetType() int {
+func (t MultisigWalletsStateObject) GetType() int {
 	return t.objectType
 }
 
 // MarkDelete will delete an object in trie
-func (t *MultisigWalletStateObject) MarkDelete() {
+func (t *MultisigWalletsStateObject) MarkDelete() {
 	t.deleted = true
 }
 
 // reset all shard committee value into default value
-func (t *MultisigWalletStateObject) Reset() bool {
-	t.multisigWalletState = NewMultisigWalletState()
+func (t *MultisigWalletsStateObject) Reset() bool {
+	t.MultisigWalletsState = NewMultisigWalletsState()
 	return true
 }
 
-func (t MultisigWalletStateObject) IsDeleted() bool {
+func (t MultisigWalletsStateObject) IsDeleted() bool {
 	return t.deleted
 }
 
 // value is either default or nil
-func (t MultisigWalletStateObject) IsEmpty() bool {
-	temp := NewMultisigWalletState()
-	return reflect.DeepEqual(temp, t.multisigWalletState) || t.multisigWalletState == nil
+func (t MultisigWalletsStateObject) IsEmpty() bool {
+	temp := NewMultisigWalletsState()
+	return reflect.DeepEqual(temp, t.MultisigWalletsState) || t.MultisigWalletsState == nil
 }

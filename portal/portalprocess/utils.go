@@ -26,7 +26,7 @@ type CurrentPortalState struct {
 	LockedCollateralForRewards *statedb.LockedCollateralState
 	//Store temporary exchange rates requests
 	ExchangeRatesRequests map[string]*portalMeta.ExchangeRatesRequestStatus // key : hash(beaconHeight | TxID)
-	MultisigWalletState   map[string]*statedb.MultisigWalletState           // key: hash(wallet address | TokenID)
+	MultisigWalletsState  map[string]*statedb.MultisigWalletsState          // key: hash(TokenID)
 }
 
 type CustodianStateSlice struct {
@@ -333,10 +333,10 @@ func UpdateCustodianStateAfterMatchingPortingRequest(
 }
 
 // UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken
-func UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState *CurrentPortalState, multiWalletKey string, utxo statedb.UTXO) error {
-	wallet, ok := currentPortalState.MultisigWalletState[multiWalletKey]
+func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState *CurrentPortalState, multiWalletsKey string, walletAddress string, utxo statedb.UTXO) error {
+	wallet, ok := currentPortalState.MultisigWalletsState[multiWalletsKey]
 	if !ok {
-		return errors.New("[UpdateMultisigWalletStateAfterUserRequestPToken] MultisigWallet not found")
+		return errors.New("[UpdateMultisigWalletsStateAfterUserRequestPToken] MultisigWallet not found")
 	}
 
 	curListUTXO := wallet.GetListUTXO()
@@ -344,7 +344,7 @@ func UpdateMultisigWalletStateAfterUserRequestPToken(currentPortalState *Current
 		curListUTXO = []statedb.UTXO{}
 	}
 	curListUTXO = append(curListUTXO, utxo)
-	currentPortalState.MultisigWalletState[multiWalletKey].SetListUTXO(curListUTXO)
+	currentPortalState.MultisigWalletsState[multiWalletsKey].SetListUTXO(curListUTXO)
 
 	return nil
 }
@@ -2308,6 +2308,16 @@ func CloneCustodians(custodians map[string]*statedb.CustodianState) map[string]*
 		)
 	}
 	return newCustodians
+}
+
+func CloneMultisigWallet(wallets map[string]*statedb.MultisigWalletsState) map[string]*statedb.MultisigWalletsState {
+	newWallets := make(map[string]*statedb.MultisigWalletsState, len(wallets))
+	for key, wallet := range wallets {
+		newWallets[key] = statedb.NewMultisigWalletsStateWithValue(
+			wallet.GetListUTXO(),
+		)
+	}
+	return newWallets
 }
 
 func cloneMatchingPortingCustodians(custodians []*statedb.MatchingPortingCustodianDetail) []*statedb.MatchingPortingCustodianDetail {
