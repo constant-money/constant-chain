@@ -66,6 +66,9 @@ var (
 	portalMatchedRedeemRequestsPrefix                    = []byte("portalmatchedredeemrequest-")
 	portalUnlockOverRateCollateralsRequestStatusPrefix   = []byte("portalunlockoverratecollateralsstatus-")
 	portalUnlockOverRateCollateralsRequestTxStatusPrefix = []byte("portalunlockoverratecollateralstxstatus-")
+	portalWaitingUnshieldRequestsPrefix                  = []byte("portalwaitingunshieldrequest-")
+	portalUnshieldRequestsProcessedPrefix                = []byte("portalunshieldrequestsprocessed-")
+	portalMultisigWalletsStatePrefix                     = []byte("portalmultisigwallet-")
 
 	portalStatusPrefix                           = []byte("portalstatus-")
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
@@ -416,6 +419,21 @@ func GetPortalConfirmProofPrefixV3(proofType []byte) []byte {
 
 func GetPortalUnlockOverRateCollateralsPrefix() []byte {
 	h := common.HashH(portalUnlockOverRateCollateralsRequestTxStatusPrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetWaitingUnshieldRequestPrefix() []byte {
+	h := common.HashH(portalWaitingUnshieldRequestsPrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetUnshieldRequestProcessedPrefix() []byte {
+	h := common.HashH(portalUnshieldRequestsProcessedPrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetPortalMultisigWalletsStatePrefix() []byte {
+	h := common.HashH(portalMultisigWalletsStatePrefix)
 	return h[:][:prefixHashKeyLength]
 }
 

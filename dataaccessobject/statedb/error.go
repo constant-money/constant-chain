@@ -45,6 +45,9 @@ const (
 	ErrInvalidBlockHashType                      = "invalid block hash type"
 	ErrInvalidPortalExternalTxStateType          = "invalid portal external tx state type"
 	ErrInvalidPortalConfirmProofStateType        = "invalid portal confirm proof state type"
+	ErrInvalidUnshieldRequestType                = "invalid portal waiting unshield request type"
+	ErrInvalidUnshieldRequestProcessedType       = "invalid portal unshield request processed type"
+	ErrInvalidPortalMultisigWalletsStateType     = "invalid portal multisig wallet state type"
 )
 const (
 	InvalidByteArrayTypeError = iota
