@@ -43,7 +43,7 @@ func (p *portalRequestPTokenProcessorV4) PrepareDataForBlockProducer(stateDB *st
 func buildReqPTokensInstV4(
 	tokenID string,
 	incogAddressStr string,
-	PortingWalletAddress string,
+	portingWalletAddress string,
 	portingAmount uint64,
 	portingProof string,
 	portingUTXO []*statedb.UTXO,
@@ -53,13 +53,14 @@ func buildReqPTokensInstV4(
 	status string,
 ) []string {
 	reqPTokenContent := metadata.PortalRequestPTokensContentV4{
-		TokenID:         tokenID,
-		IncogAddressStr: incogAddressStr,
-		PortingAmount:   portingAmount,
-		PortingProof:    portingProof,
-		PortingUTXO:     portingUTXO,
-		TxReqID:         txReqID,
-		ShardID:         shardID,
+		TokenID:              tokenID,
+		IncogAddressStr:      incogAddressStr,
+		PortingWalletAddress: portingWalletAddress,
+		PortingAmount:        portingAmount,
+		PortingProof:         portingProof,
+		PortingUTXO:          portingUTXO,
+		TxReqID:              txReqID,
+		ShardID:              shardID,
 	}
 	reqPTokenContentBytes, _ := json.Marshal(reqPTokenContent)
 	return []string{
@@ -185,13 +186,14 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 		// track reqPToken status by txID into DB
 		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
-			Status:          pCommon.PortalRequestAcceptedStatus,
-			TokenID:         actionData.TokenID,
-			IncogAddressStr: actionData.IncogAddressStr,
-			PortingAmount:   actionData.PortingAmount,
-			PortingProof:    actionData.PortingProof,
-			PortingUTXO:     actionData.PortingUTXO,
-			TxReqID:         actionData.TxReqID,
+			Status:               pCommon.PortalRequestAcceptedStatus,
+			TokenID:              actionData.TokenID,
+			IncogAddressStr:      actionData.IncogAddressStr,
+			PortingWalletAddress: actionData.PortingWalletAddress,
+			PortingAmount:        actionData.PortingAmount,
+			PortingProof:         actionData.PortingProof,
+			PortingUTXO:          actionData.PortingUTXO,
+			TxReqID:              actionData.TxReqID,
 		}
 		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
 		err = statedb.StoreRequestPTokenStatus(
@@ -226,13 +228,14 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	} else if reqStatus == pCommon.PortalRequestRejectedChainStatus {
 		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
-			Status:          pCommon.PortalRequestRejectedStatus,
-			TokenID:         actionData.TokenID,
-			IncogAddressStr: actionData.IncogAddressStr,
-			PortingAmount:   actionData.PortingAmount,
-			PortingProof:    actionData.PortingProof,
-			PortingUTXO:     actionData.PortingUTXO,
-			TxReqID:         actionData.TxReqID,
+			Status:               pCommon.PortalRequestRejectedStatus,
+			TokenID:              actionData.TokenID,
+			IncogAddressStr:      actionData.IncogAddressStr,
+			PortingWalletAddress: actionData.PortingWalletAddress,
+			PortingAmount:        actionData.PortingAmount,
+			PortingProof:         actionData.PortingProof,
+			PortingUTXO:          actionData.PortingUTXO,
+			TxReqID:              actionData.TxReqID,
 		}
 		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
 		err = statedb.StoreRequestPTokenStatus(
