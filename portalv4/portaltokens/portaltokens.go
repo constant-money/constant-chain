@@ -3,6 +3,7 @@ package portaltokens
 import (
 	"encoding/base64"
 	"encoding/json"
+
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -16,7 +17,7 @@ type PortalTokenProcessor interface {
 	GetExpectedMemoForPorting(incAddress string) string
 	GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string
 	ParseAndVerifyProof(
-		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectedAmount uint64) (bool, *statedb.UTXO, error)
+		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error)
 
 	CreateRawExternalTx() error
 }

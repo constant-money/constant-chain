@@ -3,13 +3,14 @@ package portalprocess
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strconv"
+
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portalv4/metadata"
-	"strconv"
 )
 
 /* =======
@@ -42,9 +43,10 @@ func (p *portalRequestPTokenProcessorV4) PrepareDataForBlockProducer(stateDB *st
 func buildReqPTokensInstV4(
 	tokenID string,
 	incogAddressStr string,
+	PortingWalletAddress string,
 	portingAmount uint64,
 	portingProof string,
-	portingUTXO statedb.UTXO,
+	portingUTXO []*statedb.UTXO,
 	metaType int,
 	shardID byte,
 	txReqID common.Hash,
@@ -95,9 +97,10 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	rejectInst := buildReqPTokensInstV4(
 		meta.TokenID,
 		meta.IncogAddressStr,
-		meta.PortingAmount,
+		"",
+		0,
 		meta.PortingProof,
-		statedb.UTXO{},
+		[]*statedb.UTXO{},
 		meta.Type,
 		shardID,
 		actionData.TxReqID,
@@ -118,14 +121,15 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	expectedMemo := portalTokenProcessor.GetExpectedMemoForPorting(meta.IncogAddressStr)
 	// TODO: get this value from portal params
 	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
-	expectedAmount := meta.PortingAmount
-	isValid, UTXO, err := portalTokenProcessor.ParseAndVerifyProof(meta.PortingProof, bc, expectedMemo, expectedMultisigAddress, expectedAmount)
+	isValid, listUTXO, portingAmount, err := portalTokenProcessor.ParseAndVerifyProof(meta.PortingProof, bc, expectedMemo, expectedMultisigAddress)
+
 	if !isValid || err != nil {
 		Logger.log.Error("Parse proof and verify porting proof failed: %v", err)
 		return [][]string{rejectInst}, nil
 	}
 
-	err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, meta.TokenID, expectedMultisigAddress, *UTXO)
+	err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, meta.TokenID, expectedMultisigAddress, listUTXO)
+
 	if err != nil {
 		Logger.log.Errorf("ERROR: an error occured while execute UpdateMultisigWalletsStateAfterUserRequestPToken: %+v", err)
 		return [][]string{rejectInst}, nil
@@ -134,9 +138,10 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
 		actionData.Meta.IncogAddressStr,
-		actionData.Meta.PortingAmount,
+		expectedMultisigAddress,
+		portingAmount,
 		actionData.Meta.PortingProof,
-		*UTXO,
+		listUTXO,
 		actionData.Meta.Type,
 		shardID,
 		actionData.TxReqID,
@@ -158,7 +163,6 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 		return nil
 	}
 
-	// ?: len of instructions
 	if len(instructions) != 4 {
 		return nil // skip the instruction
 	}
@@ -173,9 +177,7 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
-		// TODO: get this value from portal params
-		expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
-		err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, actionData.TokenID, expectedMultisigAddress, actionData.PortingUTXO)
+		err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, actionData.TokenID, actionData.PortingWalletAddress, actionData.PortingUTXO)
 		if err != nil {
 			Logger.log.Errorf("ERROR: an error occured while execute UpdateMultisigWalletsStateAfterUserRequestPToken: %+v", err)
 			return nil

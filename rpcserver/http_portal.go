@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -14,7 +16,6 @@ import (
 	"github.com/incognitochain/incognito-chain/rpcserver/bean"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
-	"strings"
 )
 
 func (httpServer *HttpServer) checkEnablePortalV3() *rpcservice.RPCError {
@@ -485,10 +486,6 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{
 	if !ok {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("metadata IncogAddressStr is invalid"))
 	}
-	portingAmount, err := common.AssertAndConvertStrToNumber(data["PortingAmount"])
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
-	}
 
 	portingProof, ok := data["PortingProof"].(string)
 	if !ok {
@@ -499,7 +496,6 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{
 		basemeta.PortalUserRequestPTokenMeta,
 		tokenID,
 		incognitoAddress,
-		portingAmount,
 		portingProof,
 	)
 

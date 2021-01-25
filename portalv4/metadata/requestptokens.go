@@ -18,7 +18,6 @@ type PortalRequestPTokensV4 struct {
 	basemeta.MetadataBase
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
-	PortingAmount   uint64
 	PortingProof    string
 }
 
@@ -33,31 +32,32 @@ type PortalRequestPTokensActionV4 struct {
 // It will be appended to beaconBlock
 // both accepted and rejected status
 type PortalRequestPTokensContentV4 struct {
-	TokenID         string // pTokenID in incognito chain
-	IncogAddressStr string
-	PortingAmount   uint64
-	PortingProof    string
-	PortingUTXO     statedb.UTXO
-	TxReqID         common.Hash
-	ShardID         byte
+	TokenID              string // pTokenID in incognito chain
+	IncogAddressStr      string
+	PortingWalletAddress string
+	PortingAmount        uint64
+	PortingProof         string
+	PortingUTXO          []*statedb.UTXO
+	TxReqID              common.Hash
+	ShardID              byte
 }
 
 // PortalRequestPTokensStatus - Beacon tracks status of request ptokens into db
 type PortalRequestPTokensStatusV4 struct {
-	Status          byte
-	TokenID         string // pTokenID in incognito chain
-	IncogAddressStr string
-	PortingAmount   uint64
-	PortingProof    string
-	PortingUTXO     statedb.UTXO
-	TxReqID         common.Hash
+	Status               byte
+	TokenID              string // pTokenID in incognito chain
+	IncogAddressStr      string
+	PortingWalletAddress string
+	PortingAmount        uint64
+	PortingProof         string
+	PortingUTXO          []*statedb.UTXO
+	TxReqID              common.Hash
 }
 
 func NewPortalRequestPTokensV4(
 	metaType int,
 	tokenID string,
 	incogAddressStr string,
-	portingAmount uint64,
 	portingProof string) (*PortalRequestPTokensV4, error) {
 	metadataBase := basemeta.MetadataBase{
 		Type: metaType,
@@ -65,7 +65,6 @@ func NewPortalRequestPTokensV4(
 	requestPTokenMeta := &PortalRequestPTokensV4{
 		TokenID:         tokenID,
 		IncogAddressStr: incogAddressStr,
-		PortingAmount:   portingAmount,
 		PortingProof:    portingProof,
 	}
 	requestPTokenMeta.MetadataBase = metadataBase
@@ -101,11 +100,6 @@ func (reqPToken PortalRequestPTokensV4) ValidateSanityData(chainRetriever baseme
 		return false, false, errors.New("tx custodian deposit must be TxNormalType")
 	}
 
-	// validate amount deposit
-	if reqPToken.PortingAmount == 0 {
-		return false, false, errors.New("porting amount should be larger than 0")
-	}
-
 	// validate tokenID and porting proof
 	if !chainRetriever.IsPortalToken(beaconHeight, reqPToken.TokenID) {
 		return false, false, basemeta.NewMetadataTxError(basemeta.PortalRequestPTokenParamError, errors.New("TokenID is not supported currently on Portal"))
@@ -122,7 +116,6 @@ func (reqPToken PortalRequestPTokensV4) Hash() *common.Hash {
 	record := reqPToken.MetadataBase.Hash().String()
 	record += reqPToken.TokenID
 	record += reqPToken.IncogAddressStr
-	record += strconv.FormatUint(reqPToken.PortingAmount, 10)
 	record += reqPToken.PortingProof
 	// final hash
 	hash := common.HashH([]byte(record))

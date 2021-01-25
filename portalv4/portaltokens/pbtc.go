@@ -3,11 +3,12 @@ package portaltokens
 import (
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	btcrelaying "github.com/incognitochain/incognito-chain/relaying/btc"
-	"sort"
 )
 
 type PortalBTCTokenProcessor struct {
@@ -23,45 +24,43 @@ func (p PortalBTCTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custo
 }
 
 func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
-	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectedAmount uint64) (bool, *statedb.UTXO, error) {
+	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error) {
 	btcChain := bc.GetBTCHeaderChain()
 	if btcChain == nil {
 		Logger.log.Error("BTC relaying chain should not be null")
-		return false, nil, errors.New("BTC relaying chain should not be null")
+		return false, nil, 0, errors.New("BTC relaying chain should not be null")
 	}
 	// parse BTCProof in meta
 	btcTxProof, err := btcrelaying.ParseBTCProofFromB64EncodeStr(proof)
 	if err != nil {
 		Logger.log.Errorf("PortingProof is invalid %v\n", err)
-		return false, nil, fmt.Errorf("PortingProof is invalid %v\n", err)
+		return false, nil, 0, fmt.Errorf("PortingProof is invalid %v\n", err)
 	}
 
 	// verify tx with merkle proofs
 	isValid, err := btcChain.VerifyTxWithMerkleProofs(btcTxProof)
 	if !isValid || err != nil {
 		Logger.log.Errorf("Verify btcTxProof failed %v", err)
-		return false, nil, fmt.Errorf("Verify btcTxProof failed %v", err)
+		return false, nil, 0, fmt.Errorf("Verify btcTxProof failed %v", err)
 	}
 
 	// extract attached message from txOut's OP_RETURN
 	btcAttachedMsg, err := btcrelaying.ExtractAttachedMsgFromTx(btcTxProof.BTCTx)
 	if err != nil {
 		Logger.log.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
-		return false, nil, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
+		return false, nil, 0, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
 	}
 	if btcAttachedMsg != expectedMemo {
 		Logger.log.Errorf("PortingId in the btc attached message is not matched with portingID in metadata")
-		return false, nil, fmt.Errorf("PortingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
+		return false, nil, 0, fmt.Errorf("PortingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
 	}
 
 	// check whether amount transfer in txBNB is equal porting amount or not
 	// check receiver and amount in tx
 	outputs := btcTxProof.BTCTx.TxOut
-	amountNeedToBeTransferInBTC := btcrelaying.ConvertIncPBTCAmountToExternalBTCAmount(int64(expectedAmount))
-	totalValue := int64(0)
+	totalValue := uint64(0)
 
-	var curUTXO statedb.UTXO
-	curUTXO.SetTxHash(btcTxProof.BTCTx.TxHash().String())
+	listUTXO := []*statedb.UTXO{}
 
 	for idx, out := range outputs {
 		addrStr, err := btcChain.ExtractPaymentAddrStrFromPkScript(out.PkScript)
@@ -73,21 +72,17 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 			continue
 		}
 
-		totalValue += out.Value
-		curUTXO.SetOutputAmount(uint64(out.Value))
+		totalValue += uint64(out.Value)
+
+		var curUTXO statedb.UTXO
+		curUTXO.SetTxHash(btcTxProof.BTCTx.TxHash().String())
 		curUTXO.SetOutputIndex(idx)
-		// only first output accepted
-		break
-		//curUTXO.outputIdx = append(curUTXO.outputIdx, idx)
-		//curUTXO.outputAmount = append(curUTXO.outputAmount, out.Value)
+		curUTXO.SetOutputAmount(uint64(out.Value))
+
+		listUTXO = append(listUTXO, &curUTXO)
 	}
 
-	if totalValue < amountNeedToBeTransferInBTC {
-		Logger.log.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", expectedMultisigAddress, amountNeedToBeTransferInBTC, totalValue)
-		return false, nil, fmt.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", expectedMultisigAddress, amountNeedToBeTransferInBTC, totalValue)
-	}
-
-	return true, &curUTXO, nil
+	return true, listUTXO, totalValue, nil
 }
 
 func (p PortalBTCTokenProcessor) IsValidRemoteAddress(address string, bcr bMeta.ChainRetriever) (bool, error) {
