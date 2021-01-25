@@ -8,6 +8,7 @@ import (
 	portalCommon "github.com/incognitochain/incognito-chain/portal/common"
 	portalMeta "github.com/incognitochain/incognito-chain/portal/metadata"
 	"github.com/incognitochain/incognito-chain/portal/portalprocess"
+	metadata2 "github.com/incognitochain/incognito-chain/portalv4/metadata"
 	"strconv"
 
 	rCommon "github.com/ethereum/go-ethereum/common"
@@ -971,6 +972,22 @@ func (blockService BlockService) GetPortalReqPTokenStatus(reqTxID string) (*port
 	}
 
 	var status portalMeta.PortalRequestPTokensStatus
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}
+
+func (blockService BlockService) GetPortalReqPTokenStatusV4(reqTxID string) (*metadata2.PortalRequestPTokensStatusV4, error) {
+	stateDB := blockService.BlockChain.GetBeaconBestState().GetBeaconFeatureStateDB()
+	data, err := statedb.GetRequestPTokenStatusV4(stateDB, reqTxID)
+	if err != nil {
+		return nil, err
+	}
+
+	var status metadata2.PortalRequestPTokensStatusV4
 	err = json.Unmarshal(data, &status)
 	if err != nil {
 		return nil, err

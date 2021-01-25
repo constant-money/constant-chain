@@ -30,12 +30,56 @@ func NewMultisigWalletsStateWithValue(w map[string][]UTXO) *MultisigWalletsState
 	}
 }
 
-func (ws MultisigWalletsState) GetWallets() map[string][]UTXO {
+func (ws *MultisigWalletsState) GetWallets() map[string][]UTXO {
 	return ws.wallets
 }
 
-func (ws MultisigWalletsState) SetWallets(w map[string][]UTXO) {
+func (ws *MultisigWalletsState) SetWallets(w map[string][]UTXO) {
 	ws.wallets = w
+}
+
+func (ws *MultisigWalletsState) SetWalletOutput(address string, outputs []UTXO) {
+	ws.wallets[address] = outputs
+}
+
+func NewUTXO() *UTXO {
+	return &UTXO{}
+}
+
+func NewUTXOWithValue(
+	txHash string,
+	outputIdx int,
+	outputAmount uint64,
+) *UTXO {
+	return &UTXO{
+		txHash:       txHash,
+		outputAmount: outputAmount,
+		outputIdx:    outputIdx,
+	}
+}
+
+func (uo *UTXO) GetTxHash() string {
+	return uo.txHash
+}
+
+func (uo *UTXO) SetTxHash(txHash string) {
+	uo.txHash = txHash
+}
+
+func (uo *UTXO) GetOutputAmount() uint64 {
+	return uo.outputAmount
+}
+
+func (uo *UTXO) SetOutputAmount(amount uint64) {
+	uo.outputAmount = amount
+}
+
+func (uo *UTXO) GetOutputIndex() int {
+	return uo.outputIdx
+}
+
+func (uo *UTXO) SetOutputIndex(index int) {
+	uo.outputIdx = index
 }
 
 func (ws *MultisigWalletsState) MarshalJSON() ([]byte, error) {

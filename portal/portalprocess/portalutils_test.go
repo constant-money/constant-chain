@@ -5,6 +5,7 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/portal"
+	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"testing"
 )
 
@@ -15,10 +16,10 @@ func TestPickUpCustodianForPorting(t *testing.T) {
 
 	finalExchangeRate := statedb.NewFinalExchangeRatesStateWithValue(
 		map[string]statedb.FinalExchangeRatesDetail{
-			common.PRVIDStr:       {Amount: 1000000},
+			common.PRVIDStr:        {Amount: 1000000},
 			pCommon.PortalBNBIDStr: {Amount: 20000000},
 			pCommon.PortalBTCIDStr: {Amount: 10000000000},
-			common.EthAddrStr:     {Amount: 400000000},
+			common.EthAddrStr:      {Amount: 400000000},
 		})
 
 	portalParam := portal.PortalParams{
@@ -59,7 +60,6 @@ func TestPickUpCustodianForPorting(t *testing.T) {
 		}, map[string]uint64{
 			common.EthAddrStr: 1e9,
 		}, map[string]map[string]uint64{})
-
 
 	custodian3 := statedb.NewCustodianStateWithValue(
 		"custodianIncAddress3", 10000*1e9, 10000*1e9,

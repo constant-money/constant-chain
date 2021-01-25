@@ -49,6 +49,11 @@ func NewPortalV4Manager() *PortalV4Manager {
 				actions: map[byte][][]string{},
 			},
 		},
+		bMeta.PortalUserRequestPTokenMetaV4: &portalRequestPTokenProcessorV4{
+			portalInstProcessor: &portalInstProcessor{
+				actions: map[byte][][]string{},
+			},
+		},
 	}
 
 	return &PortalV4Manager{

@@ -128,6 +128,9 @@ const (
 	RestoreCandidateShardWaitingForNextRandom
 
 	GetTotalStakerError
+
+	// portal v4
+	GetReqPTokenStatusV4Error
 )
 
 // Standard JSON-RPC 2.0 errors.

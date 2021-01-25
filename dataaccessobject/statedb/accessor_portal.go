@@ -675,6 +675,17 @@ func GetRequestPTokenStatus(stateDB *StateDB, txID string) ([]byte, error) {
 	return data, nil
 }
 
+func GetRequestPTokenStatusV4(stateDB *StateDB, txID string) ([]byte, error) {
+	statusType := PortalRequestPTokenStatusPrefixV4()
+	statusSuffix := []byte(txID)
+	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
+	if err != nil {
+		return []byte{}, NewStatedbError(GetPortalRequestPTokenStatusV4Error, err)
+	}
+
+	return data, nil
+}
+
 func StorePortalRequestUnlockCollateralStatus(stateDB *StateDB, txID string, statusContent []byte) error {
 	statusType := PortalRequestUnlockCollateralStatusPrefix()
 	statusSuffix := []byte(txID)

@@ -74,6 +74,7 @@ var (
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
 	portalCustodianDepositStatusPrefixV3         = []byte("custodiandepositv3-")
 	portalRequestPTokenStatusPrefix              = []byte("requestptoken-")
+	portalRequestPTokenStatusPrefixV4            = []byte("requestptokenv4-")
 	portalRedeemRequestStatusPrefix              = []byte("redeemrequest-")
 	portalRedeemRequestStatusByTxReqIDPrefix     = []byte("redeemrequestbytxid-")
 	portalRequestUnlockCollateralStatusPrefix    = []byte("requestunlockcollateral-")
@@ -451,6 +452,10 @@ func PortalCustodianDepositStatusPrefixV3() []byte {
 
 func PortalRequestPTokenStatusPrefix() []byte {
 	return portalRequestPTokenStatusPrefix
+}
+
+func PortalRequestPTokenStatusPrefixV4() []byte {
+	return portalRequestPTokenStatusPrefixV4
 }
 
 func PortalRedeemRequestStatusPrefix() []byte {

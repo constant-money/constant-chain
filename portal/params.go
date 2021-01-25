@@ -5,6 +5,7 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portal/portaltokens"
+	portalV4 "github.com/incognitochain/incognito-chain/portalv4/portaltokens"
 	"sort"
 	"time"
 )
@@ -40,6 +41,7 @@ type PortalParams struct {
 	MinPortalFee                         uint64 // nano PRV
 
 	PortalTokens                 map[string]portaltokens.PortalTokenProcessor
+	PortalTokensV4               map[string]portalV4.PortalTokenProcessor
 	PortalFeederAddress          string
 	PortalETHContractAddressStr  string // smart contract of ETH for portal
 	MinUnlockOverRateCollaterals uint64

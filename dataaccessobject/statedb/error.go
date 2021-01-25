@@ -194,6 +194,9 @@ const (
 	GetWithdrawCollateralConfirmError
 	StorePortalUnlockOverRateCollateralsError
 	GetPortalUnlockOverRateCollateralsStatusError
+
+	// portal v4
+	GetPortalRequestPTokenStatusV4Error
 )
 
 var ErrCodeMessage = map[int]struct {

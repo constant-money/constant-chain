@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 )
 
 type PortalTokenProcessor interface {
@@ -12,10 +13,10 @@ type PortalTokenProcessor interface {
 	GetChainID() string
 	GetMinTokenAmount() uint64
 
-	GetExpectedMemoForPorting(portingID string) string
+	GetExpectedMemoForPorting(incAddress string) string
 	GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string
 	ParseAndVerifyProof(
-		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedPaymentInfos map[string]uint64) (bool, error)
+		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectedAmount uint64) (bool, *statedb.UTXO, error)
 
 	CreateRawExternalTx() error
 }
@@ -27,11 +28,11 @@ type PortalToken struct {
 	MinTokenAmount uint64 // minimum amount for porting/redeem
 }
 
-func (p PortalToken) GetExpectedMemoForPorting(portingID string) string {
+func (p PortalToken) GetExpectedMemoForPorting(incAddress string) string {
 	type portingMemoStruct struct {
-		PortingID string `json:"PortingID"`
+		IncAddress string `json:"PortingIncAddress"`
 	}
-	memoPorting := portingMemoStruct{PortingID: portingID}
+	memoPorting := portingMemoStruct{IncAddress: incAddress}
 	memoPortingBytes, _ := json.Marshal(memoPorting)
 	memoPortingHashBytes := common.HashB(memoPortingBytes)
 	memoPortingStr := base64.StdEncoding.EncodeToString(memoPortingHashBytes)
