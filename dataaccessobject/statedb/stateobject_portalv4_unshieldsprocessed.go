@@ -3,8 +3,9 @@ package statedb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"reflect"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 type ProcessUnshieldDetail struct {
@@ -119,62 +120,6 @@ func (rq *ProcessUnshieldDetail) UnmarshalJSON(data []byte) error {
 	rq.utxos = temp.UTXOs
 	rq.txHash = temp.TxHash
 	rq.fee = temp.Fee
-	return nil
-}
-
-func (ut *UTXO) getTxHash() string {
-	return ut.txHash
-}
-
-func (ut *UTXO) setTxHash(txHash string) {
-	ut.txHash = txHash
-}
-
-func (ut *UTXO) getIndex() int {
-	return ut.outputIdx
-}
-
-func (ut *UTXO) setIndex(index int) {
-	ut.outputIdx = index
-}
-
-func (ut *UTXO) getAmount() uint64 {
-	return ut.outputAmount
-}
-
-func (ut *UTXO) setAmount(amount uint64) {
-	ut.outputAmount = amount
-}
-
-func (ut UTXO) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(struct {
-		TxHash       string
-		OutputIdx    int
-		OutputAmount uint64
-	}{
-		TxHash:       ut.txHash,
-		OutputIdx:    ut.outputIdx,
-		OutputAmount: ut.outputAmount,
-	})
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
-}
-
-func (ut *UTXO) UnmarshalJSON(data []byte) error {
-	temp := struct {
-		TxHash       string
-		OutputIdx    int
-		OutputAmount uint64
-	}{}
-	err := json.Unmarshal(data, &temp)
-	if err != nil {
-		return err
-	}
-	ut.outputAmount = temp.OutputAmount
-	ut.outputIdx = temp.OutputIdx
-	ut.txHash = temp.TxHash
 	return nil
 }
 

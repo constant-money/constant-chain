@@ -8,101 +8,40 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 )
 
-type UTXO struct {
-	txHash       string
-	outputIdx    int
-	outputAmount uint64
+type MultisigWalletsState struct {
+	wallets map[string][]*UTXO // map key: wallet address => list utxos
 }
 
-type MultisigWalletsState struct {
-	wallets map[string][]UTXO
+func (ws *MultisigWalletsState) SetWalletOutput(address string, outputs []*UTXO) {
+	ws.wallets[address] = outputs
 }
 
 func NewMultisigWalletsState() *MultisigWalletsState {
 	return &MultisigWalletsState{
-		wallets: map[string][]UTXO{},
+		wallets: map[string][]*UTXO{},
 	}
 }
 
-func NewMultisigWalletsStateWithValue(w map[string][]UTXO) *MultisigWalletsState {
+func NewMultisigWalletsStateWithValue(w map[string][]*UTXO) *MultisigWalletsState {
 	return &MultisigWalletsState{
 		wallets: w,
 	}
 }
 
-func (ws *MultisigWalletsState) GetWallets() map[string][]UTXO {
+func (ws MultisigWalletsState) GetWallets() map[string][]*UTXO {
 	return ws.wallets
 }
 
-func (ws *MultisigWalletsState) SetWallets(w map[string][]UTXO) {
+func (ws MultisigWalletsState) SetWallets(w map[string][]*UTXO) {
 	ws.wallets = w
 }
 
-func (ws *MultisigWalletsState) SetWalletOutput(address string, outputs []UTXO) {
-	ws.wallets[address] = outputs
-}
-
-func NewUTXO() *UTXO {
-	return &UTXO{}
-}
-
-func NewUTXOWithValue(
-	txHash string,
-	outputIdx int,
-	outputAmount uint64,
-) *UTXO {
-	return &UTXO{
-		txHash:       txHash,
-		outputAmount: outputAmount,
-		outputIdx:    outputIdx,
-	}
-}
-
-func (uo *UTXO) GetTxHash() string {
-	return uo.txHash
-}
-
-func (uo *UTXO) SetTxHash(txHash string) {
-	uo.txHash = txHash
-}
-
-func (uo *UTXO) GetOutputAmount() uint64 {
-	return uo.outputAmount
-}
-
-func (uo *UTXO) SetOutputAmount(amount uint64) {
-	uo.outputAmount = amount
-}
-
-func (uo *UTXO) GetOutputIndex() int {
-	return uo.outputIdx
-}
-
-func (uo *UTXO) SetOutputIndex(index int) {
-	uo.outputIdx = index
-}
-
 func (ws *MultisigWalletsState) MarshalJSON() ([]byte, error) {
-	type TmpUTXO struct {
-		TxHash       string
-		OutputIdx    int
-		OutputAmount uint64
-	}
-	temp := struct {
-		Wallets map[string][]TmpUTXO
-	}{}
-
-	for wallet_address, list_utxo := range ws.wallets {
-		temp.Wallets[wallet_address] = []TmpUTXO{}
-		for _, utxo := range list_utxo {
-			temp.Wallets[wallet_address] = append(temp.Wallets[wallet_address], TmpUTXO{
-				TxHash:       utxo.txHash,
-				OutputIdx:    utxo.outputIdx,
-				OutputAmount: utxo.outputAmount,
-			})
-		}
-	}
-	data, err := json.Marshal(temp)
+	data, err := json.Marshal(struct {
+		Wallets map[string][]*UTXO
+	}{
+		Wallets: ws.wallets,
+	})
 	if err != nil {
 		return []byte{}, err
 	}
@@ -110,32 +49,14 @@ func (ws *MultisigWalletsState) MarshalJSON() ([]byte, error) {
 }
 
 func (ws *MultisigWalletsState) UnmarshalJSON(data []byte) error {
-	type TmpUTXO struct {
-		TxHash       string
-		OutputIdx    int
-		OutputAmount uint64
-	}
 	temp := struct {
-		Wallets map[string][]TmpUTXO
+		Wallets map[string][]*UTXO
 	}{}
-
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
 		return err
 	}
-
-	ws.wallets = map[string][]UTXO{}
-	for wallet_address, list_utxo := range temp.Wallets {
-		ws.wallets[wallet_address] = []UTXO{}
-		for _, utxo := range list_utxo {
-			ws.wallets[wallet_address] = append(ws.wallets[wallet_address], UTXO{
-				txHash:       utxo.TxHash,
-				outputIdx:    utxo.OutputIdx,
-				outputAmount: utxo.OutputAmount,
-			})
-		}
-	}
-
+	ws.wallets = temp.Wallets
 	return nil
 }
 
