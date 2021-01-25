@@ -11,10 +11,11 @@ type ProcessUnshieldDetail struct {
 	unshieldsID []string
 	utxos       map[string][]*UTXO // map key (wallet address => list utxos)
 	txHash      []string
+	fee         uint
 }
 
 type ProcessUnshield struct {
-	unshields map[string]*ProcessUnshieldDetail
+	unshields map[string]*ProcessUnshieldDetail // external tx id => ProcessUnshieldDetail
 }
 
 func (rq *ProcessUnshield) GetUnshield(unshiedID string) *ProcessUnshieldDetail {
@@ -77,16 +78,25 @@ func (us *ProcessUnshieldDetail) SetUnshieldRequests(usRequests []string) {
 	us.unshieldsID = usRequests
 }
 
+func (us *ProcessUnshieldDetail) GetUnshieldFee() uint {
+	return us.fee
+}
+
+func (us *ProcessUnshieldDetail) SetUnshieldFee(fee uint) {
+	us.fee = fee
+}
+
 func (rq ProcessUnshieldDetail) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
 		UnshieldsID []string
 		UTXOs       map[string][]*UTXO
 		BtcTxHash   []string
-		WalletAddrs []string
+		Fee         uint
 	}{
 		UnshieldsID: rq.unshieldsID,
 		UTXOs:       rq.utxos,
 		BtcTxHash:   rq.txHash,
+		Fee:         rq.fee,
 	})
 	if err != nil {
 		return []byte{}, err
@@ -99,6 +109,7 @@ func (rq *ProcessUnshieldDetail) UnmarshalJSON(data []byte) error {
 		UnshieldsID []string
 		UTXOs       map[string][]*UTXO
 		TxHash      []string
+		Fee         uint
 	}{}
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
@@ -107,6 +118,7 @@ func (rq *ProcessUnshieldDetail) UnmarshalJSON(data []byte) error {
 	rq.unshieldsID = temp.UnshieldsID
 	rq.utxos = temp.UTXOs
 	rq.txHash = temp.TxHash
+	rq.fee = temp.Fee
 	return nil
 }
 
