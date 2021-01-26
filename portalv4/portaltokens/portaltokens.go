@@ -63,14 +63,23 @@ func (p PortalToken) GetExpectedMemoForRedeem(redeemID string, custodianAddress 
 	return redeemMemoStr
 }
 
+func (p PortalToken) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool {
+	// TODO: do experiments depend on external chain miner's habit
+	A := 1
+	B := 1
+	C := 10
+	return A*num_utxos+B*num_unshield_id <= C
+}
+
 // Choose list of pairs (UTXOs and unshield IDs) for broadcast external transactions
 func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unshieldIDs []string, waitingUnshieldState *statedb.WaitingUnshield) []*BroadcastTx {
 	if len(utxos) == 0 || len(unshieldIDs) == 0 {
 		return []*BroadcastTx{}
 	}
 
+	// descending sort
 	sort.SliceStable(utxos, func(i, j int) bool {
-		return utxos[i].GetOutputAmount() < utxos[j].GetOutputAmount()
+		return utxos[i].GetOutputAmount() > utxos[j].GetOutputAmount()
 	})
 
 	broadcastTxs := []*BroadcastTx{}
@@ -81,12 +90,14 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 		chosenUnshieldIDs := []string{}
 
 		cur_sum_amount := uint64(0)
+		cnt := 0
 		if utxos[utxo_idx].GetOutputAmount() >= waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() {
 			// find the last unshield idx that the cummulative sum of unshield amount <= current utxo amount
-			for unshield_idx < len(unshieldIDs) && cur_sum_amount+waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() <= utxos[utxo_idx].GetOutputAmount() {
+			for unshield_idx < len(unshieldIDs) && cur_sum_amount+waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() <= utxos[utxo_idx].GetOutputAmount() && p.IsAcceptableTxSize(1, cnt+1) {
 				cur_sum_amount += waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount()
 				chosenUnshieldIDs = append(chosenUnshieldIDs, unshieldIDs[unshield_idx])
 				unshield_idx += 1
+				cnt += 1
 			}
 			chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
 			utxo_idx += 1
@@ -96,8 +107,9 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 				cur_sum_amount += utxos[utxo_idx].GetOutputAmount()
 				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
 				utxo_idx += 1
+				cnt += 1
 			}
-			if utxo_idx < len(utxos) {
+			if utxo_idx < len(utxos) && p.IsAcceptableTxSize(cnt+1, 1) {
 				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
 				utxo_idx += 1
 			} else {
