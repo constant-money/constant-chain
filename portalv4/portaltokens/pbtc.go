@@ -82,6 +82,11 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 		listUTXO = append(listUTXO, &curUTXO)
 	}
 
+	if totalValue < p.GetMinTokenAmount() {
+		Logger.log.Errorf("Porting amount: %v is less than the minimum threshold: %v\n", totalValue, p.GetMinTokenAmount())
+		return false, nil, 0, fmt.Errorf("Porting amount: %v is less than the minimum threshold: %v", totalValue, p.GetMinTokenAmount())
+	}
+
 	return true, listUTXO, totalValue, nil
 }
 

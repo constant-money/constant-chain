@@ -3,8 +3,9 @@ package statedb
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/common"
 	"reflect"
+
+	"github.com/incognitochain/incognito-chain/common"
 )
 
 type Unshield struct {
@@ -96,7 +97,7 @@ func (us *Unshield) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func NewLWaitingUnshieldState() *WaitingUnshield {
+func NewWaitingUnshieldState() *WaitingUnshield {
 	return &WaitingUnshield{
 		unshields: map[string]*Unshield{},
 	}
@@ -147,14 +148,14 @@ func newWaitingUnshieldObject(db *StateDB, hash common.Hash) *WaitingUnshieldObj
 		version:                    defaultVersion,
 		db:                         db,
 		waitingWaitingUnshieldHash: hash,
-		waitingWaitingUnshield:     NewLWaitingUnshieldState(),
+		waitingWaitingUnshield:     NewWaitingUnshieldState(),
 		objectType:                 PortalWaitingUnshieldObjectType,
 		deleted:                    false,
 	}
 }
 
 func newWaitingUnshieldObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*WaitingUnshieldObject, error) {
-	var content = NewLWaitingUnshieldState()
+	var content = NewWaitingUnshieldState()
 	var ok bool
 	var dataBytes []byte
 	if dataBytes, ok = data.([]byte); ok {
@@ -245,7 +246,7 @@ func (t *WaitingUnshieldObject) MarkDelete() {
 
 // reset all shard committee value into default value
 func (t *WaitingUnshieldObject) Reset() bool {
-	t.waitingWaitingUnshield = NewLWaitingUnshieldState()
+	t.waitingWaitingUnshield = NewWaitingUnshieldState()
 	return true
 }
 
@@ -255,6 +256,6 @@ func (t WaitingUnshieldObject) IsDeleted() bool {
 
 // value is either default or nil
 func (t WaitingUnshieldObject) IsEmpty() bool {
-	temp := NewLWaitingUnshieldState()
+	temp := NewWaitingUnshieldState()
 	return reflect.DeepEqual(temp, t.waitingWaitingUnshield) || t.waitingWaitingUnshield == nil
 }
