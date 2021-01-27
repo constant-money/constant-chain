@@ -110,14 +110,27 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 				cnt += 1
 			}
 			if utxo_idx < len(utxos) && p.IsAcceptableTxSize(cnt+1, 1) {
+				// insert new unshield ids if the current utxos still has enough amount
+				cur_sum_amount += utxos[utxo_idx].GetOutputAmount()
 				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
 				utxo_idx += 1
+				cnt += 1
+
+				new_cnt := 0
+				target := cur_sum_amount
+				cur_sum_amount = 0
+
+				for unshield_idx < len(unshieldIDs) && cur_sum_amount+waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() <= target && p.IsAcceptableTxSize(cnt, new_cnt+1) {
+					cur_sum_amount += waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount()
+					chosenUnshieldIDs = append(chosenUnshieldIDs, unshieldIDs[unshield_idx])
+					unshield_idx += 1
+					new_cnt += 1
+				}
+
 			} else {
 				// not enough utxo for last unshield IDs
 				break
 			}
-			chosenUnshieldIDs = append(chosenUnshieldIDs, unshieldIDs[unshield_idx])
-			unshield_idx += 1
 		}
 		broadcastTxs = append(broadcastTxs, &BroadcastTx{
 			UTXOs:       chosenUTXOs,
