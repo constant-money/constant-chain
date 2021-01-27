@@ -276,6 +276,9 @@ var HttpHandler = map[string]httpHandler{
 
 	//validators state
 	getValKeyState: (*HttpServer).handleGetValKeyState,
+
+	// portal v4
+	createAndSendTxWithPortalBurnPToken: (*HttpServer).handleCreateAndSendTxWithPortalBurnPToken,
 }
 
 // Commands that are available to a limited user

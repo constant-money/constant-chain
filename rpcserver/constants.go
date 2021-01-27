@@ -292,6 +292,9 @@ const (
 
 	//validator state
 	getValKeyState = "getvalkeystate"
+
+	// portal v4
+	createAndSendTxWithPortalBurnPToken = "createandsendtxwithportalburnptoken"
 )
 
 const (

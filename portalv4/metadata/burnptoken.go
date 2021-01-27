@@ -10,15 +10,17 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/wallet"
+	"reflect"
 	"strconv"
 )
 
 type PortalBurnPToken struct {
 	basemeta.MetadataBase
-	IncAddressStr string
-	RemoteAddress string
-	BurnAmount    uint64
-	TokenID       string
+	IncAddressStr        string
+	RemoteAddress        string
+	TokenID              string
+	BurnAmount           uint64
+	MinAcceptPubTokenAmt uint64
 }
 
 type PortalBurnPTokenAction struct {
@@ -28,37 +30,47 @@ type PortalBurnPTokenAction struct {
 }
 
 type PortalBurnPTokenContent struct {
-	IncAddressStr string
-	RemoteAddress string
-	BurnAmount    uint64
-	TokenID       string
-	TxReqID       common.Hash
-	ShardID       byte
+	IncAddressStr          string
+	RemoteAddress          string
+	TokenID                string
+	BurnAmount             uint64
+	MinReceivedPubTokenAmt uint64
+	TxReqID                common.Hash
+	ShardID                byte
 }
 
 type PortalBurnPTokenRequestStatus struct {
-	IncAddressStr string
-	RemoteAddress string
-	BurnAmount    uint64
-	TokenID       string
-	TxHash        string
-	Status        int
+	IncAddressStr          string
+	RemoteAddress          string
+	TokenID                string
+	BurnAmount             uint64
+	MinReceivedPubTokenAmt uint64
+	TxHash                 string
+	Status                 int
 }
 
-func NewPortalBurnPTokenRequestStatus(incAddressStr, tokenID, remoteAddress string, burnAmount uint64, status int) *PortalBurnPTokenRequestStatus {
-	return &PortalBurnPTokenRequestStatus{IncAddressStr: incAddressStr, BurnAmount: burnAmount, Status: status, TokenID: tokenID, RemoteAddress: remoteAddress}
+func NewPortalBurnPTokenRequestStatus(incAddressStr, tokenID, remoteAddress string, burnAmount uint64, minAmt uint64, status int) *PortalBurnPTokenRequestStatus {
+	return &PortalBurnPTokenRequestStatus{
+		IncAddressStr:          incAddressStr,
+		BurnAmount:             burnAmount,
+		Status:                 status,
+		TokenID:                tokenID,
+		RemoteAddress:          remoteAddress,
+		MinReceivedPubTokenAmt: minAmt,
+	}
 }
 
-func NewPortalBurnPToken(metaType int, incAddressStr, tokenID, remoteAddress string, burnAmount uint64) (*PortalBurnPToken, error) {
+func NewPortalBurnPToken(metaType int, incAddressStr, tokenID, remoteAddress string, burnAmount uint64, minAmt uint64) (*PortalBurnPToken, error) {
 	metadataBase := basemeta.MetadataBase{
 		Type: metaType,
 	}
 
 	portalBurnPTokenReq := &PortalBurnPToken{
-		IncAddressStr: incAddressStr,
-		BurnAmount:    burnAmount,
-		RemoteAddress: remoteAddress,
-		TokenID:       tokenID,
+		IncAddressStr:        incAddressStr,
+		BurnAmount:           burnAmount,
+		MinAcceptPubTokenAmt: minAmt,
+		RemoteAddress:        remoteAddress,
+		TokenID:              tokenID,
 	}
 
 	portalBurnPTokenReq.MetadataBase = metadataBase
@@ -74,78 +86,72 @@ func (burnReq PortalBurnPToken) ValidateTxWithBlockChain(
 	shardID byte,
 	db *statedb.StateDB,
 ) (bool, error) {
-	// NOTE: verify supported tokens pair as needed
 	return true, nil
 }
 
 func (burnReq PortalBurnPToken) ValidateSanityData(chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, beaconHeight uint64, tx basemeta.Transaction) (bool, bool, error) {
-	// validate Payment address
-	if len(burnReq.IncAddressStr) <= 0 {
-		return false, false, errors.New("IncAddressStr should be not empty")
+	// Note: the metadata was already verified with *transaction.TxCustomToken level so no need to verify with *transaction.Tx level again as *transaction.Tx is embedding property of *transaction.TxCustomToken
+	if tx.GetType() == common.TxCustomTokenPrivacyType && reflect.TypeOf(tx).String() == "*transaction.Tx" {
+		return true, true, nil
 	}
+
+	// validate RedeemerIncAddressStr
 	keyWallet, err := wallet.Base58CheckDeserialize(burnReq.IncAddressStr)
 	if err != nil {
-		return false, false, errors.New("IncAddressStr incorrect")
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is invalid"))
 	}
-	incogAddr := keyWallet.KeySet.PaymentAddress
-	if len(incogAddr.Pk) == 0 {
-		return false, false, errors.New("wrong incognito address")
+	incAddr := keyWallet.KeySet.PaymentAddress
+	if len(incAddr.Pk) == 0 {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is invalid"))
 	}
-	if !bytes.Equal(tx.GetSigPubKey()[:], incogAddr.Pk[:]) {
-		return false, false, errors.New("custodian incognito address is not signer tx")
+	if !bytes.Equal(tx.GetSigPubKey()[:], incAddr.Pk[:]) {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is not signer"))
 	}
 
 	// check tx type
-	if tx.GetType() != common.TxNormalType {
-		return false, false, errors.New("tx custodian deposit must be TxNormalType")
+	if tx.GetType() != common.TxCustomTokenPrivacyType {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("tx burn ptoken must be TxCustomTokenPrivacyType"))
 	}
 
-	// validate tokenID
-	if burnReq.TokenID != tx.GetTokenID().String() {
-		return false, false, basemeta.NewMetadataTxError(basemeta.PortalRedeemRequestParamError, errors.New("TokenID in metadata is not matched to tokenID in tx"))
-	}
-
-	//validate RemoteAddress
-	if len(burnReq.RemoteAddress) == 0 {
-		return false, false, basemeta.NewMetadataTxError(basemeta.PortalRedeemRequestParamError, errors.New("Remote address is invalid"))
-	}
-
-	isValidRemoteAddress, err := chainRetriever.IsValidPortalRemoteAddress(burnReq.TokenID, burnReq.RemoteAddress, beaconHeight)
-	if err != nil || !isValidRemoteAddress {
-		return false, false, fmt.Errorf("Remote address %v is not a valid address of tokenID %v - Error %v", burnReq.RemoteAddress, burnReq.TokenID, err)
-	}
-
-	if !chainRetriever.IsPortalToken(beaconHeight, burnReq.TokenID) {
-		return false, false, errors.New("token not supported")
-	}
-
-	// check burning tx
 	if !tx.IsCoinsBurning(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight) {
-		return false, false, errors.New("must send coin to burning address")
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("txprivacytoken in tx burn ptoken must be coin burning tx"))
 	}
 
-	// check withdraw amount
-	if burnReq.BurnAmount <= 0 {
-		return false, false, errors.New("Burn amount should be larger than 0")
-	}
-
-	// validate redeem amount
+	// validate burning amount
 	minAmount, err := chainRetriever.GetMinAmountPortalToken(burnReq.TokenID, beaconHeight)
 	if err != nil {
 		return false, false, fmt.Errorf("Error get min portal token amount: %v", err)
 	}
 	if burnReq.BurnAmount < minAmount {
-		return false, false, fmt.Errorf("burn token amount should be larger or equal to %v", minAmount)
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("burning amount should be larger or equal to %v", minAmount))
 	}
-
-	// validate redeem fee
-	//if burnReq.RedeemFee <= 0 {
-	//	return false, false, errors.New("redeem fee should be larger than 0")
-	//}
 
 	// validate value transfer of tx for redeem amount in ptoken
 	if burnReq.BurnAmount != tx.CalculateTxValue() {
-		return false, false, errors.New("burn amount should be equal to the tx value")
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("burning amount should be equal to the tx value"))
+	}
+
+	// validate tokenID
+	if burnReq.TokenID != tx.GetTokenID().String() {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("TokenID in metadata is not matched to tokenID in tx"))
+	}
+	// check tokenId is portal token or not
+	if !chainRetriever.IsPortalToken(beaconHeight, burnReq.TokenID) {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("TokenID is not in portal tokens list"))
+	}
+
+	// validate RemoteAddress
+	if len(burnReq.RemoteAddress) == 0 {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Remote address is invalid"))
+	}
+	isValidRemoteAddress, err := chainRetriever.IsValidPortalRemoteAddress(burnReq.TokenID, burnReq.RemoteAddress, beaconHeight)
+	if err != nil || !isValidRemoteAddress {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("Remote address %v is not a valid address of tokenID %v - Error %v", burnReq.RemoteAddress, burnReq.TokenID, err))
+	}
+
+	// validate MinAcceptPubTokenAmt
+	if burnReq.MinAcceptPubTokenAmt == 0 {
+		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("MinAcceptPubTokenAmt should be greater than zero"))
 	}
 
 	return true, true, nil
@@ -160,6 +166,7 @@ func (burnReq PortalBurnPToken) Hash() *common.Hash {
 	record += burnReq.IncAddressStr
 	record += burnReq.RemoteAddress
 	record += strconv.FormatUint(burnReq.BurnAmount, 10)
+	record += strconv.FormatUint(burnReq.MinAcceptPubTokenAmt, 10)
 	record += burnReq.TokenID
 
 	// final hash
