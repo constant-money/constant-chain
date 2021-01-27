@@ -371,6 +371,7 @@ func (blockchain *BlockChain) verifyPreProcessingBeaconBlockForSigning(curView *
 	rewardForCustodianByEpoch := map[common.Hash]uint64{}
 
 	portalParams := blockchain.GetPortalParams(beaconBlock.GetHeight())
+	portalParamsV4 := blockchain.GetPortalParamsV4(beaconBlock.GetHeight())
 
 	// Get Reward Instruction By Epoch
 	if beaconBlock.Header.Height%blockchain.config.ChainParams.Epoch == 1 {
@@ -454,7 +455,7 @@ func (blockchain *BlockChain) verifyPreProcessingBeaconBlockForSigning(curView *
 
 	}
 	// build stateful instructions
-	statefulInsts := blockchain.buildStatefulInstructions(curView, curView.featureStateDB, statefulActionsByShardID, beaconBlock.Header.Height, rewardForCustodianByEpoch, portalParams)
+	statefulInsts := blockchain.buildStatefulInstructions(curView, curView.featureStateDB, statefulActionsByShardID, beaconBlock.Header.Height, rewardForCustodianByEpoch, portalParams, portalParamsV4)
 	bridgeInstructions = append(bridgeInstructions, statefulInsts...)
 
 	tempInstruction, err := curView.GenerateInstruction(beaconBlock.Header.Height,

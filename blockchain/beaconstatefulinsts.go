@@ -8,6 +8,8 @@ import (
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/portal"
 	"github.com/incognitochain/incognito-chain/portal/portalprocess"
+	"github.com/incognitochain/incognito-chain/portalv4"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"math/big"
 	"sort"
 	"strconv"
@@ -53,9 +55,17 @@ var statefulInstTypes = []int {
 	basemeta.PDECrossPoolTradeRequestMeta,
 	basemeta.RelayingBTCHeaderMeta,
 }
+// todo: add more portal v4 metadata types to beacon process
+var portalV4StatefulInstTypes = []int{
+	basemeta.PortalBurnPTokenMeta,
+}
 
+// isStatefulInstType checks metaType is stateful instruction type or not
+// stateful instructions include bridge insts, pdex insts,
+// portal v3 insts (if enable portal v3)
+// and portal v4 insts
 func (blockchain *BlockChain) isStatefulInstType(metaType int) bool {
-	instTypes := statefulInstTypes
+	instTypes := append(statefulInstTypes, portalV4StatefulInstTypes...)
 	if blockchain.config.ChainParams.EnablePortalV3 {
 		instTypes = append(instTypes, portalStatefulInstTypes...)
 	}
@@ -109,7 +119,8 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 	statefulActionsByShardID map[byte][][]string,
 	beaconHeight uint64,
 	rewardForCustodianByEpoch map[common.Hash]uint64,
-	portalParams portal.PortalParams) [][]string {
+	portalParams portal.PortalParams,
+	portalParamsV4 portalv4.PortalParams) [][]string {
 	currentPDEState, err := InitCurrentPDEStateFromDB(featureStateDB, beaconHeight-1)
 	if err != nil {
 		Logger.log.Error(err)
@@ -121,6 +132,12 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 
 	pm := portalprocess.NewPortalManager()
 	relayingHeaderState, err := blockchain.InitRelayingHeaderChainStateFromDB()
+	if err != nil {
+		Logger.log.Error(err)
+	}
+
+	pmv4 := portalprocessv4.NewPortalV4Manager()
+	currentPortalStateV4, err := portalprocessv4.InitCurrentPortalV4StateFromDB(featureStateDB)
 	if err != nil {
 		Logger.log.Error(err)
 	}
@@ -155,9 +172,15 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 			}
 			contentStr := action[1]
 
-			// check portal meta type
+			// collect portal meta type
 			if basemeta.IsPortalMetadata(metaType) {
 				portalprocess.CollectPortalInsts(pm, metaType, action, shardID)
+				continue
+			}
+
+			// collect portal v4 meta type
+			if basemeta.IsPortalV4Metadata(metaType) {
+				portalprocessv4.CollectPortalV4Insts(pmv4, metaType, action, shardID)
 				continue
 			}
 
@@ -252,6 +275,23 @@ func (blockchain *BlockChain) buildStatefulInstructions(
 	}
 	if len(portalInsts) > 0 {
 		instructions = append(instructions, portalInsts...)
+	}
+
+	// handle portalv4 instructions
+	portalV4Insts, err := blockchain.handlePortalV4Insts(
+		featureStateDB,
+		beaconHeight-1,
+		currentPortalStateV4,
+		portalParamsV4,
+		pmv4,
+	)
+
+	if err != nil {
+		Logger.log.Error(err)
+		return instructions
+	}
+	if len(portalV4Insts) > 0 {
+		instructions = append(instructions, portalV4Insts...)
 	}
 
 	// handle relaying instructions
@@ -628,4 +668,20 @@ func (blockchain *BlockChain) handlePortalInsts(
 	}
 
 	return portalprocess.HandlePortalInsts(blockchain, stateDB, beaconHeight, shardHeights, currentPortalState, rewardForCustodianByEpoch, portalParams, pm)
+}
+
+func (blockchain *BlockChain) handlePortalV4Insts(
+	stateDB *statedb.StateDB,
+	beaconHeight uint64,
+	currentPortalState *portalprocessv4.CurrentPortalV4State,
+	portalParams portalv4.PortalParams,
+	pm *portalprocessv4.PortalV4Manager,
+) ([][]string, error) {
+	// get shard height of all shards for producer
+	shardHeights := map[byte]uint64{}
+	for i := 0; i < common.MaxShardNumber; i++ {
+		shardHeights[byte(i)] = blockchain.ShardChain[i].multiView.GetBestView().GetHeight()
+	}
+
+	return portalprocessv4.HandlePortalV4Insts(blockchain, stateDB, beaconHeight, shardHeights, currentPortalState, portalParams, pm)
 }

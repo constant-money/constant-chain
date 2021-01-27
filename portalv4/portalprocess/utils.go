@@ -2,7 +2,6 @@ package portalprocess
 
 import (
 	"errors"
-
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 )
 
@@ -10,6 +9,17 @@ type CurrentPortalV4State struct {
 	WaitingUnshieldRequests   map[string]*statedb.WaitingUnshield      // key : hash(tokenID)
 	WalletsState              map[string]*statedb.MultisigWalletsState // key : hash(tokenID)
 	UnshieldRequestsProcessed map[string]*statedb.ProcessUnshield      // key : hash(tokenID)
+}
+
+//todo:
+func InitCurrentPortalV4StateFromDB(
+	stateDB *statedb.StateDB,
+) (*CurrentPortalV4State, error) {
+	return &CurrentPortalV4State{
+		WaitingUnshieldRequests:   nil,
+		WalletsState:              nil,
+		UnshieldRequestsProcessed: nil,
+	}, nil
 }
 
 func CloneMultisigWallet(wallets map[string]*statedb.MultisigWalletsState) map[string]*statedb.MultisigWalletsState {

@@ -237,7 +237,10 @@ var portalMetas = []int{
 
 	PortalTopUpWaitingPortingRequestMeta,
 	PortalTopUpWaitingPortingResponseMeta,
+}
 
-	// portalv4
+// todo: add more
+var portalV4Metas = []int{
+	PortalUserRequestPTokenMetaV4,
 	PortalBurnPTokenMeta,
 }

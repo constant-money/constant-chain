@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/portal"
+	"github.com/incognitochain/incognito-chain/portalv4"
 	"io"
 	"sort"
 
@@ -630,6 +631,40 @@ func (blockchain *BlockChain) GetConfig() *Config {
 // GetPortalParams returns portal params in beaconheight
 func (blockchain *BlockChain) GetPortalParams(beaconHeight uint64) portal.PortalParams {
 	portalParamMap := blockchain.GetConfig().ChainParams.PortalParams
+	// only has one value - default value
+	if len(portalParamMap) == 1 {
+		return portalParamMap[0]
+	}
+
+	bchs := []uint64{}
+	for bch := range portalParamMap {
+		bchs = append(bchs, bch)
+	}
+	sort.Slice(bchs, func(i, j int) bool {
+		return bchs[i] < bchs[j]
+	})
+
+	bchKey := bchs[len(bchs)-1]
+
+	// beaconHeight = 0 : return the latest params
+	if beaconHeight == 0 {
+		return portalParamMap[bchKey]
+	}
+
+	for i := len(bchs) - 1; i >= 0; i-- {
+		if beaconHeight < bchs[i] {
+			continue
+		}
+		bchKey = bchs[i]
+		break
+	}
+
+	return portalParamMap[bchKey]
+}
+
+// GetPortalParams returns portal params in beaconheight
+func (blockchain *BlockChain) GetPortalParamsV4(beaconHeight uint64) portalv4.PortalParams {
+	portalParamMap := blockchain.GetConfig().ChainParams.PortalV4Params
 	// only has one value - default value
 	if len(portalParamMap) == 1 {
 		return portalParamMap[0]

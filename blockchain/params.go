@@ -4,6 +4,8 @@ import (
 	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portal/portaltokens"
+	portalTokensV4 "github.com/incognitochain/incognito-chain/portalv4/portaltokens"
+	"github.com/incognitochain/incognito-chain/portalv4"
 	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -53,6 +55,7 @@ type Params struct {
 	BeaconHeightBreakPointBurnAddr   uint64
 	PortalParams                     map[uint64]portal.PortalParams
 	EnablePortalV3                   bool
+	PortalV4Params                   map[uint64]portalv4.PortalParams
 	EpochBreakPointSwapNewKey        []uint64
 	IsBackup                         bool
 	PreloadAddress                   string
@@ -151,6 +154,40 @@ func getSupportedPortalCollateralsTestnet2() []portal.PortalCollateral {
 	}
 }
 
+func initPortalTokensV4ForTestNet() map[string]portalTokensV4.PortalTokenProcessor {
+	return map[string]portalTokensV4.PortalTokenProcessor{
+		pCommon.PortalBTCIDStr: &portalTokensV4.PortalBTCTokenProcessor{
+			&portalTokensV4.PortalToken{
+				ChainID:        TestnetBTCChainID,
+				MinTokenAmount: 10,
+			},
+		},
+		//pCommon.PortalBNBIDStr: &portalTokensV4.PortalBNBTokenProcessor{
+		//	&portalTokensV4.PortalToken{
+		//		ChainID:        TestnetBNBChainID,
+		//		MinTokenAmount: 10,
+		//	},
+		//},
+	}
+}
+
+func initPortalTokensV4ForMainNet() map[string]portalTokensV4.PortalTokenProcessor {
+	return map[string]portalTokensV4.PortalTokenProcessor{
+		pCommon.PortalBTCIDStr: &portalTokensV4.PortalBTCTokenProcessor{
+			&portalTokensV4.PortalToken{
+				ChainID:        MainnetBTCChainID,
+				MinTokenAmount: 10,
+			},
+		},
+		//pCommon.PortalBNBIDStr: &portalTokensV4.PortalBNBTokenProcessor{
+		//	&portalTokensV4.PortalToken{
+		//		ChainID:        MainnetBNBChainID,
+		//		MinTokenAmount: 10,
+		//	},
+		//},
+	}
+}
+
 func SetupParam() {
 	// FOR TESTNET
 	genesisParamsTestnetNew = &GenesisParams{
@@ -235,6 +272,11 @@ func SetupParam() {
 					BNBFullNodeHost:          TestnetBNBFullNodeHost,
 					BNBFullNodePort:          TestnetBNBFullNodePort,
 				},
+			},
+		},
+		PortalV4Params: map[uint64]portalv4.PortalParams{
+			0: {
+				PortalTokens:                initPortalTokensV4ForTestNet(),
 			},
 		},
 
@@ -332,6 +374,11 @@ func SetupParam() {
 				},
 			},
 		},
+		PortalV4Params: map[uint64]portalv4.PortalParams{
+			0: {
+				PortalTokens:                initPortalTokensV4ForTestNet(),
+			},
+		},
 
 		EpochBreakPointSwapNewKey:  TestnetReplaceCommitteeEpoch,
 		ReplaceStakingTxHeight:     1,
@@ -423,6 +470,11 @@ func SetupParam() {
 					BNBFullNodeHost:          MainnetBNBFullNodeHost,
 					BNBFullNodePort:          MainnetBNBFullNodePort,
 				},
+			},
+		},
+		PortalV4Params: map[uint64]portalv4.PortalParams{
+			0: {
+				PortalTokens:                initPortalTokensV4ForMainNet(),
 			},
 		},
 

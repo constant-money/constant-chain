@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/portal"
 	"github.com/incognitochain/incognito-chain/portal/portalprocess"
+	"github.com/incognitochain/incognito-chain/portalv4"
 	"math/big"
 	"reflect"
 	"sort"
@@ -81,6 +82,7 @@ func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version i
 	//=====END Build Header Essential Data=====
 	//============Build body===================
 	portalParams := blockchain.GetPortalParams(beaconBlock.GetHeight())
+	portalParamsV4 := blockchain.GetPortalParamsV4(beaconBlock.GetHeight())
 	rewardForCustodianByEpoch := map[common.Hash]uint64{}
 
 	if (beaconBestState.BeaconHeight+1)%blockchain.config.ChainParams.Epoch == 1 {
@@ -100,7 +102,7 @@ func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version i
 		}
 	}
 
-	tempShardState, stakeInstructions, swapInstructions, bridgeInstructions, acceptedRewardInstructions, stopAutoStakingInstructions := blockchain.GetShardState(beaconBestState, rewardForCustodianByEpoch, portalParams)
+	tempShardState, stakeInstructions, swapInstructions, bridgeInstructions, acceptedRewardInstructions, stopAutoStakingInstructions := blockchain.GetShardState(beaconBestState, rewardForCustodianByEpoch, portalParams, portalParamsV4)
 
 	Logger.log.Infof("In NewBlockBeacon tempShardState: %+v", tempShardState)
 	tempInstruction, err := beaconBestState.GenerateInstruction(
@@ -248,7 +250,7 @@ func (blockchain *BlockChain) NewBlockBeacon(curView *BeaconBestState, version i
 // 4. bridge instructions
 // 5. accepted reward instructions
 // 6. stop auto staking instructions
-func (blockchain *BlockChain) GetShardState(beaconBestState *BeaconBestState, rewardForCustodianByEpoch map[common.Hash]uint64, portalParams portal.PortalParams) (map[byte][]ShardState, [][]string, map[byte][][]string, [][]string, [][]string, [][]string) {
+func (blockchain *BlockChain) GetShardState(beaconBestState *BeaconBestState, rewardForCustodianByEpoch map[common.Hash]uint64, portalParams portal.PortalParams, portalParamsV4 portalv4.PortalParams) (map[byte][]ShardState, [][]string, map[byte][][]string, [][]string, [][]string, [][]string) {
 	shardStates := make(map[byte][]ShardState)
 	validStakeInstructions := [][]string{}
 	validStakePublicKeys := []string{}
@@ -291,7 +293,7 @@ func (blockchain *BlockChain) GetShardState(beaconBestState *BeaconBestState, re
 	}
 
 	// build stateful instructions
-	statefulInsts := blockchain.buildStatefulInstructions(beaconBestState, beaconBestState.featureStateDB, statefulActionsByShardID, beaconBestState.BeaconHeight+1, rewardForCustodianByEpoch, portalParams)
+	statefulInsts := blockchain.buildStatefulInstructions(beaconBestState, beaconBestState.featureStateDB, statefulActionsByShardID, beaconBestState.BeaconHeight+1, rewardForCustodianByEpoch, portalParams, portalParamsV4)
 	bridgeInstructions = append(bridgeInstructions, statefulInsts...)
 	return shardStates, validStakeInstructions, validSwapInstructions, bridgeInstructions, acceptedRewardInstructions, validStopAutoStakingInstructions
 }

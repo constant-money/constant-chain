@@ -126,3 +126,8 @@ func IsPortalMetadata(metaType int) bool {
 	res, _ := common.SliceExists(portalMetas, metaType)
 	return res
 }
+
+func IsPortalV4Metadata(metaType int) bool {
+	res, _ := common.SliceExists(portalV4Metas, metaType)
+	return res
+}

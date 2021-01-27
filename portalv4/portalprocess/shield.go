@@ -3,12 +3,12 @@ package portalprocess
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/incognitochain/incognito-chain/portalv4"
 	"strconv"
 
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portalv4/metadata"
 )
@@ -78,7 +78,7 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	currentPortalState *CurrentPortalV4State,
 	beaconHeight uint64,
 	shardHeights map[byte]uint64,
-	portalParams portal.PortalParams,
+	portalParams portalv4.PortalParams,
 	optionalData map[string]interface{},
 ) ([][]string, error) {
 	// parse instruction
@@ -113,7 +113,7 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	portalTokenProcessor := portalParams.PortalTokensV4[meta.TokenID]
+	portalTokenProcessor := portalParams.PortalTokens[meta.TokenID]
 	if portalTokenProcessor == nil {
 		Logger.log.Errorf("TokenID is not supported currently on Portal")
 		return [][]string{rejectInst}, nil
@@ -156,7 +156,7 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 	beaconHeight uint64,
 	instructions []string,
 	currentPortalState *CurrentPortalV4State,
-	portalParams portal.PortalParams,
+	portalParams portalv4.PortalParams,
 	updatingInfoByTokenID map[common.Hash]bMeta.UpdatingInfo,
 ) error {
 	if currentPortalState == nil {

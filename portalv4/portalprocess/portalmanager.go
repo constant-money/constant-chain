@@ -4,7 +4,7 @@ import (
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"github.com/incognitochain/incognito-chain/portal"
+	"github.com/incognitochain/incognito-chain/portalv4"
 )
 
 type portalInstructionProcessor interface {
@@ -20,7 +20,7 @@ type portalInstructionProcessor interface {
 		currentPortalV4State *CurrentPortalV4State,
 		beaconHeight uint64,
 		shardHeights map[byte]uint64,
-		portalParams portal.PortalParams,
+		portalParams portalv4.PortalParams,
 		optionalData map[string]interface{},
 	) ([][]string, error)
 	// process instructions that confirmed in beacon blocks
@@ -29,7 +29,7 @@ type portalInstructionProcessor interface {
 		beaconHeight uint64,
 		instructions []string,
 		currentPortalV4State *CurrentPortalV4State,
-		portalParams portal.PortalParams,
+		portalParams portalv4.PortalParams,
 		updatingInfoByTokenID map[common.Hash]bMeta.UpdatingInfo,
 	) error
 }
