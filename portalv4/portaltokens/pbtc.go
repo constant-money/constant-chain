@@ -3,9 +3,7 @@ package portaltokens
 import (
 	"errors"
 	"fmt"
-	"sort"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	btcrelaying "github.com/incognitochain/incognito-chain/relaying/btc"
@@ -111,98 +109,6 @@ func (p PortalBTCTokenProcessor) CreateRawExternalTx() error {
 	return nil
 }
 
-type BtcUTXO struct {
-	TxID    chainhash.Hash
-	TxIndex uint32
-	Amount  uint64
-}
-
-func sortBtcUTXOsAscendingAmount(utxos []*BtcUTXO) {
-	sort.SliceStable(utxos, func(i, j int) bool {
-		return utxos[i].Amount <= utxos[j].Amount
-	})
-}
-
-func getBalance(utxos []*BtcUTXO) uint64 {
-	balance := uint64(0)
-	for _, item := range utxos {
-		balance += item.Amount
-	}
-	return balance
-}
-
-// findClosestUTXO returns the closest utxo that have amount is greater or equal to target amount
-// utxos was sorted ascending by amount
-func findClosestUTXO(utxos []*BtcUTXO, targetAmount uint64) (*BtcUTXO, error) {
-	l := 0
-	r := len(utxos) - 1
-
-	if utxos[l].Amount >= targetAmount {
-		return utxos[l], nil
-	}
-
-	if utxos[r].Amount < targetAmount {
-		return nil, errors.New("There is no utxo that has amount greater or equal target amount")
-	}
-
-	for true {
-		m := (l + r) / 2
-		if m <= l || m >= r {
-			break
-		}
-
-		if utxos[m].Amount > targetAmount {
-			r = m
-		} else if utxos[m].Amount == targetAmount {
-			return utxos[m], nil
-		} else {
-			l = m
-		}
-	}
-
-	return utxos[r], nil
-}
-
-// chooseUTXOs receives all utxos of sender and returns the list utxos for spending with amountTransfer and fee
-// we choose utxos such that number of chosen utxos is at least.
-func chooseUTXOs(utxos []*BtcUTXO, amountTransfer uint64, fee uint64) ([]*BtcUTXO, error) {
-	// check balance is valid or not
-	totalTransfer := amountTransfer + fee
-	if totalTransfer == 0 {
-		return nil, errors.New("Amount transfer and fee are zero")
-	}
-	balance := getBalance(utxos)
-	if balance < totalTransfer {
-		return nil, fmt.Errorf("Balance %v is insufficiently to transfer %v and fee %v", balance, amountTransfer, fee)
-	}
-
-	// sort list of utxos
-	sortBtcUTXOsAscendingAmount(utxos)
-	chosenUTXOs := []*BtcUTXO{}
-
-	// check the greatest utxo
-	if len(utxos) == 0 {
-		return nil, errors.New("UTXOs is empty")
-	}
-	if utxos[len(utxos)-1].Amount >= totalTransfer {
-		// find the closest utxo
-		closestUTXO, err := findClosestUTXO(utxos, totalTransfer)
-		if err != nil {
-			return nil, err
-		}
-
-		chosenUTXOs = append(chosenUTXOs, closestUTXO)
-	} else {
-		// greedy
-		actualTransfer := uint64(0)
-		for i := len(utxos) - 1; i >= 0; i-- {
-			chosenUTXOs = append(chosenUTXOs, utxos[i])
-			actualTransfer += utxos[i].Amount
-			if actualTransfer >= totalTransfer {
-				break
-			}
-		}
-	}
-
-	return chosenUTXOs, nil
+func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unshieldIDs []string, waitingUnshieldState *statedb.WaitingUnshield) []*BroadcastTx {
+	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, unshieldIDs, waitingUnshieldState)
 }

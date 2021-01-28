@@ -38,7 +38,7 @@ type BroadcastTx struct {
 
 func (p PortalToken) GetExpectedMemoForPorting(incAddress string) string {
 	type portingMemoStruct struct {
-		IncAddress string `json:"PortingIncAddress"`
+		IncAddress string `json:"ShieldingIncAddress"`
 	}
 	memoPorting := portingMemoStruct{IncAddress: incAddress}
 	memoPortingBytes, _ := json.Marshal(memoPorting)
