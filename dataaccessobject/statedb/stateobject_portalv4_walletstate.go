@@ -32,7 +32,7 @@ func (ws MultisigWalletsState) GetWallets() map[string][]*UTXO {
 	return ws.wallets
 }
 
-func (ws MultisigWalletsState) SetWallets(w map[string][]*UTXO) {
+func (ws *MultisigWalletsState) SetWallets(w map[string][]*UTXO) {
 	ws.wallets = w
 }
 

@@ -74,12 +74,14 @@ var (
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
 	portalCustodianDepositStatusPrefixV3         = []byte("custodiandepositv3-")
 	portalRequestPTokenStatusPrefix              = []byte("requestptoken-")
-	portalRequestPTokenStatusPrefixV4            = []byte("requestptokenv4-")
 	portalRedeemRequestStatusPrefix              = []byte("redeemrequest-")
 	portalRedeemRequestStatusByTxReqIDPrefix     = []byte("redeemrequestbytxid-")
 	portalRequestUnlockCollateralStatusPrefix    = []byte("requestunlockcollateral-")
 	portalRequestWithdrawRewardStatusPrefix      = []byte("requestwithdrawportalreward-")
 	portalReqMatchingRedeemStatusByTxReqIDPrefix = []byte("reqmatchredeembytxid-")
+
+	// portal v4
+	portalRequestPTokenStatusPrefixV4 = []byte("requestptokenv4-")
 
 	// liquidation for portal
 	portalLiquidateCustodianRunAwayPrefix = []byte("portalliquidaterunaway-")
@@ -454,10 +456,6 @@ func PortalRequestPTokenStatusPrefix() []byte {
 	return portalRequestPTokenStatusPrefix
 }
 
-func PortalRequestPTokenStatusPrefixV4() []byte {
-	return portalRequestPTokenStatusPrefixV4
-}
-
 func PortalRedeemRequestStatusPrefix() []byte {
 	return portalRedeemRequestStatusPrefix
 }
@@ -488,6 +486,11 @@ func PortalReqMatchingRedeemStatusByTxReqIDPrefix() []byte {
 
 func PortalUnlockOverRateCollateralsRequestStatusPrefix() []byte {
 	return portalUnlockOverRateCollateralsRequestStatusPrefix
+}
+
+// Portal v4
+func PortalRequestPTokenStatusPrefixV4() []byte {
+	return portalRequestPTokenStatusPrefixV4
 }
 
 var _ = func() (_ struct{}) {

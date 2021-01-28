@@ -1690,3 +1690,15 @@ func (stateDB *StateDB) getPortalConfirmProofState(key common.Hash) (*PortalConf
 	}
 	return NewPortalConfirmProofState(), false, nil
 }
+
+// ================================= Portal V4 OBJECT =======================================
+func (stateDB *StateDB) getShieldingRequestsByKey(key common.Hash) (*ShieldingRequestsState, bool, error) {
+	shieldingRequestsState, err := stateDB.getStateObject(PortalShieldingRequestsStateObjectType, key)
+	if err != nil {
+		return nil, false, err
+	}
+	if shieldingRequestsState != nil {
+		return shieldingRequestsState.GetValue().(*ShieldingRequestsState), true, nil
+	}
+	return NewShieldingRequestsState(), false, nil
+}

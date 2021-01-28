@@ -3,6 +3,7 @@ package statedb
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/incognitochain/incognito-chain/common"
 )
 
@@ -590,6 +591,22 @@ func IsPortingRequestIdExist(stateDB *StateDB, statusSuffix []byte) (bool, error
 	}
 
 	return true, nil
+}
+
+func IsShieldingExternalTxHashExists(stateDB *StateDB, tokenID string, externalTxHash string) (bool, error) {
+	key := GenerateShieldingRequestsStateObjectKey(tokenID)
+	shieldingRequestsState, has, err := stateDB.getShieldingRequestsByKey(key)
+
+	if err != nil {
+		return false, NewStatedbError(GetPortalRequestPTokenStatusV4Error, err)
+	}
+
+	if !has {
+		return false, nil
+	}
+
+	_, found := shieldingRequestsState.requests[externalTxHash]
+	return found, nil
 }
 
 //====================== Waiting Porting  ======================

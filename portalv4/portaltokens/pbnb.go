@@ -2,6 +2,7 @@ package portaltokens
 
 import (
 	"fmt"
+
 	"github.com/binance-chain/go-sdk/types/msg"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/relaying/bnb"
@@ -124,8 +125,8 @@ func (p PortalBNBTokenProcessor) ParseAndVerifyProof(
 	return true, nil
 }
 
-func (p PortalBNBTokenProcessor) GetExpectedMemoForPorting(portingID string) string {
-	return p.PortalToken.GetExpectedMemoForPorting(portingID)
+func (p PortalBNBTokenProcessor) GetExpectedMemoForShielding(portingID string) string {
+	return p.PortalToken.GetExpectedMemoForShielding(portingID)
 }
 
 func (p PortalBNBTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custodianAddress string) string {
@@ -138,6 +139,6 @@ func ConvertIncPBNBAmountToExternalBNBAmount(incPBNBAmount int64) int64 {
 }
 
 // TODO:
-func (p PortalBNBTokenProcessor) CreateRawExternalTx() (error) {
+func (p PortalBNBTokenProcessor) CreateRawExternalTx() error {
 	return nil
 }

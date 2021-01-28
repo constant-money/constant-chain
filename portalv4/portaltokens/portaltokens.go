@@ -15,10 +15,11 @@ type PortalTokenProcessor interface {
 	GetChainID() string
 	GetMinTokenAmount() uint64
 
-	GetExpectedMemoForPorting(incAddress string) string
+	GetExpectedMemoForShielding(incAddress string) string
 	GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string
 	ParseAndVerifyProof(
 		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error)
+	GetExternalTxHashFromProof(proof string) (string, error)
 	ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unshieldIDs []string, waitingUnshieldState *statedb.WaitingUnshield) []*BroadcastTx
 
 	CreateRawExternalTx() error
@@ -28,7 +29,7 @@ type PortalTokenProcessor interface {
 // such as satoshi in BTC
 type PortalToken struct {
 	ChainID        string
-	MinTokenAmount uint64 // minimum amount for porting/redeem
+	MinTokenAmount uint64 // minimum amount for shielding/redeem
 }
 
 type BroadcastTx struct {
@@ -36,15 +37,15 @@ type BroadcastTx struct {
 	UnshieldIDs []string
 }
 
-func (p PortalToken) GetExpectedMemoForPorting(incAddress string) string {
-	type portingMemoStruct struct {
+func (p PortalToken) GetExpectedMemoForShielding(incAddress string) string {
+	type shieldingMemoStruct struct {
 		IncAddress string `json:"ShieldingIncAddress"`
 	}
-	memoPorting := portingMemoStruct{IncAddress: incAddress}
-	memoPortingBytes, _ := json.Marshal(memoPorting)
-	memoPortingHashBytes := common.HashB(memoPortingBytes)
-	memoPortingStr := base64.StdEncoding.EncodeToString(memoPortingHashBytes)
-	return memoPortingStr
+	memoShielding := shieldingMemoStruct{IncAddress: incAddress}
+	memoShieldingBytes, _ := json.Marshal(memoShielding)
+	memoShieldingHashBytes := common.HashB(memoShieldingBytes)
+	memoShieldingStr := base64.StdEncoding.EncodeToString(memoShieldingHashBytes)
+	return memoShieldingStr
 }
 
 func (p PortalToken) GetExpectedMemoForRedeem(redeemID string, custodianAddress string) string {

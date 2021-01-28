@@ -56,6 +56,7 @@ const (
 	PortalWaitingUnshieldObjectType
 	PortalUnshieldProcessedObjectType
 	PortalMultisigWalletObjectType
+	PortalShieldingRequestsStateObjectType
 )
 
 // Prefix length
