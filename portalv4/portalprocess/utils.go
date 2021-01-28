@@ -47,3 +47,20 @@ func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalV4State *Curr
 	currentPortalV4State.WalletsState[tokenID].SetWallets(wallets)
 	return nil
 }
+
+func UpdatePortalStateAfterUnshieldRequest(
+	currentPortalV4State *CurrentPortalV4State,
+	unshieldID string, tokenID string, remoteAddress string, unshieldAmt uint64) {
+	if currentPortalV4State.WaitingUnshieldRequests == nil {
+		currentPortalV4State.WaitingUnshieldRequests = map[string]*statedb.WaitingUnshield{}
+	}
+
+	if currentPortalV4State.WaitingUnshieldRequests[tokenID] == nil {
+		currentPortalV4State.WaitingUnshieldRequests[tokenID] = statedb.NewWaitingUnshieldState()
+	}
+
+	currentPortalV4State.WaitingUnshieldRequests[tokenID].SetUnshield(
+		statedb.GenerateWaitingWaitingUnshieldObjectKey(unshieldID).String(),
+		statedb.NewUnshieldRequestDetailWithValue(remoteAddress, unshieldAmt),
+	)
+}

@@ -97,6 +97,9 @@ var (
 	portalExternalTxPrefix      = []byte("portalexttx-")
 	portalConfirmProofPrefix    = []byte("portalproof-")
 	withdrawCollateralProofType = []byte("0-")
+
+	// portal v4
+	portalUnshieldRequestStatusPrefix              = []byte("unshieldrequest-")
 )
 
 func GetCommitteePrefixWithRole(role int, shardID int) []byte {
@@ -488,6 +491,11 @@ func PortalReqMatchingRedeemStatusByTxReqIDPrefix() []byte {
 
 func PortalUnlockOverRateCollateralsRequestStatusPrefix() []byte {
 	return portalUnlockOverRateCollateralsRequestStatusPrefix
+}
+
+// Portal v4
+func PortalUnshieldRequestStatusPrefix() []byte {
+	return portalUnshieldRequestStatusPrefix
 }
 
 var _ = func() (_ struct{}) {
