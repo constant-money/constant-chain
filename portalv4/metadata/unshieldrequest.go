@@ -14,61 +14,56 @@ import (
 	"strconv"
 )
 
-type PortalBurnPToken struct {
+type PortalUnshieldRequest struct {
 	basemeta.MetadataBase
-	IncAddressStr        string
-	RemoteAddress        string
-	TokenID              string
-	BurnAmount           uint64
-	MinAcceptPubTokenAmt uint64
+	IncAddressStr  string
+	RemoteAddress  string
+	TokenID        string
+	UnshieldAmount uint64
 }
 
-type PortalBurnPTokenAction struct {
-	Meta    PortalBurnPToken
+type PortalUnshieldRequestAction struct {
+	Meta    PortalUnshieldRequest
 	TxReqID common.Hash
 	ShardID byte
 }
 
-type PortalBurnPTokenContent struct {
-	IncAddressStr          string
-	RemoteAddress          string
-	TokenID                string
-	BurnAmount             uint64
-	MinReceivedPubTokenAmt uint64
-	TxReqID                common.Hash
-	ShardID                byte
+type PortalUnshieldRequestContent struct {
+	IncAddressStr  string
+	RemoteAddress  string
+	TokenID        string
+	UnshieldAmount uint64
+	TxReqID        common.Hash
+	ShardID        byte
 }
 
-type PortalBurnPTokenRequestStatus struct {
-	IncAddressStr          string
-	RemoteAddress          string
-	TokenID                string
-	BurnAmount             uint64
-	MinReceivedPubTokenAmt uint64
-	TxHash                 string
-	Status                 int
+type PortalUnshieldRequestStatus struct {
+	IncAddressStr  string
+	RemoteAddress  string
+	TokenID        string
+	UnshieldAmount uint64
+	TxHash         string
+	Status         int
 }
 
-func NewPortalBurnPTokenRequestStatus(incAddressStr, tokenID, remoteAddress string, burnAmount uint64, minAmt uint64, status int) *PortalBurnPTokenRequestStatus {
-	return &PortalBurnPTokenRequestStatus{
+func NewPortalUnshieldRequestStatus(incAddressStr, tokenID, remoteAddress string, burnAmount uint64, status int) *PortalUnshieldRequestStatus {
+	return &PortalUnshieldRequestStatus{
 		IncAddressStr:          incAddressStr,
-		BurnAmount:             burnAmount,
+		UnshieldAmount:         burnAmount,
 		Status:                 status,
 		TokenID:                tokenID,
 		RemoteAddress:          remoteAddress,
-		MinReceivedPubTokenAmt: minAmt,
 	}
 }
 
-func NewPortalBurnPToken(metaType int, incAddressStr, tokenID, remoteAddress string, burnAmount uint64, minAmt uint64) (*PortalBurnPToken, error) {
+func NewPortalUnshieldRequest(metaType int, incAddressStr, tokenID, remoteAddress string, burnAmount uint64) (*PortalUnshieldRequest, error) {
 	metadataBase := basemeta.MetadataBase{
 		Type: metaType,
 	}
 
-	portalBurnPTokenReq := &PortalBurnPToken{
+	portalBurnPTokenReq := &PortalUnshieldRequest{
 		IncAddressStr:        incAddressStr,
-		BurnAmount:           burnAmount,
-		MinAcceptPubTokenAmt: minAmt,
+		UnshieldAmount:       burnAmount,
 		RemoteAddress:        remoteAddress,
 		TokenID:              tokenID,
 	}
@@ -78,7 +73,7 @@ func NewPortalBurnPToken(metaType int, incAddressStr, tokenID, remoteAddress str
 	return portalBurnPTokenReq, nil
 }
 
-func (burnReq PortalBurnPToken) ValidateTxWithBlockChain(
+func (burnReq PortalUnshieldRequest) ValidateTxWithBlockChain(
 	txr basemeta.Transaction,
 	chainRetriever basemeta.ChainRetriever,
 	shardViewRetriever basemeta.ShardViewRetriever,
@@ -89,7 +84,7 @@ func (burnReq PortalBurnPToken) ValidateTxWithBlockChain(
 	return true, nil
 }
 
-func (burnReq PortalBurnPToken) ValidateSanityData(chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, beaconHeight uint64, tx basemeta.Transaction) (bool, bool, error) {
+func (burnReq PortalUnshieldRequest) ValidateSanityData(chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, beaconHeight uint64, tx basemeta.Transaction) (bool, bool, error) {
 	// Note: the metadata was already verified with *transaction.TxCustomToken level so no need to verify with *transaction.Tx level again as *transaction.Tx is embedding property of *transaction.TxCustomToken
 	if tx.GetType() == common.TxCustomTokenPrivacyType && reflect.TypeOf(tx).String() == "*transaction.Tx" {
 		return true, true, nil
@@ -122,12 +117,12 @@ func (burnReq PortalBurnPToken) ValidateSanityData(chainRetriever basemeta.Chain
 	if err != nil {
 		return false, false, fmt.Errorf("Error get min portal token amount: %v", err)
 	}
-	if burnReq.BurnAmount < minAmount {
+	if burnReq.UnshieldAmount < minAmount {
 		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("burning amount should be larger or equal to %v", minAmount))
 	}
 
 	// validate value transfer of tx for redeem amount in ptoken
-	if burnReq.BurnAmount != tx.CalculateTxValue() {
+	if burnReq.UnshieldAmount != tx.CalculateTxValue() {
 		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("burning amount should be equal to the tx value"))
 	}
 
@@ -149,24 +144,18 @@ func (burnReq PortalBurnPToken) ValidateSanityData(chainRetriever basemeta.Chain
 		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("Remote address %v is not a valid address of tokenID %v - Error %v", burnReq.RemoteAddress, burnReq.TokenID, err))
 	}
 
-	// validate MinAcceptPubTokenAmt
-	if burnReq.MinAcceptPubTokenAmt == 0 {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("MinAcceptPubTokenAmt should be greater than zero"))
-	}
-
 	return true, true, nil
 }
 
-func (burnReq PortalBurnPToken) ValidateMetadataByItself() bool {
+func (burnReq PortalUnshieldRequest) ValidateMetadataByItself() bool {
 	return burnReq.Type == basemeta.PortalBurnPTokenMeta
 }
 
-func (burnReq PortalBurnPToken) Hash() *common.Hash {
+func (burnReq PortalUnshieldRequest) Hash() *common.Hash {
 	record := burnReq.MetadataBase.Hash().String()
 	record += burnReq.IncAddressStr
 	record += burnReq.RemoteAddress
-	record += strconv.FormatUint(burnReq.BurnAmount, 10)
-	record += strconv.FormatUint(burnReq.MinAcceptPubTokenAmt, 10)
+	record += strconv.FormatUint(burnReq.UnshieldAmount, 10)
 	record += burnReq.TokenID
 
 	// final hash
@@ -174,8 +163,8 @@ func (burnReq PortalBurnPToken) Hash() *common.Hash {
 	return &hash
 }
 
-func (burnReq *PortalBurnPToken) BuildReqActions(tx basemeta.Transaction, chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, shardID byte, shardHeight uint64) ([][]string, error) {
-	actionContent := PortalBurnPTokenAction{
+func (burnReq *PortalUnshieldRequest) BuildReqActions(tx basemeta.Transaction, chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, shardID byte, shardHeight uint64) ([][]string, error) {
+	actionContent := PortalUnshieldRequestAction{
 		Meta:    *burnReq,
 		TxReqID: *tx.Hash(),
 		ShardID: shardID,
@@ -189,6 +178,6 @@ func (burnReq *PortalBurnPToken) BuildReqActions(tx basemeta.Transaction, chainR
 	return [][]string{action}, nil
 }
 
-func (burnReq *PortalBurnPToken) CalculateSize() uint64 {
+func (burnReq *PortalUnshieldRequest) CalculateSize() uint64 {
 	return basemeta.CalculateSize(burnReq)
 }

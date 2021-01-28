@@ -23,7 +23,7 @@ func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 	var md basemeta.Metadata
 	switch int(mtTemp["Type"].(float64)) {
 	case basemeta.PortalBurnPTokenMeta:
-		md = &PortalBurnPToken{}
+		md = &PortalUnshieldRequest{}
 	default:
 		Logger.log.Debug("[db] parse meta err: %+v\n", meta)
 		return nil, errors.Errorf("Could not parse metadata with type: %d", int(mtTemp["Type"].(float64)))

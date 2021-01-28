@@ -44,7 +44,7 @@ type PortalV4Manager struct {
 
 func NewPortalV4Manager() *PortalV4Manager {
 	portalInstProcessor := map[int]portalInstructionProcessor{
-		bMeta.PortalBurnPTokenMeta: &portalBurnPTokenRequestProcessor{
+		bMeta.PortalBurnPTokenMeta: &portalUnshieldRequestProcessor{
 			portalInstProcessor: &portalInstProcessor{
 				actions: map[byte][][]string{},
 			},

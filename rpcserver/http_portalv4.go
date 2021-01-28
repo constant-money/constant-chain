@@ -37,12 +37,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithPortalBurnPToken(params inter
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("PortalTokenID is invalid"))
 	}
 
-	burnAmount, err := common.AssertAndConvertStrToNumber(tokenParamsRaw["BurnAmount"])
-	if err != nil {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
-	}
-
-	minAcceptAmount, err := common.AssertAndConvertStrToNumber(tokenParamsRaw["MinAcceptAmount"])
+	unshieldAmount, err := common.AssertAndConvertStrToNumber(tokenParamsRaw["UnshieldAmount"])
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
 	}
@@ -57,8 +52,8 @@ func (httpServer *HttpServer) handleCreateRawTxWithPortalBurnPToken(params inter
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("RemoteAddress is invalid"))
 	}
 
-	meta, err := pMetaV4.NewPortalBurnPToken(basemeta.PortalBurnPTokenMeta,
-		incAddressStr, portalTokenID, remoteAddress, burnAmount, minAcceptAmount)
+	meta, err := pMetaV4.NewPortalUnshieldRequest(basemeta.PortalBurnPTokenMeta,
+		incAddressStr, portalTokenID, remoteAddress, unshieldAmount)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
 	}
