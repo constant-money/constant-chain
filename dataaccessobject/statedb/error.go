@@ -198,6 +198,9 @@ const (
 
 	// portal v4
 	GetPortalRequestPTokenStatusV4Error
+	StorePortalListWaitingUnshieldRequestError
+	GetPortalUnshieldRequestStatusError
+	StorePortalUnshieldRequestStatusError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -341,6 +344,12 @@ var ErrCodeMessage = map[int]struct {
 	GetAllRewardFeatureError:             {-15002, "Get all reward feature state error"},
 	GetRewardFeatureAmountByTokenIDError: {-15004, "Get reward feature amount by tokenID error"},
 	InvalidStakerInfoTypeError:           {-15005, "Staker info invalid"},
+
+	// Portal v4
+	StorePortalListWaitingUnshieldRequestError: {-15006, "Store portal list waiting unshield request error"},
+	GetPortalRequestPTokenStatusV4Error:        {-15007, "Get portal shielding request status error"},
+	GetPortalUnshieldRequestStatusError:        {-15008, "Get portal unshielding request status error"},
+	StorePortalUnshieldRequestStatusError:      {-15009, "Store portal unshielding request status error"},
 }
 
 type StatedbError struct {

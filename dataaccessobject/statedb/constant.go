@@ -54,7 +54,7 @@ const (
 
 	// Portal v4
 	PortalWaitingUnshieldObjectType
-	PortalUnshieldProcessedObjectType
+	PortalProcessedUnshieldRequestBatchObjectType
 	PortalMultisigWalletObjectType
 	PortalShieldingRequestsStateObjectType
 )

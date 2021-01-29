@@ -91,8 +91,8 @@ func newStateObjectWithValue(db *StateDB, objectType int, hash common.Hash, valu
 		return newUnlockOverRateCollateralsStateObjectWithValue(db, hash, value)
 	case StakerObjectType:
 		return newStakerObjectWithValue(db, hash, value)
-	case PortalUnshieldProcessedObjectType:
-		return newProcessUnshieldObjectWithValue(db, hash, value)
+	case PortalProcessedUnshieldRequestBatchObjectType:
+		return newProcessUnshieldRequestBatchObjectWithValue(db, hash, value)
 	case PortalWaitingUnshieldObjectType:
 		return newWaitingPortingRequestObjectWithValue(db, hash, value)
 	case PortalMultisigWalletObjectType:
@@ -168,8 +168,8 @@ func newStateObject(db *StateDB, objectType int, hash common.Hash) StateObject {
 		return newUnlockOverRateCollateralsStateObject(db, hash)
 	case StakerObjectType:
 		return newStakerObject(db, hash)
-	case PortalUnshieldProcessedObjectType:
-		return newProcessUnshieldObject(db, hash)
+	case PortalProcessedUnshieldRequestBatchObjectType:
+		return newProcessUnshieldRequestBatchObject(db, hash)
 	case PortalWaitingUnshieldObjectType:
 		return newWaitingUnshieldObject(db, hash)
 	case PortalMultisigWalletObjectType:

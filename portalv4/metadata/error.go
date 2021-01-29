@@ -8,7 +8,7 @@ import (
 const (
 	UnexpectedError = iota
 
-	PortalBurnPTokenMetaError
+	PortalUnshieldRequestMetaError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -17,7 +17,7 @@ var ErrCodeMessage = map[int]struct {
 }{
 	UnexpectedError: {-17000, "Unexpected error"},
 
-	PortalBurnPTokenMetaError: {-17001, "Portal burn ptoken metadata error"},
+	PortalUnshieldRequestMetaError: {-17001, "Portal unshield request metadata error"},
 }
 
 type PortalV4MetadataError struct {

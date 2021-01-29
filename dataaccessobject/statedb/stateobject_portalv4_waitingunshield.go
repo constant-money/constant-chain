@@ -8,74 +8,56 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 )
 
-type Unshield struct {
+type WaitingUnshieldRequest struct {
+	unshieldID string
 	remoteAddress string
 	amount        uint64
+	beaconHeight uint64
 }
 
-type WaitingUnshield struct {
-	unshields map[string]*Unshield // txid : Unshield struct
-}
-
-func (rq *WaitingUnshield) GetUnshield(unshiedID string) *Unshield {
-	return rq.unshields[unshiedID]
-}
-
-func (rq *WaitingUnshield) GetUnshields() map[string]*Unshield {
-	return rq.unshields
-}
-
-func (rq *WaitingUnshield) SetUnshield(unshiedID string, unshield *Unshield) {
-	rq.unshields[unshiedID] = unshield
-}
-
-func (rq WaitingUnshield) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(struct {
-		Unshields map[string]*Unshield
-	}{
-		Unshields: rq.unshields,
-	})
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
-}
-
-func (rq *WaitingUnshield) UnmarshalJSON(data []byte) error {
-	temp := struct {
-		Unshields map[string]*Unshield
-	}{}
-	err := json.Unmarshal(data, &temp)
-	if err != nil {
-		return err
-	}
-	rq.unshields = temp.Unshields
-	return nil
-}
-
-func (us *Unshield) GetRemoteAddress() string {
+func (us *WaitingUnshieldRequest) GetRemoteAddress() string {
 	return us.remoteAddress
 }
 
-func (us *Unshield) GetAmount() uint64 {
-	return us.amount
-}
-
-func (us *Unshield) SetRemoteAddress(remoteAddress string) {
+func (us *WaitingUnshieldRequest) SetRemoteAddress(remoteAddress string) {
 	us.remoteAddress = remoteAddress
 }
 
-func (us *Unshield) SetAmount(amount uint64) {
+func (us *WaitingUnshieldRequest) GetAmount() uint64 {
+	return us.amount
+}
+
+func (us *WaitingUnshieldRequest) SetAmount(amount uint64) {
 	us.amount = amount
 }
 
-func (us Unshield) MarshalJSON() ([]byte, error) {
+func (us *WaitingUnshieldRequest) GetUnshieldID() string {
+	return us.unshieldID
+}
+
+func (us *WaitingUnshieldRequest) SetUnshieldID(unshieldID string) {
+	us.unshieldID = unshieldID
+}
+
+func (us *WaitingUnshieldRequest) GetBeaconHeight() uint64 {
+	return us.beaconHeight
+}
+
+func (us *WaitingUnshieldRequest) SetBeaconHeight(beaconHeight uint64) {
+	us.beaconHeight = beaconHeight
+}
+
+func (us WaitingUnshieldRequest) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
 		RemoteAddress string
 		Amount        uint64
+		UnshieldID string
+		BeaconHeight uint64
 	}{
 		RemoteAddress: us.remoteAddress,
 		Amount:        us.amount,
+		UnshieldID: us.unshieldID,
+		BeaconHeight : us.beaconHeight,
 	})
 	if err != nil {
 		return []byte{}, err
@@ -83,10 +65,12 @@ func (us Unshield) MarshalJSON() ([]byte, error) {
 	return data, nil
 }
 
-func (us *Unshield) UnmarshalJSON(data []byte) error {
+func (us *WaitingUnshieldRequest) UnmarshalJSON(data []byte) error {
 	temp := struct {
 		RemoteAddress string
 		Amount        uint64
+		UnshieldID string
+		BeaconHeight uint64
 	}{}
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
@@ -97,31 +81,21 @@ func (us *Unshield) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func NewWaitingUnshieldState() *WaitingUnshield {
-	return &WaitingUnshield{
-		unshields: map[string]*Unshield{},
-	}
-}
-
-func NewWaitingUnshieldStateWithValue(
-	unshieldsInput map[string]*Unshield,
-) *WaitingUnshield {
-	return &WaitingUnshield{
-		unshields: unshieldsInput,
-	}
-}
-
-func NewUnshieldRequestDetailWithValue(
+func NewWaitingUnshieldRequestStateWithValue(
 	remoteAddress string,
-	amount uint64) *Unshield {
-	return &Unshield{
+	amount uint64,
+	unshieldID string,
+	beaconHeight uint64) *WaitingUnshieldRequest {
+	return &WaitingUnshieldRequest{
 		remoteAddress: remoteAddress,
 		amount:        amount,
+		unshieldID: unshieldID,
+		beaconHeight: beaconHeight,
 	}
 }
 
-func NewUnshield() *Unshield {
-	return &Unshield{}
+func NewWaitingUnshieldRequestState() *WaitingUnshieldRequest {
+	return &WaitingUnshieldRequest{}
 }
 
 type WaitingUnshieldObject struct {
@@ -130,8 +104,8 @@ type WaitingUnshieldObject struct {
 	trie Trie // storage trie, which becomes non-nil on first access
 
 	version                    int
-	waitingWaitingUnshieldHash common.Hash
-	waitingWaitingUnshield     *WaitingUnshield
+	waitingUnshieldRequestHash common.Hash
+	waitingUnshieldRequest     *WaitingUnshieldRequest
 	objectType                 int
 	deleted                    bool
 
@@ -147,15 +121,15 @@ func newWaitingUnshieldObject(db *StateDB, hash common.Hash) *WaitingUnshieldObj
 	return &WaitingUnshieldObject{
 		version:                    defaultVersion,
 		db:                         db,
-		waitingWaitingUnshieldHash: hash,
-		waitingWaitingUnshield:     NewWaitingUnshieldState(),
+		waitingUnshieldRequestHash: hash,
+		waitingUnshieldRequest:     NewWaitingUnshieldRequestState(),
 		objectType:                 PortalWaitingUnshieldObjectType,
 		deleted:                    false,
 	}
 }
 
 func newWaitingUnshieldObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*WaitingUnshieldObject, error) {
-	var content = NewWaitingUnshieldState()
+	var content = NewWaitingUnshieldRequestState()
 	var ok bool
 	var dataBytes []byte
 	if dataBytes, ok = data.([]byte); ok {
@@ -164,30 +138,24 @@ func newWaitingUnshieldObjectWithValue(db *StateDB, key common.Hash, data interf
 			return nil, err
 		}
 	} else {
-		content, ok = data.(*WaitingUnshield)
+		content, ok = data.(*WaitingUnshieldRequest)
 		if !ok {
 			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidUnshieldRequestType, reflect.TypeOf(data))
 		}
 	}
 	return &WaitingUnshieldObject{
 		version:                    defaultVersion,
-		waitingWaitingUnshieldHash: key,
-		waitingWaitingUnshield:     content,
+		waitingUnshieldRequestHash: key,
+		waitingUnshieldRequest:     content,
 		db:                         db,
 		objectType:                 PortalWaitingUnshieldObjectType,
 		deleted:                    false,
 	}, nil
 }
 
-func GenerateWaitingWaitingUnshieldObjectKey(redeemID string) common.Hash {
-	prefixHash := GetWaitingUnshieldRequestPrefix()
-	valueHash := common.HashH([]byte(redeemID))
-	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
-}
-
-func GenerateMatchedWaitingUnshieldObjectKey(redeemID string) common.Hash {
-	prefixHash := GetWaitingUnshieldRequestPrefix()
-	valueHash := common.HashH([]byte(redeemID))
+func GenerateWaitingUnshieldRequestObjectKey(tokenID string, unshieldID string) common.Hash {
+	prefixHash := GetWaitingUnshieldRequestPrefix(tokenID)
+	valueHash := common.HashH([]byte(unshieldID))
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
 }
 
@@ -207,20 +175,20 @@ func (t WaitingUnshieldObject) GetTrie(db DatabaseAccessWarper) Trie {
 }
 
 func (t *WaitingUnshieldObject) SetValue(data interface{}) error {
-	WaitingUnshield, ok := data.(*WaitingUnshield)
+	WaitingUnshield, ok := data.(*WaitingUnshieldRequest)
 	if !ok {
 		return fmt.Errorf("%+v, got type %+v", ErrInvalidUnshieldRequestType, reflect.TypeOf(data))
 	}
-	t.waitingWaitingUnshield = WaitingUnshield
+	t.waitingUnshieldRequest = WaitingUnshield
 	return nil
 }
 
 func (t WaitingUnshieldObject) GetValue() interface{} {
-	return t.waitingWaitingUnshield
+	return t.waitingUnshieldRequest
 }
 
 func (t WaitingUnshieldObject) GetValueBytes() []byte {
-	WaitingUnshield, ok := t.GetValue().(*WaitingUnshield)
+	WaitingUnshield, ok := t.GetValue().(*WaitingUnshieldRequest)
 	if !ok {
 		panic("wrong expected value type")
 	}
@@ -232,7 +200,7 @@ func (t WaitingUnshieldObject) GetValueBytes() []byte {
 }
 
 func (t WaitingUnshieldObject) GetHash() common.Hash {
-	return t.waitingWaitingUnshieldHash
+	return t.waitingUnshieldRequestHash
 }
 
 func (t WaitingUnshieldObject) GetType() int {
@@ -246,7 +214,7 @@ func (t *WaitingUnshieldObject) MarkDelete() {
 
 // reset all shard committee value into default value
 func (t *WaitingUnshieldObject) Reset() bool {
-	t.waitingWaitingUnshield = NewWaitingUnshieldState()
+	t.waitingUnshieldRequest = NewWaitingUnshieldRequestState()
 	return true
 }
 
@@ -256,6 +224,6 @@ func (t WaitingUnshieldObject) IsDeleted() bool {
 
 // value is either default or nil
 func (t WaitingUnshieldObject) IsEmpty() bool {
-	temp := NewWaitingUnshieldState()
-	return reflect.DeepEqual(temp, t.waitingWaitingUnshield) || t.waitingWaitingUnshield == nil
+	temp := NewWaitingUnshieldRequestState()
+	return reflect.DeepEqual(temp, t.waitingUnshieldRequest) || t.waitingUnshieldRequest == nil
 }

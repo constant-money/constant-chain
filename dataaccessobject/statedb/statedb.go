@@ -1702,3 +1702,23 @@ func (stateDB *StateDB) getShieldingRequestsByKey(key common.Hash) (*ShieldingRe
 	}
 	return NewShieldingRequestsState(), false, nil
 }
+
+func (stateDB *StateDB) getListWaitingUnshieldRequestsByTokenID(tokenID string) map[string]*WaitingUnshieldRequest {
+	waitingUnshieldRequests := make(map[string]*WaitingUnshieldRequest)
+	temp := stateDB.trie.NodeIterator(GetWaitingUnshieldRequestPrefix(tokenID))
+	it := trie.NewIterator(temp)
+	for it.Next() {
+		key := it.Key
+		keyHash, _ := common.Hash{}.NewHash(key)
+		value := it.Value
+		newValue := make([]byte, len(value))
+		copy(newValue, value)
+		wr := NewWaitingUnshieldRequestState()
+		err := json.Unmarshal(newValue, wr)
+		if err != nil {
+			panic("wrong expect type")
+		}
+		waitingUnshieldRequests[keyHash.String()] = wr
+	}
+	return waitingUnshieldRequests
+}

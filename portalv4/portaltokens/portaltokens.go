@@ -20,7 +20,7 @@ type PortalTokenProcessor interface {
 	ParseAndVerifyProof(
 		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error)
 	GetExternalTxHashFromProof(proof string) (string, error)
-	ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unshieldIDs []string, waitingUnshieldState *statedb.WaitingUnshield) []*BroadcastTx
+	ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldState map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
 	CreateRawExternalTx() error
 }
@@ -73,8 +73,8 @@ func (p PortalToken) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool
 }
 
 // Choose list of pairs (UTXOs and unshield IDs) for broadcast external transactions
-func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unshieldIDs []string, waitingUnshieldState *statedb.WaitingUnshield) []*BroadcastTx {
-	if len(utxos) == 0 || len(unshieldIDs) == 0 {
+func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
+	if len(utxos) == 0 || len(waitingUnshieldReqs) == 0 {
 		return []*BroadcastTx{}
 	}
 
@@ -83,20 +83,40 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 		return utxos[i].GetOutputAmount() > utxos[j].GetOutputAmount()
 	})
 
+	// ascending sort waitingUnshieldReqs by beaconHeight
+	type unshieldItem struct {
+		key string
+		value *statedb.WaitingUnshieldRequest
+	}
+
+	wReqsArr := []unshieldItem{}
+	for k, req := range waitingUnshieldReqs {
+		wReqsArr = append(
+			wReqsArr,
+			unshieldItem{
+				key:   k,
+				value: req,
+			})
+	}
+
+	sort.SliceStable(wReqsArr, func(i, j int) bool {
+		return wReqsArr[i].value.GetBeaconHeight() < wReqsArr[j].value.GetBeaconHeight()
+	})
+
 	broadcastTxs := []*BroadcastTx{}
 	utxo_idx := 0
 	unshield_idx := 0
-	for utxo_idx < len(utxos) && unshield_idx < len(unshieldIDs) {
+	for utxo_idx < len(utxos) && unshield_idx < len(wReqsArr) {
 		chosenUTXOs := []*statedb.UTXO{}
 		chosenUnshieldIDs := []string{}
 
 		cur_sum_amount := uint64(0)
 		cnt := 0
-		if utxos[utxo_idx].GetOutputAmount() >= waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() {
+		if utxos[utxo_idx].GetOutputAmount() >= wReqsArr[unshield_idx].value.GetAmount() {
 			// find the last unshield idx that the cummulative sum of unshield amount <= current utxo amount
-			for unshield_idx < len(unshieldIDs) && cur_sum_amount+waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() <= utxos[utxo_idx].GetOutputAmount() && p.IsAcceptableTxSize(1, cnt+1) {
-				cur_sum_amount += waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount()
-				chosenUnshieldIDs = append(chosenUnshieldIDs, unshieldIDs[unshield_idx])
+			for unshield_idx < len(wReqsArr) && cur_sum_amount+wReqsArr[unshield_idx].value.GetAmount() <= utxos[utxo_idx].GetOutputAmount() && p.IsAcceptableTxSize(1, cnt+1) {
+				cur_sum_amount += wReqsArr[unshield_idx].value.GetAmount()
+				chosenUnshieldIDs = append(chosenUnshieldIDs, wReqsArr[unshield_idx].value.GetUnshieldID())
 				unshield_idx += 1
 				cnt += 1
 			}
@@ -104,7 +124,7 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 			utxo_idx += 1
 		} else {
 			// find the first utxo idx that the cummulative sum of utxo amount >= current unshield amount
-			for utxo_idx < len(utxos) && cur_sum_amount+utxos[utxo_idx].GetOutputAmount() < waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() {
+			for utxo_idx < len(utxos) && cur_sum_amount+utxos[utxo_idx].GetOutputAmount() < wReqsArr[unshield_idx].value.GetAmount() {
 				cur_sum_amount += utxos[utxo_idx].GetOutputAmount()
 				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
 				utxo_idx += 1
@@ -121,9 +141,9 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, unsh
 				target := cur_sum_amount
 				cur_sum_amount = 0
 
-				for unshield_idx < len(unshieldIDs) && cur_sum_amount+waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount() <= target && p.IsAcceptableTxSize(cnt, new_cnt+1) {
-					cur_sum_amount += waitingUnshieldState.GetUnshield(unshieldIDs[unshield_idx]).GetAmount()
-					chosenUnshieldIDs = append(chosenUnshieldIDs, unshieldIDs[unshield_idx])
+				for unshield_idx < len(wReqsArr) && cur_sum_amount+wReqsArr[unshield_idx].value.GetAmount() <= target && p.IsAcceptableTxSize(cnt, new_cnt+1) {
+					cur_sum_amount += wReqsArr[unshield_idx].value.GetAmount()
+					chosenUnshieldIDs = append(chosenUnshieldIDs, wReqsArr[unshield_idx].value.GetUnshieldID())
 					unshield_idx += 1
 					new_cnt += 1
 				}

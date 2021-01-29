@@ -89,7 +89,6 @@ func buildUnshieldRequestInst(
 	}
 }
 
-//todo:
 func (p *portalUnshieldRequestProcessor) BuildNewInsts(
 	bc bMeta.ChainRetriever,
 	contentStr string,
@@ -133,31 +132,15 @@ func (p *portalUnshieldRequestProcessor) BuildNewInsts(
 	unshieldID := actionData.TxReqID.String()
 	tokenID := meta.TokenID
 
-	if currentPortalV4State.WaitingUnshieldRequests[tokenID] == nil {
-		currentPortalV4State.WaitingUnshieldRequests[tokenID] = statedb.NewWaitingUnshieldState()
-	}
-	wUnshieldReqsByTokenID := currentPortalV4State.WaitingUnshieldRequests[tokenID].GetUnshields()
-
-	if currentPortalV4State.UnshieldRequestsProcessed[tokenID] == nil {
-		currentPortalV4State.UnshieldRequestsProcessed[tokenID] = statedb.NewProcessUnshieldState()
-	}
-	processedUnshieldReqsByTokenID := currentPortalV4State.UnshieldRequestsProcessed[tokenID].GetUnshields()
-
-
 	// check unshieldID is existed waitingUnshield list or not
-	keyWaitingUnshieldRequestStr := statedb.GenerateWaitingWaitingUnshieldObjectKey(unshieldID).String()
-	waitingUnshieldRequest := wUnshieldReqsByTokenID[keyWaitingUnshieldRequestStr]
-	if waitingUnshieldRequest != nil {
-		Logger.log.Errorf("[Unshield Request] unshieldID is existed in waiting unshield requests list %v\n", unshieldID)
-		return [][]string{rejectInst}, nil
-	}
-
-	// check unshieldID is existed matched process Unshield request list or not
-	keyProcessedUnshieldRequest := statedb.GenerateMatchedProcessUnshieldObjectKey(unshieldID).String()
-	processedUnshieldRequest := processedUnshieldReqsByTokenID[keyProcessedUnshieldRequest]
-	if processedUnshieldRequest != nil {
-		Logger.log.Errorf("[Unshield Request] unshieldID is existed in processed unshield requests list %v\n", unshieldID)
-		return [][]string{rejectInst}, nil
+	wUnshieldReqsByTokenID := currentPortalV4State.WaitingUnshieldRequests[tokenID]
+	if wUnshieldReqsByTokenID != nil {
+		keyWaitingUnshieldRequestStr := statedb.GenerateWaitingUnshieldRequestObjectKey(tokenID, unshieldID).String()
+		waitingUnshieldRequest := wUnshieldReqsByTokenID[keyWaitingUnshieldRequestStr]
+		if waitingUnshieldRequest != nil {
+			Logger.log.Errorf("[Unshield Request] unshieldID is existed in waiting unshield requests list %v\n", unshieldID)
+			return [][]string{rejectInst}, nil
+		}
 	}
 
 	// check unshieldID is existed in db or not
@@ -188,7 +171,7 @@ func (p *portalUnshieldRequestProcessor) BuildNewInsts(
 	)
 
 	// add new waiting unshield request to waiting list
-	UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount)
+	UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount, beaconHeight)
 
 	return [][]string{newInst}, nil
 }
@@ -221,10 +204,10 @@ func (p *portalUnshieldRequestProcessor) ProcessInsts(
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
 		// add new waiting unshield request to waiting list
-		UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount)
+		UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount, beaconHeight)
 
-		// track status of redeem request by redeemID
-		redeemRequestStatus := pv4Meta.PortalUnshieldRequestStatus{
+		// track status of unshield request by unshieldID (txID)
+		unshieldRequestStatus := pv4Meta.PortalUnshieldRequestStatus{
 			IncAddressStr:  actionData.IncAddressStr,
 			RemoteAddress:  actionData.RemoteAddress,
 			TokenID:        actionData.TokenID,
@@ -232,8 +215,8 @@ func (p *portalUnshieldRequestProcessor) ProcessInsts(
 			TxHash:         actionData.TxReqID.String(),
 			Status:         pv4Common.PortalUnshieldReqWaitingStatus,
 		}
-		redeemRequestStatusBytes, _ := json.Marshal(redeemRequestStatus)
-		err := statedb.StorePortalRedeemRequestStatus(
+		redeemRequestStatusBytes, _ := json.Marshal(unshieldRequestStatus)
+		err := statedb.StorePortalUnshieldRequestStatus(
 			stateDB,
 			actionData.TxReqID.String(),
 			redeemRequestStatusBytes)

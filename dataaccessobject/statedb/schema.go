@@ -428,21 +428,6 @@ func GetPortalUnlockOverRateCollateralsPrefix() []byte {
 	return h[:][:prefixHashKeyLength]
 }
 
-func GetWaitingUnshieldRequestPrefix() []byte {
-	h := common.HashH(portalWaitingUnshieldRequestsPrefix)
-	return h[:][:prefixHashKeyLength]
-}
-
-func GetUnshieldRequestProcessedPrefix() []byte {
-	h := common.HashH(portalUnshieldRequestsProcessedPrefix)
-	return h[:][:prefixHashKeyLength]
-}
-
-func GetPortalMultisigWalletsStatePrefix() []byte {
-	h := common.HashH(portalMultisigWalletsStatePrefix)
-	return h[:][:prefixHashKeyLength]
-}
-
 func PortalWithdrawCollateralProofType() []byte {
 	return withdrawCollateralProofType
 }
@@ -491,7 +476,22 @@ func PortalUnlockOverRateCollateralsRequestStatusPrefix() []byte {
 	return portalUnlockOverRateCollateralsRequestStatusPrefix
 }
 
-// Portal v4
+// ================================== Prefix Portal v4 ==================================
+func GetWaitingUnshieldRequestPrefix(tokenID string) []byte {
+	h := common.HashH(append(portalWaitingUnshieldRequestsPrefix, []byte(tokenID)...))
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetProcessedUnshieldRequestBatchPrefix(tokenID string) []byte {
+	h := common.HashH(append(portalUnshieldRequestsProcessedPrefix, []byte(tokenID)...))
+	return h[:][:prefixHashKeyLength]
+}
+
+func GetPortalMultisigWalletsStatePrefix() []byte {
+	h := common.HashH(portalMultisigWalletsStatePrefix)
+	return h[:][:prefixHashKeyLength]
+}
+
 func PortalRequestPTokenStatusPrefixV4() []byte {
 	return portalRequestPTokenStatusPrefixV4
 }

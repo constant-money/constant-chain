@@ -37,6 +37,7 @@ type PortalUnshieldRequestContent struct {
 	ShardID        byte
 }
 
+//TODO: add external tx id and actual external fee charged (if then)
 type PortalUnshieldRequestStatus struct {
 	IncAddressStr  string
 	RemoteAddress  string
@@ -61,16 +62,16 @@ func NewPortalUnshieldRequest(metaType int, incAddressStr, tokenID, remoteAddres
 		Type: metaType,
 	}
 
-	portalBurnPTokenReq := &PortalUnshieldRequest{
+	portalUnshieldReq := &PortalUnshieldRequest{
 		IncAddressStr:        incAddressStr,
 		UnshieldAmount:       burnAmount,
 		RemoteAddress:        remoteAddress,
 		TokenID:              tokenID,
 	}
 
-	portalBurnPTokenReq.MetadataBase = metadataBase
+	portalUnshieldReq.MetadataBase = metadataBase
 
-	return portalBurnPTokenReq, nil
+	return portalUnshieldReq, nil
 }
 
 func (burnReq PortalUnshieldRequest) ValidateTxWithBlockChain(
@@ -93,23 +94,23 @@ func (burnReq PortalUnshieldRequest) ValidateSanityData(chainRetriever basemeta.
 	// validate RedeemerIncAddressStr
 	keyWallet, err := wallet.Base58CheckDeserialize(burnReq.IncAddressStr)
 	if err != nil {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is invalid"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("Requester incognito address is invalid"))
 	}
 	incAddr := keyWallet.KeySet.PaymentAddress
 	if len(incAddr.Pk) == 0 {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is invalid"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("Requester incognito address is invalid"))
 	}
 	if !bytes.Equal(tx.GetSigPubKey()[:], incAddr.Pk[:]) {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Requester incognito address is not signer"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("Requester incognito address is not signer"))
 	}
 
 	// check tx type
 	if tx.GetType() != common.TxCustomTokenPrivacyType {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("tx burn ptoken must be TxCustomTokenPrivacyType"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("tx burn ptoken must be TxCustomTokenPrivacyType"))
 	}
 
 	if !tx.IsCoinsBurning(chainRetriever, shardViewRetriever, beaconViewRetriever, beaconHeight) {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("txprivacytoken in tx burn ptoken must be coin burning tx"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("txprivacytoken in tx burn ptoken must be coin burning tx"))
 	}
 
 	// validate burning amount
@@ -118,30 +119,30 @@ func (burnReq PortalUnshieldRequest) ValidateSanityData(chainRetriever basemeta.
 		return false, false, fmt.Errorf("Error get min portal token amount: %v", err)
 	}
 	if burnReq.UnshieldAmount < minAmount {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("burning amount should be larger or equal to %v", minAmount))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, fmt.Errorf("burning amount should be larger or equal to %v", minAmount))
 	}
 
 	// validate value transfer of tx for redeem amount in ptoken
 	if burnReq.UnshieldAmount != tx.CalculateTxValue() {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("burning amount should be equal to the tx value"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("burning amount should be equal to the tx value"))
 	}
 
 	// validate tokenID
 	if burnReq.TokenID != tx.GetTokenID().String() {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("TokenID in metadata is not matched to tokenID in tx"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("TokenID in metadata is not matched to tokenID in tx"))
 	}
 	// check tokenId is portal token or not
 	if !chainRetriever.IsPortalToken(beaconHeight, burnReq.TokenID) {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("TokenID is not in portal tokens list"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("TokenID is not in portal tokens list"))
 	}
 
 	// validate RemoteAddress
 	if len(burnReq.RemoteAddress) == 0 {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, errors.New("Remote address is invalid"))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, errors.New("Remote address is invalid"))
 	}
 	isValidRemoteAddress, err := chainRetriever.IsValidPortalRemoteAddress(burnReq.TokenID, burnReq.RemoteAddress, beaconHeight)
 	if err != nil || !isValidRemoteAddress {
-		return false, false, NewPortalV4MetadataError(PortalBurnPTokenMetaError, fmt.Errorf("Remote address %v is not a valid address of tokenID %v - Error %v", burnReq.RemoteAddress, burnReq.TokenID, err))
+		return false, false, NewPortalV4MetadataError(PortalUnshieldRequestMetaError, fmt.Errorf("Remote address %v is not a valid address of tokenID %v - Error %v", burnReq.RemoteAddress, burnReq.TokenID, err))
 	}
 
 	return true, true, nil
