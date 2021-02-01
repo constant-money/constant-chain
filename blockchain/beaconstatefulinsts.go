@@ -3,16 +3,17 @@ package blockchain
 import (
 	"encoding/base64"
 	"encoding/json"
-	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
+	"math/big"
+	"sort"
+	"strconv"
+
 	"github.com/incognitochain/incognito-chain/basemeta"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/portal"
 	"github.com/incognitochain/incognito-chain/portal/portalprocess"
 	"github.com/incognitochain/incognito-chain/portalv4"
 	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
-	"math/big"
-	"sort"
-	"strconv"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -44,7 +45,7 @@ var portalStatefulInstTypes = []int{
 	basemeta.PortalRequestPortingMetaV3,
 	basemeta.PortalRedeemRequestMetaV3,
 }
-var statefulInstTypes = []int {
+var statefulInstTypes = []int{
 	basemeta.IssuingRequestMeta,
 	basemeta.IssuingETHRequestMeta,
 	basemeta.PDEContributionMeta,
@@ -55,8 +56,10 @@ var statefulInstTypes = []int {
 	basemeta.PDECrossPoolTradeRequestMeta,
 	basemeta.RelayingBTCHeaderMeta,
 }
+
 // todo: add more portal v4 metadata types to beacon process
 var portalV4StatefulInstTypes = []int{
+	basemeta.PortalShieldingRequestMeta,
 	basemeta.PortalBurnPTokenMeta,
 }
 

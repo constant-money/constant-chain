@@ -13,9 +13,9 @@ import (
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/incognitokey"
+	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/privacy"
 	"github.com/incognitochain/incognito-chain/transaction"
-	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 )
 
 // NewBlockShard Create New block Shard:
@@ -419,6 +419,12 @@ func (blockGenerator *BlockGenerator) buildResponseTxsFromBeaconInstructions(cur
 						newTx, err = curView.buildPortalRefundRedeemLiquidateExchangeRatesTxV3(blockGenerator.chain.GetBeaconBestState(), l[3], producerPrivateKey, shardID)
 					}
 				}
+				//portal v4
+			case basemeta.PortalShieldingRequestMeta:
+				if len(l) >= 4 && l[2] == pCommon.PortalRequestAcceptedChainStatus {
+					newTx, err = curView.buildPortalAcceptedShieldingRequestTx(blockGenerator.chain.GetBeaconBestState(), l[3], producerPrivateKey, shardID)
+				}
+
 			default:
 				continue
 			}

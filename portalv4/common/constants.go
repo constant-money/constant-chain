@@ -13,4 +13,15 @@ const (
 	PortalUnshieldReqWaitingStatus   = 0
 	PortalUnshieldReqProcessedStatus = 1
 	PortalUnshieldReqCompletedStatus = 2
+
+	// status of portal request - used to store db
+	PortalRequestRejectedStatus = 0
+	PortalRequestAcceptedStatus = 1
+
+	// status of portal request - used to append to beacon instructions
+	PortalRequestAcceptedChainStatus = "accepted"
+	PortalRequestRejectedChainStatus = "rejected"
+
+	PortalProducerInstSuccessChainStatus = "success"
+	PortalProducerInstFailedChainStatus  = "failed"
 )

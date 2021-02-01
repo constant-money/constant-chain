@@ -11,7 +11,7 @@ import (
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	pCommon "github.com/incognitochain/incognito-chain/portal/common"
+	pCommon "github.com/incognitochain/incognito-chain/portalv4/common"
 	"github.com/incognitochain/incognito-chain/portalv4/metadata"
 	portalMeta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 )
