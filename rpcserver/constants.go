@@ -217,7 +217,6 @@ const (
 	// portal
 	createAndSendTxWithCustodianDeposit           = "createandsendtxwithcustodiandeposit"
 	createAndSendTxWithReqPToken                  = "createandsendtxwithreqptoken"
-	createAndSendTxWithReqPTokenV4                = "createandsendtxwithreqptokenv4"
 	getPortalState                                = "getportalstate"
 	getPortalCustodianDepositStatus               = "getportalcustodiandepositstatus"
 	createAndSendRegisterPortingPublicTokens      = "createandsendregisterportingpublictokens"
@@ -227,7 +226,6 @@ const (
 	getPortalPortingRequestByPortingId            = "getportalportingrequestbyportingid"
 	convertExchangeRates                          = "convertexchangerates"
 	getPortalReqPTokenStatus                      = "getportalreqptokenstatus"
-	getPortalReqPTokenStatusV4                    = "getportalreqptokenstatusv4"
 	getPortingRequestFees                         = "getportingrequestfees"
 	createAndSendTxWithRedeemReq                  = "createandsendtxwithredeemreq"
 	createAndSendTxWithReqUnlockCollateral        = "createandsendtxwithrequnlockcollateral"
@@ -294,6 +292,8 @@ const (
 	getValKeyState = "getvalkeystate"
 
 	// portal v4
+	createAndSendTxWithShieldingRequest = "createandsendtxshieldingrequest"
+	getPortalShieldingRequestStatus     = "getportalshieldingrequeststatus"
 	createAndSendTxWithPortalBurnPToken = "createandsendtxwithportalburnptoken"
 )
 

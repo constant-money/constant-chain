@@ -9,8 +9,9 @@ import (
 )
 
 type ShieldingRequest struct {
-	incAddress string
-	amount     uint64
+	externalTxHash string
+	incAddress     string
+	amount         uint64
 }
 
 func NewShieldingRequest() *ShieldingRequest {
@@ -18,13 +19,23 @@ func NewShieldingRequest() *ShieldingRequest {
 }
 
 func NewShieldingRequestWithValue(
+	externalTxHash string,
 	incAddress string,
 	amount uint64,
 ) *ShieldingRequest {
 	return &ShieldingRequest{
-		incAddress: incAddress,
-		amount:     amount,
+		externalTxHash: externalTxHash,
+		incAddress:     incAddress,
+		amount:         amount,
 	}
+}
+
+func (pr *ShieldingRequest) GetExternalTxHash() string {
+	return pr.externalTxHash
+}
+
+func (pr *ShieldingRequest) SetExternalTxHash(txHash string) {
+	pr.externalTxHash = txHash
 }
 
 func (pr *ShieldingRequest) GetIncAddress() string {
@@ -45,11 +56,13 @@ func (pr *ShieldingRequest) SetAmount(amount uint64) {
 
 func (pr *ShieldingRequest) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
-		IncAddress string
-		Amount     uint64
+		ExternalTxHash string
+		IncAddress     string
+		Amount         uint64
 	}{
-		IncAddress: pr.incAddress,
-		Amount:     pr.amount,
+		ExternalTxHash: pr.externalTxHash,
+		IncAddress:     pr.incAddress,
+		Amount:         pr.amount,
 	})
 	if err != nil {
 		return []byte{}, err
@@ -59,8 +72,9 @@ func (pr *ShieldingRequest) MarshalJSON() ([]byte, error) {
 
 func (pr *ShieldingRequest) UnmarshalJSON(data []byte) error {
 	temp := struct {
-		IncAddress string
-		Amount     uint64
+		ExternalTxHash string
+		IncAddress     string
+		Amount         uint64
 	}{}
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
@@ -71,68 +85,16 @@ func (pr *ShieldingRequest) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-type ShieldingRequestsState struct {
-	requests map[string]*ShieldingRequest // map key: external tx hash => Shielding request information
-}
-
-func NewShieldingRequestsState() *ShieldingRequestsState {
-	return &ShieldingRequestsState{
-		requests: map[string]*ShieldingRequest{},
-	}
-}
-
-func NewShieldingRequestsStateWithValue(r map[string]*ShieldingRequest) *ShieldingRequestsState {
-	return &ShieldingRequestsState{
-		requests: r,
-	}
-}
-
-func (ps *ShieldingRequestsState) SetShieldingRequest(externalTxHash string, request *ShieldingRequest) {
-	ps.requests[externalTxHash] = request
-}
-
-func (ps ShieldingRequestsState) GetShieldingRequests() map[string]*ShieldingRequest {
-	return ps.requests
-}
-
-func (ps *ShieldingRequestsState) SetShieldingRequests(r map[string]*ShieldingRequest) {
-	ps.requests = r
-}
-
-func (ps *ShieldingRequestsState) MarshalJSON() ([]byte, error) {
-	data, err := json.Marshal(struct {
-		Requests map[string]*ShieldingRequest
-	}{
-		Requests: ps.requests,
-	})
-	if err != nil {
-		return []byte{}, err
-	}
-	return data, nil
-}
-
-func (ps *ShieldingRequestsState) UnmarshalJSON(data []byte) error {
-	temp := struct {
-		Requests map[string]*ShieldingRequest
-	}{}
-	err := json.Unmarshal(data, &temp)
-	if err != nil {
-		return err
-	}
-	ps.requests = temp.Requests
-	return nil
-}
-
-type ShieldingRequestsStateObject struct {
+type ShieldingRequestObject struct {
 	db *StateDB
 	// Write caches.
 	trie Trie // storage trie, which becomes non-nil on first access
 
-	version                    int
-	ShieldingRequestsStateHash common.Hash
-	ShieldingRequestsState     *ShieldingRequestsState
-	objectType                 int
-	deleted                    bool
+	version              int
+	ShieldingRequestHash common.Hash
+	ShieldingRequest     *ShieldingRequest
+	objectType           int
+	deleted              bool
 
 	// DB error.
 	// State objects are used by the consensus core and VM which are
@@ -142,19 +104,19 @@ type ShieldingRequestsStateObject struct {
 	dbErr error
 }
 
-func newShieldingRequestsStateObject(db *StateDB, hash common.Hash) *ShieldingRequestsStateObject {
-	return &ShieldingRequestsStateObject{
-		version:                    defaultVersion,
-		db:                         db,
-		ShieldingRequestsStateHash: hash,
-		ShieldingRequestsState:     NewShieldingRequestsState(),
-		objectType:                 PortalShieldingRequestsStateObjectType,
-		deleted:                    false,
+func newShieldingRequestObject(db *StateDB, hash common.Hash) *ShieldingRequestObject {
+	return &ShieldingRequestObject{
+		version:              defaultVersion,
+		db:                   db,
+		ShieldingRequestHash: hash,
+		ShieldingRequest:     NewShieldingRequest(),
+		objectType:           PortalShieldingRequestObjectType,
+		deleted:              false,
 	}
 }
 
-func newShieldingRequestsStateObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*ShieldingRequestsStateObject, error) {
-	var shieldingRequestsState = NewShieldingRequestsState()
+func newShieldingRequestObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*ShieldingRequestObject, error) {
+	var shieldingRequestsState = NewShieldingRequest()
 	var ok bool
 	var dataBytes []byte
 	if dataBytes, ok = data.([]byte); ok {
@@ -163,92 +125,92 @@ func newShieldingRequestsStateObjectWithValue(db *StateDB, key common.Hash, data
 			return nil, err
 		}
 	} else {
-		shieldingRequestsState, ok = data.(*ShieldingRequestsState)
+		shieldingRequestsState, ok = data.(*ShieldingRequest)
 		if !ok {
-			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidPortalShieldingRequestsStateType, reflect.TypeOf(data))
+			return nil, fmt.Errorf("%+v, got type %+v", ErrInvalidPortalShieldingRequestType, reflect.TypeOf(data))
 		}
 	}
-	return &ShieldingRequestsStateObject{
-		version:                    defaultVersion,
-		ShieldingRequestsStateHash: key,
-		ShieldingRequestsState:     shieldingRequestsState,
-		db:                         db,
-		objectType:                 PortalShieldingRequestsStateObjectType,
-		deleted:                    false,
+	return &ShieldingRequestObject{
+		version:              defaultVersion,
+		ShieldingRequestHash: key,
+		ShieldingRequest:     shieldingRequestsState,
+		db:                   db,
+		objectType:           PortalShieldingRequestObjectType,
+		deleted:              false,
 	}, nil
 }
 
-func GenerateShieldingRequestsStateObjectKey(tokenIDStr string) common.Hash {
-	prefixHash := PortalRequestPTokenStatusPrefixV4()
-	valueHash := common.HashH([]byte(tokenIDStr))
+func GenerateShieldingRequestObjectKey(tokenIDStr string, externalTxHash string) common.Hash {
+	prefixHash := GetShieldingRequestPrefix(tokenIDStr)
+	valueHash := common.HashH([]byte(externalTxHash))
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
 }
 
-func (t ShieldingRequestsStateObject) GetVersion() int {
+func (t ShieldingRequestObject) GetVersion() int {
 	return t.version
 }
 
 // setError remembers the first non-nil error it is called with.
-func (t *ShieldingRequestsStateObject) SetError(err error) {
+func (t *ShieldingRequestObject) SetError(err error) {
 	if t.dbErr == nil {
 		t.dbErr = err
 	}
 }
 
-func (t ShieldingRequestsStateObject) GetTrie(db DatabaseAccessWarper) Trie {
+func (t ShieldingRequestObject) GetTrie(db DatabaseAccessWarper) Trie {
 	return t.trie
 }
 
-func (t *ShieldingRequestsStateObject) SetValue(data interface{}) error {
-	newShieldingRequestsState, ok := data.(*ShieldingRequestsState)
+func (t *ShieldingRequestObject) SetValue(data interface{}) error {
+	newShieldingRequest, ok := data.(*ShieldingRequest)
 	if !ok {
-		return fmt.Errorf("%+v, got type %+v", ErrInvalidPortalShieldingRequestsStateType, reflect.TypeOf(data))
+		return fmt.Errorf("%+v, got type %+v", ErrInvalidPortalShieldingRequestType, reflect.TypeOf(data))
 	}
-	t.ShieldingRequestsState = newShieldingRequestsState
+	t.ShieldingRequest = newShieldingRequest
 	return nil
 }
 
-func (t ShieldingRequestsStateObject) GetValue() interface{} {
-	return t.ShieldingRequestsState
+func (t ShieldingRequestObject) GetValue() interface{} {
+	return t.ShieldingRequest
 }
 
-func (t ShieldingRequestsStateObject) GetValueBytes() []byte {
-	ShieldingRequestsState, ok := t.GetValue().(*ShieldingRequestsState)
+func (t ShieldingRequestObject) GetValueBytes() []byte {
+	ShieldingRequest, ok := t.GetValue().(*ShieldingRequest)
 	if !ok {
 		panic("wrong expected value type")
 	}
-	value, err := json.Marshal(ShieldingRequestsState)
+	value, err := json.Marshal(ShieldingRequest)
 	if err != nil {
 		panic("failed to marshal multisigWallet state")
 	}
 	return value
 }
 
-func (t ShieldingRequestsStateObject) GetHash() common.Hash {
-	return t.ShieldingRequestsStateHash
+func (t ShieldingRequestObject) GetHash() common.Hash {
+	return t.ShieldingRequestHash
 }
 
-func (t ShieldingRequestsStateObject) GetType() int {
+func (t ShieldingRequestObject) GetType() int {
 	return t.objectType
 }
 
 // MarkDelete will delete an object in trie
-func (t *ShieldingRequestsStateObject) MarkDelete() {
+func (t *ShieldingRequestObject) MarkDelete() {
 	t.deleted = true
 }
 
 // reset all shard committee value into default value
-func (t *ShieldingRequestsStateObject) Reset() bool {
-	t.ShieldingRequestsState = NewShieldingRequestsState()
+func (t *ShieldingRequestObject) Reset() bool {
+	t.ShieldingRequest = NewShieldingRequest()
 	return true
 }
 
-func (t ShieldingRequestsStateObject) IsDeleted() bool {
+func (t ShieldingRequestObject) IsDeleted() bool {
 	return t.deleted
 }
 
 // value is either default or nil
-func (t ShieldingRequestsStateObject) IsEmpty() bool {
-	temp := NewShieldingRequestsState()
-	return reflect.DeepEqual(temp, t.ShieldingRequestsState) || t.ShieldingRequestsState == nil
+func (t ShieldingRequestObject) IsEmpty() bool {
+	temp := NewShieldingRequest()
+	return reflect.DeepEqual(temp, t.ShieldingRequest) || t.ShieldingRequest == nil
 }

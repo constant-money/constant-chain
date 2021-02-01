@@ -201,14 +201,13 @@ var HttpHandler = map[string]httpHandler{
 	getPortalCustodianDepositStatus:               (*HttpServer).handleGetPortalCustodianDepositStatus,
 	createAndSendRegisterPortingPublicTokens:      (*HttpServer).handleCreateAndSendTxPortingRequest,
 	createAndSendTxWithReqPToken:                  (*HttpServer).handleCreateAndSendTxWithReqPToken,
-	createAndSendTxWithReqPTokenV4:                (*HttpServer).handleCreateAndSendTxWithReqPTokenV4,
 	createAndSendPortalExchangeRates:              (*HttpServer).handleCreateAndSendTxWithPortalExchangeRate,
 	getPortalFinalExchangeRates:                   (*HttpServer).handleGetPortalFinalExchangeRates,
 	getPortalPortingRequestByKey:                  (*HttpServer).handleGetPortingRequestStatusByTxID,
 	getPortalPortingRequestByPortingId:            (*HttpServer).handleGetPortingRequestStatusByPortingId,
 	convertExchangeRates:                          (*HttpServer).handleConvertExchangeRates,
 	getPortalReqPTokenStatus:                      (*HttpServer).handleGetPortalReqPTokenStatus,
-	getPortalReqPTokenStatusV4:                    (*HttpServer).handleGetPortalReqPTokenStatusV4,
+	getPortalShieldingRequestStatus:               (*HttpServer).handleGetPortalShieldingRequestStatus,
 	getPortingRequestFees:                         (*HttpServer).handleGetPortingRequestFees,
 	createAndSendTxWithRedeemReq:                  (*HttpServer).handleCreateAndSendTxWithRedeemReq,
 	createAndSendTxWithReqUnlockCollateral:        (*HttpServer).handleCreateAndSendTxWithReqUnlockCollateral,
@@ -278,6 +277,7 @@ var HttpHandler = map[string]httpHandler{
 	getValKeyState: (*HttpServer).handleGetValKeyState,
 
 	// portal v4
+	createAndSendTxWithShieldingRequest: (*HttpServer).handleCreateAndSendTxWithShieldingReq,
 	createAndSendTxWithPortalBurnPToken: (*HttpServer).handleCreateAndSendTxWithPortalBurnPToken,
 }
 

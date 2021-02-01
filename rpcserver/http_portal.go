@@ -463,7 +463,7 @@ func (httpServer *HttpServer) handleGetPortalReqPTokenStatus(params interface{},
 	return status, nil
 }
 
-func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+func (httpServer *HttpServer) handleCreateRawTxWithShieldingReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 5 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least 5"))
@@ -492,7 +492,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("metadata PortingProof param is invalid"))
 	}
 
-	meta, _ := metadata.NewPortalRequestPTokensV4(
+	meta, _ := metadata.NewPortalShieldingRequest(
 		basemeta.PortalUserRequestPTokenMeta,
 		tokenID,
 		incognitoAddress,
@@ -525,8 +525,8 @@ func (httpServer *HttpServer) handleCreateRawTxWithReqPTokenV4(params interface{
 	return result, nil
 }
 
-func (httpServer *HttpServer) handleCreateAndSendTxWithReqPTokenV4(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
-	data, err := httpServer.handleCreateRawTxWithReqPTokenV4(params, closeChan)
+func (httpServer *HttpServer) handleCreateAndSendTxWithShieldingReq(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	data, err := httpServer.handleCreateRawTxWithShieldingReq(params, closeChan)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
@@ -542,7 +542,7 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithReqPTokenV4(params interf
 	return result, nil
 }
 
-func (httpServer *HttpServer) handleGetPortalReqPTokenStatusV4(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+func (httpServer *HttpServer) handleGetPortalShieldingRequestStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 	arrayParams := common.InterfaceSlice(params)
 	if len(arrayParams) < 1 {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
@@ -555,7 +555,7 @@ func (httpServer *HttpServer) handleGetPortalReqPTokenStatusV4(params interface{
 	if !ok {
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param ReqTxID is invalid"))
 	}
-	status, err := httpServer.blockService.GetPortalReqPTokenStatusV4(reqTxID)
+	status, err := httpServer.blockService.GetPortalShieldingRequestStatus(reqTxID)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.GetReqPTokenStatusV4Error, err)
 	}

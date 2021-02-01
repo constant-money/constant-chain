@@ -48,7 +48,7 @@ const (
 	ErrInvalidUnshieldRequestType                = "invalid portal waiting unshield request type"
 	ErrInvalidUnshieldRequestProcessedType       = "invalid portal unshield request processed type"
 	ErrInvalidPortalUTXOType                     = "invalid portal utxo state type"
-	ErrInvalidPortalShieldingRequestsStateType   = "invalid portal shielding requests state type"
+	ErrInvalidPortalShieldingRequestType         = "invalid portal shielding request type"
 )
 const (
 	InvalidByteArrayTypeError = iota
@@ -197,7 +197,8 @@ const (
 	GetPortalUnlockOverRateCollateralsStatusError
 
 	// portal v4
-	GetPortalRequestPTokenStatusV4Error
+	StorePortalShieldingRequestStatusError
+	GetPortalShieldingRequestStatusError
 	StorePortalListWaitingUnshieldRequestError
 	GetPortalUnshieldRequestStatusError
 	StorePortalUnshieldRequestStatusError
@@ -347,9 +348,10 @@ var ErrCodeMessage = map[int]struct {
 
 	// Portal v4
 	StorePortalListWaitingUnshieldRequestError: {-15006, "Store portal list waiting unshield request error"},
-	GetPortalRequestPTokenStatusV4Error:        {-15007, "Get portal shielding request status error"},
-	GetPortalUnshieldRequestStatusError:        {-15008, "Get portal unshielding request status error"},
-	StorePortalUnshieldRequestStatusError:      {-15009, "Store portal unshielding request status error"},
+	GetPortalShieldingRequestStatusError:       {-15007, "Get portal shielding request status error"},
+	StorePortalShieldingRequestStatusError:     {-15008, "Store portal shielding request status error"},
+	GetPortalUnshieldRequestStatusError:        {-15009, "Get portal unshielding request status error"},
+	StorePortalUnshieldRequestStatusError:      {-15010, "Store portal unshielding request status error"},
 }
 
 type StatedbError struct {

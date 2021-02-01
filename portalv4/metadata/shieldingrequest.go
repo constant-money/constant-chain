@@ -12,26 +12,26 @@ import (
 	"github.com/incognitochain/incognito-chain/wallet"
 )
 
-// PortalRequestPTokens - portal user requests ptoken (after sending pubToken to multisig wallet)
-// metadata - user requests ptoken - create normal tx with this metadata
-type PortalRequestPTokensV4 struct {
+// PortalShieldingRequest - portal user requests ptoken (after sending pubToken to multisig wallet)
+// metadata - portal user sends shielding request - create normal tx with this metadata
+type PortalShieldingRequest struct {
 	basemeta.MetadataBase
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
 	ShieldingProof  string
 }
 
-// PortalRequestPTokensAction - shard validator creates instruction that contain this action content
-type PortalRequestPTokensActionV4 struct {
-	Meta    PortalRequestPTokensV4
+// PortalShieldingRequestAction - shard validator creates instruction that contain this action content
+type PortalShieldingRequestAction struct {
+	Meta    PortalShieldingRequest
 	TxReqID common.Hash
 	ShardID byte
 }
 
-// PortalRequestPTokensContent - Beacon builds a new instruction with this content after receiving a instruction from shard
+// PortalShieldingRequestContent - Beacon builds a new instruction with this content after receiving a instruction from shard
 // It will be appended to beaconBlock
 // both accepted and rejected status
-type PortalRequestPTokensContentV4 struct {
+type PortalShieldingRequestContent struct {
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
 	ShieldingUTXO   []*statedb.UTXO
@@ -40,7 +40,7 @@ type PortalRequestPTokensContentV4 struct {
 }
 
 // PortalRequestPTokensStatus - Beacon tracks status of request ptokens into db
-type PortalRequestPTokensStatusV4 struct {
+type PortalShieldingRequestStatus struct {
 	Status          byte
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
@@ -48,24 +48,24 @@ type PortalRequestPTokensStatusV4 struct {
 	TxReqID         common.Hash
 }
 
-func NewPortalRequestPTokensV4(
+func NewPortalShieldingRequest(
 	metaType int,
 	tokenID string,
 	incogAddressStr string,
-	shieldingProof string) (*PortalRequestPTokensV4, error) {
+	shieldingProof string) (*PortalShieldingRequest, error) {
 	metadataBase := basemeta.MetadataBase{
 		Type: metaType,
 	}
-	requestPTokenMeta := &PortalRequestPTokensV4{
+	shieldingRequestMeta := &PortalShieldingRequest{
 		TokenID:         tokenID,
 		IncogAddressStr: incogAddressStr,
 		ShieldingProof:  shieldingProof,
 	}
-	requestPTokenMeta.MetadataBase = metadataBase
-	return requestPTokenMeta, nil
+	shieldingRequestMeta.MetadataBase = metadataBase
+	return shieldingRequestMeta, nil
 }
 
-func (reqPToken PortalRequestPTokensV4) ValidateTxWithBlockChain(
+func (shieldingReq PortalShieldingRequest) ValidateTxWithBlockChain(
 	txr basemeta.Transaction,
 	chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever,
 	shardID byte,
@@ -74,9 +74,9 @@ func (reqPToken PortalRequestPTokensV4) ValidateTxWithBlockChain(
 	return true, nil
 }
 
-func (reqPToken PortalRequestPTokensV4) ValidateSanityData(chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, beaconHeight uint64, txr basemeta.Transaction) (bool, bool, error) {
+func (shieldingReq PortalShieldingRequest) ValidateSanityData(chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, beaconHeight uint64, txr basemeta.Transaction) (bool, bool, error) {
 	// validate IncogAddressStr
-	keyWallet, err := wallet.Base58CheckDeserialize(reqPToken.IncogAddressStr)
+	keyWallet, err := wallet.Base58CheckDeserialize(shieldingReq.IncogAddressStr)
 	if err != nil {
 		return false, false, basemeta.NewMetadataTxError(basemeta.PortalRequestPTokenParamError, errors.New("Requester incognito address is invalid"))
 	}
@@ -95,30 +95,30 @@ func (reqPToken PortalRequestPTokensV4) ValidateSanityData(chainRetriever baseme
 	}
 
 	// validate tokenID and shielding proof
-	if !chainRetriever.IsPortalToken(beaconHeight, reqPToken.TokenID) {
+	if !chainRetriever.IsPortalToken(beaconHeight, shieldingReq.TokenID) {
 		return false, false, basemeta.NewMetadataTxError(basemeta.PortalRequestPTokenParamError, errors.New("TokenID is not supported currently on Portal"))
 	}
 
 	return true, true, nil
 }
 
-func (reqPToken PortalRequestPTokensV4) ValidateMetadataByItself() bool {
-	return reqPToken.Type == basemeta.PortalUserRequestPTokenMetaV4
+func (shieldingReq PortalShieldingRequest) ValidateMetadataByItself() bool {
+	return shieldingReq.Type == basemeta.PortalUserRequestPTokenMetaV4
 }
 
-func (reqPToken PortalRequestPTokensV4) Hash() *common.Hash {
-	record := reqPToken.MetadataBase.Hash().String()
-	record += reqPToken.TokenID
-	record += reqPToken.IncogAddressStr
-	record += reqPToken.ShieldingProof
+func (shieldingReq PortalShieldingRequest) Hash() *common.Hash {
+	record := shieldingReq.MetadataBase.Hash().String()
+	record += shieldingReq.TokenID
+	record += shieldingReq.IncogAddressStr
+	record += shieldingReq.ShieldingProof
 	// final hash
 	hash := common.HashH([]byte(record))
 	return &hash
 }
 
-func (reqPToken *PortalRequestPTokensV4) BuildReqActions(tx basemeta.Transaction, chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, shardID byte, shardHeight uint64) ([][]string, error) {
-	actionContent := PortalRequestPTokensActionV4{
-		Meta:    *reqPToken,
+func (shieldingReq *PortalShieldingRequest) BuildReqActions(tx basemeta.Transaction, chainRetriever basemeta.ChainRetriever, shardViewRetriever basemeta.ShardViewRetriever, beaconViewRetriever basemeta.BeaconViewRetriever, shardID byte, shardHeight uint64) ([][]string, error) {
+	actionContent := PortalShieldingRequestAction{
+		Meta:    *shieldingReq,
 		TxReqID: *tx.Hash(),
 		ShardID: shardID,
 	}
@@ -131,6 +131,6 @@ func (reqPToken *PortalRequestPTokensV4) BuildReqActions(tx basemeta.Transaction
 	return [][]string{action}, nil
 }
 
-func (reqPToken *PortalRequestPTokensV4) CalculateSize() uint64 {
-	return basemeta.CalculateSize(reqPToken)
+func (shieldingReq *PortalShieldingRequest) CalculateSize() uint64 {
+	return basemeta.CalculateSize(shieldingReq)
 }

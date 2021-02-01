@@ -69,6 +69,7 @@ var (
 	portalWaitingUnshieldRequestsPrefix                  = []byte("portalwaitingunshieldrequest-")
 	portalUnshieldRequestsProcessedPrefix                = []byte("portalunshieldrequestsprocessed-")
 	portalUTXOStatePrefix                                = []byte("portalutxo-")
+	portalShieldRequestPrefix                            = []byte("portalshieldrequest-")
 
 	portalStatusPrefix                           = []byte("portalstatus-")
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
@@ -79,9 +80,6 @@ var (
 	portalRequestUnlockCollateralStatusPrefix    = []byte("requestunlockcollateral-")
 	portalRequestWithdrawRewardStatusPrefix      = []byte("requestwithdrawportalreward-")
 	portalReqMatchingRedeemStatusByTxReqIDPrefix = []byte("reqmatchredeembytxid-")
-
-	// portal v4
-	portalRequestPTokenStatusPrefixV4 = []byte("requestptokenv4-")
 
 	// liquidation for portal
 	portalLiquidateCustodianRunAwayPrefix = []byte("portalliquidaterunaway-")
@@ -444,6 +442,10 @@ func PortalRequestPTokenStatusPrefix() []byte {
 	return portalRequestPTokenStatusPrefix
 }
 
+func PortalShieldingRequestStatusPrefix() []byte {
+	return portalShieldRequestPrefix
+}
+
 func PortalRedeemRequestStatusPrefix() []byte {
 	return portalRedeemRequestStatusPrefix
 }
@@ -492,8 +494,9 @@ func GetPortalUTXOStatePrefix(tokenID string) []byte {
 	return h[:][:prefixHashKeyLength]
 }
 
-func PortalRequestPTokenStatusPrefixV4() []byte {
-	return portalRequestPTokenStatusPrefixV4
+func GetShieldingRequestPrefix(tokenID string) []byte {
+	h := common.HashH(append(portalShieldRequestPrefix, []byte(tokenID)...))
+	return h[:][:prefixHashKeyLength]
 }
 
 func PortalUnshieldRequestStatusPrefix() []byte {

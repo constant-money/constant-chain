@@ -1692,15 +1692,15 @@ func (stateDB *StateDB) getPortalConfirmProofState(key common.Hash) (*PortalConf
 }
 
 // ================================= Portal V4 OBJECT =======================================
-func (stateDB *StateDB) getShieldingRequestsByKey(key common.Hash) (*ShieldingRequestsState, bool, error) {
-	shieldingRequestsState, err := stateDB.getStateObject(PortalShieldingRequestsStateObjectType, key)
+func (stateDB *StateDB) getShieldingRequestByKey(key common.Hash) (*ShieldingRequest, bool, error) {
+	shieldingRequest, err := stateDB.getStateObject(PortalShieldingRequestObjectType, key)
 	if err != nil {
 		return nil, false, err
 	}
-	if shieldingRequestsState != nil {
-		return shieldingRequestsState.GetValue().(*ShieldingRequestsState), true, nil
+	if shieldingRequest != nil {
+		return shieldingRequest.GetValue().(*ShieldingRequest), true, nil
 	}
-	return NewShieldingRequestsState(), false, nil
+	return NewShieldingRequest(), false, nil
 }
 
 func (stateDB *StateDB) getListWaitingUnshieldRequestsByTokenID(tokenID string) map[string]*WaitingUnshieldRequest {

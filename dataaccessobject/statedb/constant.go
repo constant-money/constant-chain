@@ -56,7 +56,7 @@ const (
 	PortalWaitingUnshieldObjectType
 	PortalProcessedUnshieldRequestBatchObjectType
 	PortalUTXOObjectType
-	PortalShieldingRequestsStateObjectType
+	PortalShieldingRequestObjectType
 )
 
 // Prefix length

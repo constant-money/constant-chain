@@ -594,19 +594,14 @@ func IsPortingRequestIdExist(stateDB *StateDB, statusSuffix []byte) (bool, error
 }
 
 func IsShieldingExternalTxHashExists(stateDB *StateDB, tokenID string, externalTxHash string) (bool, error) {
-	key := GenerateShieldingRequestsStateObjectKey(tokenID)
-	shieldingRequestsState, has, err := stateDB.getShieldingRequestsByKey(key)
+	key := GenerateShieldingRequestObjectKey(tokenID, externalTxHash)
+	_, has, err := stateDB.getShieldingRequestByKey(key)
 
 	if err != nil {
-		return false, NewStatedbError(GetPortalRequestPTokenStatusV4Error, err)
+		return false, NewStatedbError(GetPortalShieldingRequestStatusError, err)
 	}
 
-	if !has {
-		return false, nil
-	}
-
-	_, found := shieldingRequestsState.requests[externalTxHash]
-	return found, nil
+	return has, nil
 }
 
 //====================== Waiting Porting  ======================
@@ -692,12 +687,23 @@ func GetRequestPTokenStatus(stateDB *StateDB, txID string) ([]byte, error) {
 	return data, nil
 }
 
-func GetRequestPTokenStatusV4(stateDB *StateDB, txID string) ([]byte, error) {
-	statusType := PortalRequestPTokenStatusPrefixV4()
+func StoreShieldingRequestStatus(stateDB *StateDB, txID string, statusContent []byte) error {
+	statusType := PortalShieldingRequestStatusPrefix()
+	statusSuffix := []byte(txID)
+	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
+	if err != nil {
+		return NewStatedbError(StorePortalShieldingRequestStatusError, err)
+	}
+
+	return nil
+}
+
+func GetShieldingRequestStatus(stateDB *StateDB, txID string) ([]byte, error) {
+	statusType := PortalShieldingRequestStatusPrefix()
 	statusSuffix := []byte(txID)
 	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
 	if err != nil {
-		return []byte{}, NewStatedbError(GetPortalRequestPTokenStatusV4Error, err)
+		return []byte{}, NewStatedbError(GetPortalShieldingRequestStatusError, err)
 	}
 
 	return data, nil

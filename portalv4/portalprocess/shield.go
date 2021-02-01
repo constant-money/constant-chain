@@ -17,18 +17,18 @@ import (
 )
 
 /* =======
-Portal Request Ptoken Processor V4
+Portal Shielding Request Processor V4
 ======= */
 
-type portalRequestPTokenProcessorV4 struct {
+type portalShieldingRequestProcessor struct {
 	*portalInstProcessor
 }
 
-func (p *portalRequestPTokenProcessorV4) GetActions() map[byte][][]string {
+func (p *portalShieldingRequestProcessor) GetActions() map[byte][][]string {
 	return p.actions
 }
 
-func (p *portalRequestPTokenProcessorV4) PutAction(action []string, shardID byte) {
+func (p *portalShieldingRequestProcessor) PutAction(action []string, shardID byte) {
 	_, found := p.actions[shardID]
 	if !found {
 		p.actions[shardID] = [][]string{action}
@@ -37,18 +37,18 @@ func (p *portalRequestPTokenProcessorV4) PutAction(action []string, shardID byte
 	}
 }
 
-func (p *portalRequestPTokenProcessorV4) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
+func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
 	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
 	if err != nil {
 		Logger.log.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
 		return nil, fmt.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
 	}
 
-	var actionData portalMeta.PortalRequestPTokensActionV4
+	var actionData portalMeta.PortalShieldingRequestAction
 	err = json.Unmarshal(actionContentBytes, &actionData)
 	if err != nil {
-		Logger.log.Errorf("Shielding request: an error occurred while unmarshal pToken request action: %+v", err)
-		return nil, fmt.Errorf("Shielding request: an error occurred while unmarshal pToken request action: %+v", err)
+		Logger.log.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
+		return nil, fmt.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
 	}
 
 	portalParams := portalv4.PortalParams{}
@@ -85,23 +85,23 @@ func buildReqPTokensInstV4(
 	txReqID common.Hash,
 	status string,
 ) []string {
-	reqPTokenContent := portalMeta.PortalRequestPTokensContentV4{
+	shieldingReqContent := portalMeta.PortalShieldingRequestContent{
 		TokenID:         tokenID,
 		IncogAddressStr: incogAddressStr,
 		ShieldingUTXO:   shieldingUTXO,
 		TxReqID:         txReqID,
 		ShardID:         shardID,
 	}
-	reqPTokenContentBytes, _ := json.Marshal(reqPTokenContent)
+	shieldingReqContentBytes, _ := json.Marshal(shieldingReqContent)
 	return []string{
 		strconv.Itoa(metaType),
 		strconv.Itoa(int(shardID)),
 		status,
-		string(reqPTokenContentBytes),
+		string(shieldingReqContentBytes),
 	}
 }
 
-func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
+func (p *portalShieldingRequestProcessor) BuildNewInsts(
 	bc bMeta.ChainRetriever,
 	contentStr string,
 	shardID byte,
@@ -114,13 +114,13 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	// parse instruction
 	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
 	if err != nil {
-		Logger.log.Errorf("ERROR: an error occured while decoding content string of portal request ptoken action: %+v", err)
+		Logger.log.Errorf("ERROR: an error occured while decoding content string of portal shielding request action: %+v", err)
 		return [][]string{}, nil
 	}
-	var actionData metadata.PortalRequestPTokensActionV4
+	var actionData metadata.PortalShieldingRequestAction
 	err = json.Unmarshal(actionContentBytes, &actionData)
 	if err != nil {
-		Logger.log.Errorf("ERROR: an error occured while unmarshal portal request ptoken action: %+v", err)
+		Logger.log.Errorf("ERROR: an error occured while unmarshal portal shielding request action: %+v", err)
 		return [][]string{}, nil
 	}
 	meta := actionData.Meta
@@ -136,24 +136,9 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	)
 
 	if currentPortalState == nil {
-		Logger.log.Warn("Request PTokens: Current Portal state is null.")
+		Logger.log.Warn("Shielding Request: Current Portal state is null.")
 		return [][]string{rejectInst}, nil
 	}
-
-	// // check unique id from optionalData which get from statedb
-	// if optionalData == nil {
-	// 	Logger.log.Errorf("Shielding request: optionalData is null")
-	// 	return [][]string{rejectInst}, nil
-	// }
-	// isExist, ok := optionalData["isExistExternalTxHash"].(bool)
-	// if !ok {
-	// 	Logger.log.Errorf("Shielding request: optionalData isExistExternalTxHash is invalid")
-	// 	return [][]string{rejectInst}, nil
-	// }
-	// if isExist {
-	// 	Logger.log.Errorf("Shielding request: Shielding proof exists in db %v", actionData.Meta.ShieldingProof)
-	// 	return [][]string{rejectInst}, nil
-	// }
 
 	portalTokenProcessor := portalParams.PortalTokens[meta.TokenID]
 	if portalTokenProcessor == nil {
@@ -171,7 +156,7 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, meta.TokenID, listUTXO)
+	UpdatePortalStateAfterShieldingRequest(currentPortalState, meta.TokenID, listUTXO)
 
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
@@ -185,7 +170,7 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	return [][]string{inst}, nil
 }
 
-func (p *portalRequestPTokenProcessorV4) ProcessInsts(
+func (p *portalShieldingRequestProcessor) ProcessInsts(
 	stateDB *statedb.StateDB,
 	beaconHeight uint64,
 	instructions []string,
@@ -203,7 +188,7 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 	}
 
 	// unmarshal instructions content
-	var actionData metadata.PortalRequestPTokensContentV4
+	var actionData metadata.PortalShieldingRequestContent
 	err := json.Unmarshal([]byte(instructions[3]), &actionData)
 	if err != nil {
 		Logger.log.Errorf("Can not unmarshal instruction content %v - Error: %v\n", instructions[3], err)
@@ -212,35 +197,31 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
-		UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, actionData.TokenID, actionData.ShieldingUTXO)
+		UpdatePortalStateAfterShieldingRequest(currentPortalState, actionData.TokenID, actionData.ShieldingUTXO)
 		shieldingExternalTxHash := actionData.ShieldingUTXO[0].GetTxHash()
 		shieldingAmount := uint64(0)
 		for _, utxo := range actionData.ShieldingUTXO {
 			shieldingAmount += utxo.GetOutputAmount()
 		}
 
-		err = SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
-		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while execute SaveShieldingExternalTxHashToStateDB: %+v", err)
-			return nil
-		}
+		SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
 
-		// track reqPToken status by txID into DB
-		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
+		// track shieldingReq status by txID into DB
+		shieldingReqTrackData := metadata.PortalShieldingRequestStatus{
 			Status:          pCommon.PortalRequestAcceptedStatus,
 			TokenID:         actionData.TokenID,
 			IncogAddressStr: actionData.IncogAddressStr,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
 			TxReqID:         actionData.TxReqID,
 		}
-		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
-		err = statedb.StoreRequestPTokenStatus(
+		shieldingReqTrackDataBytes, _ := json.Marshal(shieldingReqTrackData)
+		err = statedb.StoreShieldingRequestStatus(
 			stateDB,
 			actionData.TxReqID.String(),
-			reqPTokenTrackDataBytes,
+			shieldingReqTrackDataBytes,
 		)
 		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while tracking request ptoken tx: %+v", err)
+			Logger.log.Errorf("ERROR: an error occured while tracking shielding request tx: %+v", err)
 			return nil
 		}
 
@@ -265,21 +246,21 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 		updatingInfoByTokenID[*incTokenID] = updatingInfo
 
 	} else if reqStatus == pCommon.PortalRequestRejectedChainStatus {
-		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
+		shieldingReqTrackData := metadata.PortalShieldingRequestStatus{
 			Status:          pCommon.PortalRequestRejectedStatus,
 			TokenID:         actionData.TokenID,
 			IncogAddressStr: actionData.IncogAddressStr,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
 			TxReqID:         actionData.TxReqID,
 		}
-		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
-		err = statedb.StoreRequestPTokenStatus(
+		shieldingReqTrackDataBytes, _ := json.Marshal(shieldingReqTrackData)
+		err = statedb.StoreShieldingRequestStatus(
 			stateDB,
 			actionData.TxReqID.String(),
-			reqPTokenTrackDataBytes,
+			shieldingReqTrackDataBytes,
 		)
 		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while tracking request ptoken tx: %+v", err)
+			Logger.log.Errorf("ERROR: an error occured while tracking shielding request tx: %+v", err)
 			return nil
 		}
 	}

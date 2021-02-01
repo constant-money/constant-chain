@@ -1,8 +1,6 @@
 package portalprocess
 
 import (
-	"errors"
-
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -10,9 +8,9 @@ import (
 
 type CurrentPortalV4State struct {
 	WaitingUnshieldRequests   map[string]map[string]*statedb.WaitingUnshieldRequest        // tokenID : hash(tokenID || unshieldID) : value
-	UTXOs                     map[string]map[string]*statedb.UTXO                          // tokenID : hash(tokenID || walletAddress || txHash || index): value
+	UTXOs                     map[string]map[string]*statedb.UTXO                          // tokenID : hash(tokenID || walletAddress || txHash || index) : value
 	ProcessedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch // tokenID : hash(tokenID || batchID) : value
-	ShieldingExternalTx       map[string]*statedb.ShieldingRequestsState                   // key : hash(tokenID)
+	ShieldingExternalTx       map[string]map[string]*statedb.ShieldingRequest              // tokenID : hash(tokenID || txHash) : value
 }
 
 //todo:
@@ -53,8 +51,13 @@ func StorePortalV4StateToDB(
 	return nil
 }
 
-// UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken
-func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalV4State *CurrentPortalV4State, tokenID string, listUTXO []*statedb.UTXO) {
+func UpdatePortalStateAfterShieldingRequest(currentPortalV4State *CurrentPortalV4State, tokenID string, listUTXO []*statedb.UTXO) {
+	if currentPortalV4State.UTXOs == nil {
+		currentPortalV4State.UTXOs = map[string]map[string]*statedb.UTXO{}
+	}
+	if currentPortalV4State.UTXOs[tokenID] == nil {
+		currentPortalV4State.UTXOs[tokenID] = map[string]*statedb.UTXO{}
+	}
 	for _, utxo := range listUTXO {
 		walletAddress := utxo.GetWalletAddress()
 		txHash := utxo.GetTxHash()
@@ -64,17 +67,14 @@ func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalV4State *Curr
 	}
 }
 
-// UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken
-func SaveShieldingExternalTxToStateDB(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingExternalTxHash string, incAddress string, amount uint64) error {
-	externalTxHashState, ok := currentPortalV4State.ShieldingExternalTx[tokenID]
-	if !ok {
-		return errors.New("[SaveShieldingExternalTxToStateDB] TokenID not found")
+func SaveShieldingExternalTxToStateDB(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingExternalTxHash string, incAddress string, amount uint64) {
+	if currentPortalV4State.ShieldingExternalTx == nil {
+		currentPortalV4State.ShieldingExternalTx = map[string]map[string]*statedb.ShieldingRequest{}
 	}
-	requests := externalTxHashState.GetShieldingRequests()
-	request := statedb.NewShieldingRequestWithValue(incAddress, amount)
-	requests[shieldingExternalTxHash] = request
-	currentPortalV4State.ShieldingExternalTx[tokenID].SetShieldingRequests(requests)
-	return nil
+	if currentPortalV4State.ShieldingExternalTx[tokenID] == nil {
+		currentPortalV4State.ShieldingExternalTx[tokenID] = map[string]*statedb.ShieldingRequest{}
+	}
+	currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingExternalTxHash).String()] = statedb.NewShieldingRequestWithValue(shieldingExternalTxHash, incAddress, amount)
 }
 
 func UpdatePortalStateAfterUnshieldRequest(
