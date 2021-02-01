@@ -181,8 +181,8 @@ const (
 	PortalTopUpWaitingPortingResponseMeta = 203
 
 	// Portal v4
-	PortalBurnPTokenMeta          = 250
-	PortalUserRequestPTokenMetaV4 = 251
+	PortalBurnPTokenMeta       = 250
+	PortalShieldingRequestMeta = 251
 )
 
 var portalMetas = []int{
@@ -241,6 +241,6 @@ var portalMetas = []int{
 
 // todo: add more
 var portalV4Metas = []int{
-	PortalUserRequestPTokenMetaV4,
+	PortalShieldingRequestMeta,
 	PortalBurnPTokenMeta,
 }

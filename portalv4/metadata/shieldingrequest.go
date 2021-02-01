@@ -103,7 +103,7 @@ func (shieldingReq PortalShieldingRequest) ValidateSanityData(chainRetriever bas
 }
 
 func (shieldingReq PortalShieldingRequest) ValidateMetadataByItself() bool {
-	return shieldingReq.Type == basemeta.PortalUserRequestPTokenMetaV4
+	return shieldingReq.Type == basemeta.PortalShieldingRequestMeta
 }
 
 func (shieldingReq PortalShieldingRequest) Hash() *common.Hash {
@@ -127,7 +127,7 @@ func (shieldingReq *PortalShieldingRequest) BuildReqActions(tx basemeta.Transact
 		return [][]string{}, err
 	}
 	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
-	action := []string{strconv.Itoa(basemeta.PortalUserRequestPTokenMetaV4), actionContentBase64Str}
+	action := []string{strconv.Itoa(basemeta.PortalShieldingRequestMeta), actionContentBase64Str}
 	return [][]string{action}, nil
 }
 

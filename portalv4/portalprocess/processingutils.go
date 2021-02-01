@@ -1,17 +1,18 @@
 package portalprocess
 
 import (
+	"sort"
+
 	"github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/portalv4"
-	"sort"
 )
 
-func CollectPortalV4Insts (pm *PortalV4Manager, metaType int, action []string, shardID byte) {
+func CollectPortalV4Insts(pm *PortalV4Manager, metaType int, action []string, shardID byte) {
 	switch metaType {
 	// shield
-	case basemeta.PortalUserRequestPTokenMetaV4:
-		pm.PortalInstructions[basemeta.PortalUserRequestPTokenMetaV4].PutAction(action, shardID)
+	case basemeta.PortalShieldingRequestMeta:
+		pm.PortalInstructions[basemeta.PortalShieldingRequestMeta].PutAction(action, shardID)
 	// unshield
 	case basemeta.PortalBurnPTokenMeta:
 		pm.PortalInstructions[basemeta.PortalBurnPTokenMeta].PutAction(action, shardID)
