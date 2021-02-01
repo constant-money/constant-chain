@@ -95,8 +95,8 @@ func newStateObjectWithValue(db *StateDB, objectType int, hash common.Hash, valu
 		return newProcessUnshieldRequestBatchObjectWithValue(db, hash, value)
 	case PortalWaitingUnshieldObjectType:
 		return newWaitingPortingRequestObjectWithValue(db, hash, value)
-	case PortalMultisigWalletObjectType:
-		return newMultisigWalletObjectWithValue(db, hash, value)
+	case PortalUTXOObjectType:
+		return newUTXOObjectWithValue(db, hash, value)
 	default:
 		panic("state object type not exist")
 	}
@@ -172,8 +172,8 @@ func newStateObject(db *StateDB, objectType int, hash common.Hash) StateObject {
 		return newProcessUnshieldRequestBatchObject(db, hash)
 	case PortalWaitingUnshieldObjectType:
 		return newWaitingUnshieldObject(db, hash)
-	case PortalMultisigWalletObjectType:
-		return newMultisigWalletsStateObject(db, hash)
+	case PortalUTXOObjectType:
+		return newUTXOObject(db, hash)
 	default:
 		panic("state object type not exist")
 	}

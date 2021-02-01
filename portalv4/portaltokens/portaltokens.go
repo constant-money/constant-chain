@@ -18,7 +18,7 @@ type PortalTokenProcessor interface {
 	GetExpectedMemoForShielding(incAddress string) string
 	GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string
 	ParseAndVerifyProof(
-		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error)
+		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error)
 	GetExternalTxHashFromProof(proof string) (string, error)
 	ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldState map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
@@ -85,7 +85,7 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, wait
 
 	// ascending sort waitingUnshieldReqs by beaconHeight
 	type unshieldItem struct {
-		key string
+		key   string
 		value *statedb.WaitingUnshieldRequest
 	}
 

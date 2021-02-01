@@ -22,35 +22,35 @@ func (p PortalBTCTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custo
 }
 
 func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
-	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, uint64, error) {
+	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error) {
 	btcChain := bc.GetBTCHeaderChain()
 	if btcChain == nil {
 		Logger.log.Error("BTC relaying chain should not be null")
-		return false, nil, 0, errors.New("BTC relaying chain should not be null")
+		return false, nil, errors.New("BTC relaying chain should not be null")
 	}
 	// parse BTCProof in meta
 	btcTxProof, err := btcrelaying.ParseBTCProofFromB64EncodeStr(proof)
 	if err != nil {
 		Logger.log.Errorf("ShieldingProof is invalid %v\n", err)
-		return false, nil, 0, fmt.Errorf("ShieldingProof is invalid %v\n", err)
+		return false, nil, fmt.Errorf("ShieldingProof is invalid %v\n", err)
 	}
 
 	// verify tx with merkle proofs
 	isValid, err := btcChain.VerifyTxWithMerkleProofs(btcTxProof)
 	if !isValid || err != nil {
 		Logger.log.Errorf("Verify btcTxProof failed %v", err)
-		return false, nil, 0, fmt.Errorf("Verify btcTxProof failed %v", err)
+		return false, nil, fmt.Errorf("Verify btcTxProof failed %v", err)
 	}
 
 	// extract attached message from txOut's OP_RETURN
 	btcAttachedMsg, err := btcrelaying.ExtractAttachedMsgFromTx(btcTxProof.BTCTx)
 	if err != nil {
 		Logger.log.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
-		return false, nil, 0, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
+		return false, nil, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
 	}
 	if btcAttachedMsg != expectedMemo {
 		Logger.log.Errorf("ShieldingId in the btc attached message is not matched with portingID in metadata")
-		return false, nil, 0, fmt.Errorf("ShieldingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
+		return false, nil, fmt.Errorf("ShieldingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
 	}
 
 	// check whether amount transfer in txBNB is equal porting amount or not
@@ -72,20 +72,20 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 
 		totalValue += uint64(out.Value)
 
-		var curUTXO statedb.UTXO
-		curUTXO.SetTxHash(btcTxProof.BTCTx.TxHash().String())
-		curUTXO.SetOutputIndex(idx)
-		curUTXO.SetOutputAmount(uint64(out.Value))
-
-		listUTXO = append(listUTXO, &curUTXO)
+		listUTXO = append(listUTXO, statedb.NewUTXOWithValue(
+			addrStr,
+			btcTxProof.BTCTx.TxHash().String(),
+			idx,
+			uint64(out.Value),
+		))
 	}
 
 	if len(listUTXO) == 0 || totalValue < p.GetMinTokenAmount() {
 		Logger.log.Errorf("Shielding amount: %v is less than the minimum threshold: %v\n", totalValue, p.GetMinTokenAmount())
-		return false, nil, 0, fmt.Errorf("Shielding amount: %v is less than the minimum threshold: %v", totalValue, p.GetMinTokenAmount())
+		return false, nil, fmt.Errorf("Shielding amount: %v is less than the minimum threshold: %v", totalValue, p.GetMinTokenAmount())
 	}
 
-	return true, listUTXO, totalValue, nil
+	return true, listUTXO, nil
 }
 
 func (p PortalBTCTokenProcessor) GetExternalTxHashFromProof(proof string) (string, error) {

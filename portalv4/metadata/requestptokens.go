@@ -32,26 +32,20 @@ type PortalRequestPTokensActionV4 struct {
 // It will be appended to beaconBlock
 // both accepted and rejected status
 type PortalRequestPTokensContentV4 struct {
-	TokenID                 string // pTokenID in incognito chain
-	IncogAddressStr         string
-	ShieldingWalletAddress  string
-	ShieldingAmount         uint64
-	ShieldingExternalTxHash string
-	ShieldingUTXO           []*statedb.UTXO
-	TxReqID                 common.Hash
-	ShardID                 byte
+	TokenID         string // pTokenID in incognito chain
+	IncogAddressStr string
+	ShieldingUTXO   []*statedb.UTXO
+	TxReqID         common.Hash
+	ShardID         byte
 }
 
 // PortalRequestPTokensStatus - Beacon tracks status of request ptokens into db
 type PortalRequestPTokensStatusV4 struct {
-	Status                  byte
-	TokenID                 string // pTokenID in incognito chain
-	IncogAddressStr         string
-	ShieldingWalletAddress  string
-	ShieldingAmount         uint64
-	ShieldingExternalTxHash string
-	ShieldingUTXO           []*statedb.UTXO
-	TxReqID                 common.Hash
+	Status          byte
+	TokenID         string // pTokenID in incognito chain
+	IncogAddressStr string
+	ShieldingUTXO   []*statedb.UTXO
+	TxReqID         common.Hash
 }
 
 func NewPortalRequestPTokensV4(

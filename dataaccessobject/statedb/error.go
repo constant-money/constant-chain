@@ -47,7 +47,7 @@ const (
 	ErrInvalidPortalConfirmProofStateType        = "invalid portal confirm proof state type"
 	ErrInvalidUnshieldRequestType                = "invalid portal waiting unshield request type"
 	ErrInvalidUnshieldRequestProcessedType       = "invalid portal unshield request processed type"
-	ErrInvalidPortalMultisigWalletsStateType     = "invalid portal multisig wallet state type"
+	ErrInvalidPortalUTXOType                     = "invalid portal utxo state type"
 	ErrInvalidPortalShieldingRequestsStateType   = "invalid portal shielding requests state type"
 )
 const (

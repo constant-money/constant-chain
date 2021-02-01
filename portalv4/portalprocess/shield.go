@@ -79,9 +79,6 @@ func (p *portalRequestPTokenProcessorV4) PrepareDataForBlockProducer(stateDB *st
 func buildReqPTokensInstV4(
 	tokenID string,
 	incogAddressStr string,
-	shieldingWalletAddress string,
-	shieldingAmount uint64,
-	shieldingExternalTxHash string,
 	shieldingUTXO []*statedb.UTXO,
 	metaType int,
 	shardID byte,
@@ -89,14 +86,11 @@ func buildReqPTokensInstV4(
 	status string,
 ) []string {
 	reqPTokenContent := portalMeta.PortalRequestPTokensContentV4{
-		TokenID:                 tokenID,
-		IncogAddressStr:         incogAddressStr,
-		ShieldingWalletAddress:  shieldingWalletAddress,
-		ShieldingAmount:         shieldingAmount,
-		ShieldingExternalTxHash: shieldingExternalTxHash,
-		ShieldingUTXO:           shieldingUTXO,
-		TxReqID:                 txReqID,
-		ShardID:                 shardID,
+		TokenID:         tokenID,
+		IncogAddressStr: incogAddressStr,
+		ShieldingUTXO:   shieldingUTXO,
+		TxReqID:         txReqID,
+		ShardID:         shardID,
 	}
 	reqPTokenContentBytes, _ := json.Marshal(reqPTokenContent)
 	return []string{
@@ -134,9 +128,6 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	rejectInst := buildReqPTokensInstV4(
 		meta.TokenID,
 		meta.IncogAddressStr,
-		"",
-		0,
-		"",
 		[]*statedb.UTXO{},
 		meta.Type,
 		shardID,
@@ -173,26 +164,18 @@ func (p *portalRequestPTokenProcessorV4) BuildNewInsts(
 	expectedMemo := portalTokenProcessor.GetExpectedMemoForShielding(meta.IncogAddressStr)
 	// TODO: get this value from portal params
 	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
-	isValid, listUTXO, shieldingAmount, err := portalTokenProcessor.ParseAndVerifyProof(meta.ShieldingProof, bc, expectedMemo, expectedMultisigAddress)
+	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyProof(meta.ShieldingProof, bc, expectedMemo, expectedMultisigAddress)
 
 	if !isValid || err != nil {
 		Logger.log.Error("Parse proof and verify shielding proof failed: %v", err)
 		return [][]string{rejectInst}, nil
 	}
 
-	err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, meta.TokenID, expectedMultisigAddress, listUTXO)
-
-	if err != nil {
-		Logger.log.Errorf("ERROR: an error occured while execute UpdateMultisigWalletsStateAfterUserRequestPToken: %+v", err)
-		return [][]string{rejectInst}, nil
-	}
+	UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, meta.TokenID, listUTXO)
 
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
 		actionData.Meta.IncogAddressStr,
-		expectedMultisigAddress,
-		shieldingAmount,
-		listUTXO[0].GetTxHash(),
 		listUTXO,
 		actionData.Meta.Type,
 		shardID,
@@ -229,12 +212,14 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
-		err = UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, actionData.TokenID, actionData.ShieldingWalletAddress, actionData.ShieldingUTXO)
-		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while execute UpdateMultisigWalletsStateAfterUserRequestPToken: %+v", err)
-			return nil
+		UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalState, actionData.TokenID, actionData.ShieldingUTXO)
+		shieldingExternalTxHash := actionData.ShieldingUTXO[0].GetTxHash()
+		shieldingAmount := uint64(0)
+		for _, utxo := range actionData.ShieldingUTXO {
+			shieldingAmount += utxo.GetOutputAmount()
 		}
-		err = SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, actionData.ShieldingExternalTxHash, actionData.IncogAddressStr, actionData.ShieldingAmount)
+
+		err = SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
 		if err != nil {
 			Logger.log.Errorf("ERROR: an error occured while execute SaveShieldingExternalTxHashToStateDB: %+v", err)
 			return nil
@@ -242,14 +227,11 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 		// track reqPToken status by txID into DB
 		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
-			Status:                  pCommon.PortalRequestAcceptedStatus,
-			TokenID:                 actionData.TokenID,
-			IncogAddressStr:         actionData.IncogAddressStr,
-			ShieldingWalletAddress:  actionData.ShieldingWalletAddress,
-			ShieldingAmount:         actionData.ShieldingAmount,
-			ShieldingExternalTxHash: actionData.ShieldingExternalTxHash,
-			ShieldingUTXO:           actionData.ShieldingUTXO,
-			TxReqID:                 actionData.TxReqID,
+			Status:          pCommon.PortalRequestAcceptedStatus,
+			TokenID:         actionData.TokenID,
+			IncogAddressStr: actionData.IncogAddressStr,
+			ShieldingUTXO:   actionData.ShieldingUTXO,
+			TxReqID:         actionData.TxReqID,
 		}
 		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
 		err = statedb.StoreRequestPTokenStatus(
@@ -270,10 +252,10 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 		}
 		updatingInfo, found := updatingInfoByTokenID[*incTokenID]
 		if found {
-			updatingInfo.CountUpAmt += actionData.ShieldingAmount
+			updatingInfo.CountUpAmt += shieldingAmount
 		} else {
 			updatingInfo = bMeta.UpdatingInfo{
-				CountUpAmt:      actionData.ShieldingAmount,
+				CountUpAmt:      shieldingAmount,
 				DeductAmt:       0,
 				TokenID:         *incTokenID,
 				ExternalTokenID: nil,
@@ -284,14 +266,11 @@ func (p *portalRequestPTokenProcessorV4) ProcessInsts(
 
 	} else if reqStatus == pCommon.PortalRequestRejectedChainStatus {
 		reqPTokenTrackData := metadata.PortalRequestPTokensStatusV4{
-			Status:                  pCommon.PortalRequestRejectedStatus,
-			TokenID:                 actionData.TokenID,
-			IncogAddressStr:         actionData.IncogAddressStr,
-			ShieldingWalletAddress:  actionData.ShieldingWalletAddress,
-			ShieldingAmount:         actionData.ShieldingAmount,
-			ShieldingExternalTxHash: actionData.ShieldingExternalTxHash,
-			ShieldingUTXO:           actionData.ShieldingUTXO,
-			TxReqID:                 actionData.TxReqID,
+			Status:          pCommon.PortalRequestRejectedStatus,
+			TokenID:         actionData.TokenID,
+			IncogAddressStr: actionData.IncogAddressStr,
+			ShieldingUTXO:   actionData.ShieldingUTXO,
+			TxReqID:         actionData.TxReqID,
 		}
 		reqPTokenTrackDataBytes, _ := json.Marshal(reqPTokenTrackData)
 		err = statedb.StoreRequestPTokenStatus(

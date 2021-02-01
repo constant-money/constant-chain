@@ -2,6 +2,7 @@ package portalprocess
 
 import (
 	"errors"
+
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -9,7 +10,7 @@ import (
 
 type CurrentPortalV4State struct {
 	WaitingUnshieldRequests   map[string]map[string]*statedb.WaitingUnshieldRequest        // tokenID : hash(tokenID || unshieldID) : value
-	WalletsState              map[string]*statedb.MultisigWalletsState                     // key : hash(tokenID)
+	UTXOs                     map[string]map[string]*statedb.UTXO                          // tokenID : hash(tokenID || walletAddress || txHash || index): value
 	ProcessedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch // tokenID : hash(tokenID || batchID) : value
 	ShieldingExternalTx       map[string]*statedb.ShieldingRequestsState                   // key : hash(tokenID)
 }
@@ -31,7 +32,7 @@ func InitCurrentPortalV4StateFromDB(
 
 	return &CurrentPortalV4State{
 		WaitingUnshieldRequests:   waitingUnshieldRequests,
-		WalletsState:              nil,
+		UTXOs:                     nil,
 		ProcessedUnshieldRequests: nil,
 		ShieldingExternalTx:       nil,
 	}, nil
@@ -52,30 +53,15 @@ func StorePortalV4StateToDB(
 	return nil
 }
 
-func CloneMultisigWallet(wallets map[string]*statedb.MultisigWalletsState) map[string]*statedb.MultisigWalletsState {
-	newWallets := make(map[string]*statedb.MultisigWalletsState, len(wallets))
-	for key, wallet := range wallets {
-		newWallets[key] = statedb.NewMultisigWalletsStateWithValue(
-			wallet.GetWallets(),
-		)
-	}
-	return newWallets
-}
-
 // UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken
-func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalV4State *CurrentPortalV4State, tokenID string, walletAddress string, listUTXO []*statedb.UTXO) error {
-	walletsState, ok := currentPortalV4State.WalletsState[tokenID]
-	if !ok {
-		return errors.New("[UpdateMultisigWalletsStateAfterUserRequestPToken] MultisigWallet not found")
+func UpdateMultisigWalletsStateAfterUserRequestPToken(currentPortalV4State *CurrentPortalV4State, tokenID string, listUTXO []*statedb.UTXO) {
+	for _, utxo := range listUTXO {
+		walletAddress := utxo.GetWalletAddress()
+		txHash := utxo.GetTxHash()
+		outputIdx := utxo.GetOutputIndex()
+		outputAmount := utxo.GetOutputAmount()
+		currentPortalV4State.UTXOs[tokenID][statedb.GenerateUTXOObjectKey(tokenID, walletAddress, txHash, outputIdx).String()] = statedb.NewUTXOWithValue(walletAddress, txHash, outputIdx, outputAmount)
 	}
-	wallets := walletsState.GetWallets()
-	_, found := wallets[walletAddress]
-	if !found {
-		wallets[walletAddress] = []*statedb.UTXO{}
-	}
-	wallets[walletAddress] = append(wallets[walletAddress], listUTXO...)
-	currentPortalV4State.WalletsState[tokenID].SetWallets(wallets)
-	return nil
 }
 
 // UpdateCustodianStateAfterMatchingPortingRequest updates current portal state after requesting ptoken

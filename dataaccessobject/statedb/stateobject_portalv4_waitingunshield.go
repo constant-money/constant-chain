@@ -9,10 +9,10 @@ import (
 )
 
 type WaitingUnshieldRequest struct {
-	unshieldID string
+	unshieldID    string
 	remoteAddress string
 	amount        uint64
-	beaconHeight uint64
+	beaconHeight  uint64
 }
 
 func (us *WaitingUnshieldRequest) GetRemoteAddress() string {
@@ -51,13 +51,13 @@ func (us WaitingUnshieldRequest) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
 		RemoteAddress string
 		Amount        uint64
-		UnshieldID string
-		BeaconHeight uint64
+		UnshieldID    string
+		BeaconHeight  uint64
 	}{
 		RemoteAddress: us.remoteAddress,
 		Amount:        us.amount,
-		UnshieldID: us.unshieldID,
-		BeaconHeight : us.beaconHeight,
+		UnshieldID:    us.unshieldID,
+		BeaconHeight:  us.beaconHeight,
 	})
 	if err != nil {
 		return []byte{}, err
@@ -69,8 +69,8 @@ func (us *WaitingUnshieldRequest) UnmarshalJSON(data []byte) error {
 	temp := struct {
 		RemoteAddress string
 		Amount        uint64
-		UnshieldID string
-		BeaconHeight uint64
+		UnshieldID    string
+		BeaconHeight  uint64
 	}{}
 	err := json.Unmarshal(data, &temp)
 	if err != nil {
@@ -89,8 +89,8 @@ func NewWaitingUnshieldRequestStateWithValue(
 	return &WaitingUnshieldRequest{
 		remoteAddress: remoteAddress,
 		amount:        amount,
-		unshieldID: unshieldID,
-		beaconHeight: beaconHeight,
+		unshieldID:    unshieldID,
+		beaconHeight:  beaconHeight,
 	}
 }
 

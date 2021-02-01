@@ -68,7 +68,7 @@ var (
 	portalUnlockOverRateCollateralsRequestTxStatusPrefix = []byte("portalunlockoverratecollateralstxstatus-")
 	portalWaitingUnshieldRequestsPrefix                  = []byte("portalwaitingunshieldrequest-")
 	portalUnshieldRequestsProcessedPrefix                = []byte("portalunshieldrequestsprocessed-")
-	portalMultisigWalletsStatePrefix                     = []byte("portalmultisigwallet-")
+	portalUTXOStatePrefix                                = []byte("portalutxo-")
 
 	portalStatusPrefix                           = []byte("portalstatus-")
 	portalCustodianDepositStatusPrefix           = []byte("custodiandeposit-")
@@ -487,8 +487,8 @@ func GetProcessedUnshieldRequestBatchPrefix(tokenID string) []byte {
 	return h[:][:prefixHashKeyLength]
 }
 
-func GetPortalMultisigWalletsStatePrefix() []byte {
-	h := common.HashH(portalMultisigWalletsStatePrefix)
+func GetPortalUTXOStatePrefix(tokenID string) []byte {
+	h := common.HashH(append(portalUTXOStatePrefix, []byte(tokenID)...))
 	return h[:][:prefixHashKeyLength]
 }
 
