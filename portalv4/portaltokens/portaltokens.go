@@ -20,7 +20,7 @@ type PortalTokenProcessor interface {
 	ParseAndVerifyProof(
 		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error)
 	GetExternalTxHashFromProof(proof string) (string, error)
-	ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldState map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
+	ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
 	CreateRawExternalTx() error
 }
@@ -73,14 +73,27 @@ func (p PortalToken) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool
 }
 
 // Choose list of pairs (UTXOs and unshield IDs) for broadcast external transactions
-func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
+func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
 	if len(utxos) == 0 || len(waitingUnshieldReqs) == 0 {
 		return []*BroadcastTx{}
 	}
 
-	// descending sort
-	sort.SliceStable(utxos, func(i, j int) bool {
-		return utxos[i].GetOutputAmount() > utxos[j].GetOutputAmount()
+	// descending sort utxo by value
+	type utxoItem struct {
+		key   string
+		value *statedb.UTXO
+	}
+	utxosArr := []utxoItem{}
+	for k, req := range utxos {
+		utxosArr = append(
+			utxosArr,
+			utxoItem{
+				key:   k,
+				value: req,
+			})
+	}
+	sort.SliceStable(utxosArr, func(i, j int) bool {
+		return utxosArr[i].value.GetOutputAmount() > utxosArr[j].value.GetOutputAmount()
 	})
 
 	// ascending sort waitingUnshieldReqs by beaconHeight
@@ -112,28 +125,28 @@ func (p PortalToken) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, wait
 
 		cur_sum_amount := uint64(0)
 		cnt := 0
-		if utxos[utxo_idx].GetOutputAmount() >= wReqsArr[unshield_idx].value.GetAmount() {
+		if utxosArr[utxo_idx].value.GetOutputAmount() >= wReqsArr[unshield_idx].value.GetAmount() {
 			// find the last unshield idx that the cummulative sum of unshield amount <= current utxo amount
-			for unshield_idx < len(wReqsArr) && cur_sum_amount+wReqsArr[unshield_idx].value.GetAmount() <= utxos[utxo_idx].GetOutputAmount() && p.IsAcceptableTxSize(1, cnt+1) {
+			for unshield_idx < len(wReqsArr) && cur_sum_amount+wReqsArr[unshield_idx].value.GetAmount() <= utxosArr[utxo_idx].value.GetOutputAmount() && p.IsAcceptableTxSize(1, cnt+1) {
 				cur_sum_amount += wReqsArr[unshield_idx].value.GetAmount()
 				chosenUnshieldIDs = append(chosenUnshieldIDs, wReqsArr[unshield_idx].value.GetUnshieldID())
 				unshield_idx += 1
 				cnt += 1
 			}
-			chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
+			chosenUTXOs = append(chosenUTXOs, utxosArr[utxo_idx].value)
 			utxo_idx += 1
 		} else {
 			// find the first utxo idx that the cummulative sum of utxo amount >= current unshield amount
-			for utxo_idx < len(utxos) && cur_sum_amount+utxos[utxo_idx].GetOutputAmount() < wReqsArr[unshield_idx].value.GetAmount() {
-				cur_sum_amount += utxos[utxo_idx].GetOutputAmount()
-				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
+			for utxo_idx < len(utxos) && cur_sum_amount+utxosArr[utxo_idx].value.GetOutputAmount() < wReqsArr[unshield_idx].value.GetAmount() {
+				cur_sum_amount += utxosArr[utxo_idx].value.GetOutputAmount()
+				chosenUTXOs = append(chosenUTXOs, utxosArr[utxo_idx].value)
 				utxo_idx += 1
 				cnt += 1
 			}
 			if utxo_idx < len(utxos) && p.IsAcceptableTxSize(cnt+1, 1) {
 				// insert new unshield ids if the current utxos still has enough amount
-				cur_sum_amount += utxos[utxo_idx].GetOutputAmount()
-				chosenUTXOs = append(chosenUTXOs, utxos[utxo_idx])
+				cur_sum_amount += utxosArr[utxo_idx].value.GetOutputAmount()
+				chosenUTXOs = append(chosenUTXOs, utxosArr[utxo_idx].value)
 				utxo_idx += 1
 				cnt += 1
 

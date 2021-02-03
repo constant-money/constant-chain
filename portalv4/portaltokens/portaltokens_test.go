@@ -12,10 +12,10 @@ func insertUnshieldIDIntoStateDB(waitingUnshieldState map[string]*statedb.Waitin
 	waitingUnshieldState[key] = statedb.NewWaitingUnshieldRequestStateWithValue(remoteAddress, amount, unshieldID, beaconHeight)
 }
 
-func insertUTXOIntoStateDB(utxos []*statedb.UTXO, amount uint64) []*statedb.UTXO {
-	cur_utxo := &statedb.UTXO{}
-	cur_utxo.SetOutputAmount(amount)
-	return append(utxos, cur_utxo)
+func insertUTXOIntoStateDB(utxos map[string]*statedb.UTXO, key string, amount uint64) {
+	curUTXO := &statedb.UTXO{}
+	curUTXO.SetOutputAmount(amount)
+	utxos[key] = curUTXO
 }
 
 func printBroadcastTxs(t *testing.T, broadcastTxs []*BroadcastTx) {
@@ -39,22 +39,22 @@ func TestChooseUnshieldIDsFromCandidates(t *testing.T) {
 	insertUnshieldIDIntoStateDB(waitingUnshieldState, tokenID, "remoteAddr_3", "unshield_3", 2000, 3)
 
 	// Not enough UTXO
-	utxos := []*statedb.UTXO{}
-	utxos = insertUTXOIntoStateDB(utxos, 900)
+	utxos := map[string]*statedb.UTXO{}
+	insertUTXOIntoStateDB(utxos, "utxo_1", 900)
 
 	broadcastTxs := p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)
 
 	// Broadcast a part of unshield requests
-	utxos = []*statedb.UTXO{}
-	utxos = insertUTXOIntoStateDB(utxos, 1500)
+	utxos = map[string]*statedb.UTXO{}
+	insertUTXOIntoStateDB(utxos, "utxo_2", 1500)
 
 	broadcastTxs = p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)
 
 	// Broadcast all unshield requests
-	utxos = []*statedb.UTXO{}
-	utxos = insertUTXOIntoStateDB(utxos, 5000)
+	utxos = map[string]*statedb.UTXO{}
+	insertUTXOIntoStateDB(utxos, "utxo_3", 5000)
 
 	broadcastTxs = p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)
@@ -66,10 +66,10 @@ func TestChooseUnshieldIDsFromCandidates(t *testing.T) {
 	insertUnshieldIDIntoStateDB(waitingUnshieldState, tokenID, "remoteAddr_6", "unshield_6", 1500, 6)
 	insertUnshieldIDIntoStateDB(waitingUnshieldState, tokenID, "remoteAddr_7", "unshield_7", 10000, 7)
 
-	utxos = []*statedb.UTXO{}
-	utxos = insertUTXOIntoStateDB(utxos, 500)
-	utxos = insertUTXOIntoStateDB(utxos, 1600)
-	utxos = insertUTXOIntoStateDB(utxos, 1000)
+	utxos = map[string]*statedb.UTXO{}
+	insertUTXOIntoStateDB(utxos, "utxo_4", 500)
+	insertUTXOIntoStateDB(utxos, "utxo_5", 1600)
+	insertUTXOIntoStateDB(utxos, "utxo_6", 1000)
 
 	broadcastTxs = p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)
@@ -81,12 +81,12 @@ func TestChooseUnshieldIDsFromCandidates(t *testing.T) {
 	insertUnshieldIDIntoStateDB(waitingUnshieldState, tokenID, "remoteAddr_10", "unshield_10", 200, 10)
 	insertUnshieldIDIntoStateDB(waitingUnshieldState, tokenID, "remoteAddr_11", "unshield_11", 100, 11)
 
-	utxos = []*statedb.UTXO{}
-	utxos = insertUTXOIntoStateDB(utxos, 150)
-	utxos = insertUTXOIntoStateDB(utxos, 150)
-	utxos = insertUTXOIntoStateDB(utxos, 1000)
-	utxos = insertUTXOIntoStateDB(utxos, 1600)
-	utxos = insertUTXOIntoStateDB(utxos, 1000)
+	utxos = map[string]*statedb.UTXO{}
+	insertUTXOIntoStateDB(utxos, "utxo_7", 150)
+	insertUTXOIntoStateDB(utxos, "utxo_8", 150)
+	insertUTXOIntoStateDB(utxos, "utxo_9", 1000)
+	insertUTXOIntoStateDB(utxos, "utxo_10", 1600)
+	insertUTXOIntoStateDB(utxos, "utxo_11", 1000)
 
 	broadcastTxs = p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)

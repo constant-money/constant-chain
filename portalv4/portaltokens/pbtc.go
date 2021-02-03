@@ -120,6 +120,6 @@ func (p PortalBTCTokenProcessor) CreateRawExternalTx() error {
 	return nil
 }
 
-func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos []*statedb.UTXO, waitingUnshieldState map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
-	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
+func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
+	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldReqs)
 }
