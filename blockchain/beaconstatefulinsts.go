@@ -61,6 +61,7 @@ var statefulInstTypes = []int{
 var portalV4StatefulInstTypes = []int{
 	basemeta.PortalShieldingRequestMeta,
 	basemeta.PortalBurnPTokenMeta,
+	basemeta.PortalReplacementFeeRequestMeta,
 }
 
 // isStatefulInstType checks metaType is stateful instruction type or not

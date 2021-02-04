@@ -1275,3 +1275,19 @@ func (blockService BlockService) GetPortalReqUnlockOverRateCollateralStatus(reqT
 
 	return &status, nil
 }
+
+func (blockService BlockService) GetPortalReqReplacementFeeStatus(reqTxID string) (*metadata2.PortalReplacementFeeRequestStatus, error) {
+	stateDB := blockService.BlockChain.GetBeaconBestState().GetBeaconFeatureStateDB()
+	data, err := statedb.GetPortalUnshieldBatchReplacementRequestStatus(stateDB, reqTxID)
+	if err != nil {
+		return nil, err
+	}
+
+	var status metadata2.PortalReplacementFeeRequestStatus
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}

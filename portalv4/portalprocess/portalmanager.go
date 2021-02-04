@@ -54,6 +54,11 @@ func NewPortalV4Manager() *PortalV4Manager {
 				actions: map[byte][][]string{},
 			},
 		},
+		bMeta.PortalReplacementFeeRequestMeta: &portalReplacementFeeRequestProcessor{
+			portalInstProcessor: &portalInstProcessor{
+				actions: map[byte][][]string{},
+			},
+		},
 	}
 
 	return &PortalV4Manager{

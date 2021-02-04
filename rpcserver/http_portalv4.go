@@ -198,3 +198,105 @@ func (httpServer *HttpServer) handleCreateAndSendTxWithPortalBurnPToken(params i
 
 	return sendResult, nil
 }
+
+/*
+====== Replacement fee
+*/
+func (httpServer *HttpServer) handleCreateRawTxWithPortalReplaceUnshieldFee(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+
+	if len(arrayParams) >= 7 {
+		hasPrivacyTokenParam, ok := arrayParams[6].(float64)
+		if !ok {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("HasPrivacyToken is invalid"))
+		}
+		hasPrivacyToken := int(hasPrivacyTokenParam) > 0
+		if hasPrivacyToken {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("The privacy mode must be disabled"))
+		}
+	}
+	tokenParamsRaw, ok := arrayParams[4].(map[string]interface{})
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param metadata is invalid"))
+	}
+
+	portalTokenID, ok := tokenParamsRaw["PortalTokenID"].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("PortalTokenID is invalid"))
+	}
+
+	replacementFee, err := common.AssertAndConvertStrToNumber(tokenParamsRaw["ReplacementFee"])
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+	}
+
+	incAddressStr, ok := tokenParamsRaw["IncAddressStr"].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("IncAddressStr is invalid"))
+	}
+
+	batchID, ok := tokenParamsRaw["BatchID"].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("BatchID is invalid"))
+	}
+
+	meta, err := metadata.NewPortalReplacementFeeRequest(basemeta.PortalReplacementFeeRequestMeta, incAddressStr, portalTokenID, batchID, uint(replacementFee))
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+	}
+
+	customTokenTx, rpcErr := httpServer.txService.BuildRawPrivacyCustomTokenTransactionV2(params, meta)
+	if rpcErr != nil {
+		Logger.log.Error(rpcErr)
+		return nil, rpcErr
+	}
+
+	byteArrays, err2 := json.Marshal(customTokenTx)
+	if err2 != nil {
+		Logger.log.Error(err2)
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err2)
+	}
+	result := jsonresult.CreateTransactionResult{
+		TxID:            customTokenTx.Hash().String(),
+		Base58CheckData: base58.Base58Check{}.Encode(byteArrays, 0x00),
+	}
+	return result, nil
+}
+
+func (httpServer *HttpServer) handleCreateAndSendTxWithPortalReplaceUnshieldFee(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	data, err := httpServer.handleCreateRawTxWithPortalReplaceUnshieldFee(params, closeChan)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
+	}
+
+	tx := data.(jsonresult.CreateTransactionResult)
+	base58CheckData := tx.Base58CheckData
+	newParam := make([]interface{}, 0)
+	newParam = append(newParam, base58CheckData)
+	sendResult, err1 := httpServer.handleSendRawPrivacyCustomTokenTransaction(newParam, closeChan)
+	if err1 != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err1)
+	}
+
+	return sendResult, nil
+}
+
+func (httpServer *HttpServer) handleGetPortalReplacementFeeRequestStatus(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	arrayParams := common.InterfaceSlice(params)
+	if len(arrayParams) < 1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
+	}
+	data, ok := arrayParams[0].(map[string]interface{})
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Payload data is invalid"))
+	}
+	reqTxID, ok := data["ReqTxID"].(string)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param ReqTxID is invalid"))
+	}
+	status, err := httpServer.blockService.GetPortalReqReplacementFeeStatus(reqTxID)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetReqPTokenStatusV4Error, err)
+	}
+	return status, nil
+}

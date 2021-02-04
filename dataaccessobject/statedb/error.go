@@ -202,6 +202,8 @@ const (
 	StorePortalListWaitingUnshieldRequestError
 	GetPortalUnshieldRequestStatusError
 	StorePortalUnshieldRequestStatusError
+	GetPortalUnshieldBatchReplacementRequestStatusError
+	StorePortalUnshieldBatchReplacementRequestStatusError
 )
 
 var ErrCodeMessage = map[int]struct {

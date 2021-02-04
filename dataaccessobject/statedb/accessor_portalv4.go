@@ -52,3 +52,27 @@ func GetPortalUnshieldRequestStatus(stateDB *StateDB, unshieldID string) ([]byte
 
 	return data, nil
 }
+
+// ================= Unshielding Batch Replacement Status =================
+// Store and get the status of the Unshield Batch Replacement Request by batchID
+func StorePortalUnshieldBatchReplacementRequestStatus(stateDB *StateDB, txID string, statusContent []byte) error {
+	statusType := PortalUnshielReplacementFeeBatchStatusPrefix()
+	statusSuffix := []byte(txID)
+	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
+	if err != nil {
+		return NewStatedbError(StorePortalUnshieldBatchReplacementRequestStatusError, err)
+	}
+
+	return nil
+}
+
+func GetPortalUnshieldBatchReplacementRequestStatus(stateDB *StateDB, txID string) ([]byte, error) {
+	statusType := PortalUnshielReplacementFeeBatchStatusPrefix()
+	statusSuffix := []byte(txID)
+	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
+	if err != nil && err.(*StatedbError).GetErrorCode() != ErrCodeMessage[GetPortalStatusNotFoundError].Code {
+		return []byte{}, NewStatedbError(GetPortalUnshieldBatchReplacementRequestStatusError, err)
+	}
+
+	return data, nil
+}
