@@ -122,3 +122,33 @@ func UpdatePortalStateAfterProcessBatchUnshieldRequest(
 	currentPortalV4State.ProcessedUnshieldRequests[tokenID][keyProcessedUnshieldRequest] = statedb.NewProcessedUnshieldRequestBatchWithValue(
 		batchID, unshieldIDs, utxos, externalFees)
 }
+
+func UpdatePortalStateAfterReplaceFeedRequest(
+	currentPortalV4State *CurrentPortalV4State, unshieldBatch *statedb.ProcessedUnshieldRequestBatch, beaconHeight uint64, fee uint, tokenIDStr, batchIDStr string) {
+	if currentPortalV4State.ProcessedUnshieldRequests == nil {
+		currentPortalV4State.ProcessedUnshieldRequests = map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
+	}
+	if currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr] == nil {
+		currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr] = map[string]*statedb.ProcessedUnshieldRequestBatch{}
+	}
+	keyWaitingReplacementRequest := statedb.GenerateProcessedUnshieldRequestBatchObjectKey(tokenIDStr, batchIDStr).String()
+	fees := unshieldBatch.GetExternalFees()
+	fees[beaconHeight] = fee
+	waitingReplacementRequest := statedb.NewProcessedUnshieldRequestBatchWithValue(unshieldBatch.GetBatchID(), unshieldBatch.GetUnshieldRequests(), unshieldBatch.GetUTXOs(), fees)
+	currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr][keyWaitingReplacementRequest] = waitingReplacementRequest
+}
+
+// get latest beaconheight
+func GetMaxKeyValue(input map[uint64]uint) (max uint64) {
+	max = 0
+	for k := range input {
+		if k > max {
+			max = k
+		}
+	}
+	return max
+}
+
+func UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State *CurrentPortalV4State, tokenIDStr, batchKey string) {
+	delete(currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr], batchKey)
+}

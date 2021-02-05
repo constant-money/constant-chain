@@ -99,7 +99,9 @@ var (
 	withdrawCollateralProofType = []byte("0-")
 
 	// portal v4
-	portalUnshieldRequestStatusPrefix = []byte("unshieldrequest-")
+	portalUnshieldRequestStatusPrefix            = []byte("unshieldrequest-")
+	portalUnshielReplacementFeeBatchStatusPrefix = []byte("unshieldrequestbatchreplacementfeeprocessed-")
+	portalUnshielSubmitConfirmedTxStatusPrefix   = []byte("unshieldrequestsubmitconfirmedtx-")
 )
 
 func GetCommitteePrefixWithRole(role int, shardID int) []byte {
@@ -501,6 +503,14 @@ func GetShieldingRequestPrefix(tokenID string) []byte {
 
 func PortalUnshieldRequestStatusPrefix() []byte {
 	return portalUnshieldRequestStatusPrefix
+}
+
+func PortalUnshielReplacementFeeBatchStatusPrefix() []byte {
+	return portalUnshielReplacementFeeBatchStatusPrefix
+}
+
+func PortalSubmitConfirmedTxStatusPrefix() []byte {
+	return portalUnshielSubmitConfirmedTxStatusPrefix
 }
 
 var _ = func() (_ struct{}) {

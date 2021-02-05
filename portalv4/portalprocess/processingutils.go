@@ -18,6 +18,12 @@ func CollectPortalV4Insts(pm *PortalV4Manager, metaType int, action []string, sh
 	// unshield
 	case basemeta.PortalBurnPTokenMeta:
 		pm.PortalInstructions[basemeta.PortalBurnPTokenMeta].PutAction(action, shardID)
+	// replacement fee
+	case basemeta.PortalReplacementFeeRequestMeta:
+		pm.PortalInstructions[basemeta.PortalReplacementFeeRequestMeta].PutAction(action, shardID)
+	// submit confirmed tx
+	case basemeta.PortalSubmitConfirmedTxMeta:
+		pm.PortalInstructions[basemeta.PortalSubmitConfirmedTxMeta].PutAction(action, shardID)
 
 	default:
 		return

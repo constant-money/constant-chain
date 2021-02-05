@@ -75,6 +75,10 @@ func (blockchain *BlockChain) CheckBlockTimeIsReached(recentBeaconHeight, beacon
 		(recentShardHeight+1)-shardHeight >= blockchain.convertDurationTimeToShardBlocks(duration)
 }
 
+func (blockchain *BlockChain) CheckBlockTimeIsReachedByBeaconHeight(recentBeaconHeight, beaconHeight uint64, duration time.Duration) bool {
+	return (recentBeaconHeight+1)-beaconHeight >= blockchain.convertDurationTimeToBeaconBlocks(duration)
+}
+
 func (bc *BlockChain) InitRelayingHeaderChainStateFromDB() (*portalprocess.RelayingHeaderChainState, error) {
 	bnbChain := bc.GetBNBChainState()
 	btcChain := bc.config.BTCChain
@@ -184,6 +188,10 @@ func (blockchain *BlockChain) GetBTCHeaderChain() *btcrelaying.BlockChain {
 
 func (blockchain *BlockChain) GetPortalFeederAddress(beaconHeight uint64) string {
 	return blockchain.GetPortalParams(beaconHeight).PortalFeederAddress
+}
+
+func (blockchain *BlockChain) GetPortalReplacementAddress(beaconHeight uint64) string {
+	return blockchain.GetPortalParamsV4(beaconHeight).PortalReplacementAddress
 }
 
 func (blockchain *BlockChain) GetMinAmountPortalToken(tokenIDStr string, beaconHeight uint64) (uint64, error) {

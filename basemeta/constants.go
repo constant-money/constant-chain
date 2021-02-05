@@ -181,9 +181,11 @@ const (
 	PortalTopUpWaitingPortingResponseMeta = 203
 
 	// Portal v4
-	PortalBurnPTokenMeta       = 250
-	PortalShieldingRequestMeta = 251
-	PortalUnshieldBatchingMeta = 252
+	PortalBurnPTokenMeta            = 250
+	PortalShieldingRequestMeta      = 251
+	PortalUnshieldBatchingMeta      = 252
+	PortalReplacementFeeRequestMeta = 253
+	PortalSubmitConfirmedTxMeta     = 254
 )
 
 var portalMetas = []int{
@@ -244,4 +246,6 @@ var portalMetas = []int{
 var portalV4Metas = []int{
 	PortalShieldingRequestMeta,
 	PortalBurnPTokenMeta,
+	PortalReplacementFeeRequestMeta,
+	PortalSubmitConfirmedTxMeta,
 }
