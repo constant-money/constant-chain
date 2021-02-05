@@ -183,6 +183,7 @@ const (
 	// Portal v4
 	PortalBurnPTokenMeta       = 250
 	PortalShieldingRequestMeta = 251
+	PortalUnshieldBatchingMeta = 252
 )
 
 var portalMetas = []int{

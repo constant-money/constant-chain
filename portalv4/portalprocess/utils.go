@@ -28,6 +28,15 @@ func InitCurrentPortalV4StateFromDB(
 		}
 	}
 
+	// load list of processed unshielding requests batch
+	//processedUnshieldRequestsBatch := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
+	//for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
+	//	waitingUnshieldRequests[tokenID], err = statedb.GetWaitingUnshieldRequestsByTokenID(stateDB, tokenID)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//}
+
 	return &CurrentPortalV4State{
 		WaitingUnshieldRequests:   waitingUnshieldRequests,
 		UTXOs:                     nil,
@@ -90,4 +99,26 @@ func UpdatePortalStateAfterUnshieldRequest(
 	keyWaitingUnshieldRequest := statedb.GenerateWaitingUnshieldRequestObjectKey(tokenID, unshieldID).String()
 	waitingUnshieldRequest := statedb.NewWaitingUnshieldRequestStateWithValue(remoteAddress, unshieldAmt, unshieldID, beaconHeight)
 	currentPortalV4State.WaitingUnshieldRequests[tokenID][keyWaitingUnshieldRequest] = waitingUnshieldRequest
+}
+
+func UpdatePortalStateAfterProcessBatchUnshieldRequest(
+	currentPortalV4State *CurrentPortalV4State,
+	batchID string, utxos map[string][]*statedb.UTXO, externalFees map[uint64]uint, unshieldIDs []string, tokenID string, beaconHeight uint64) {
+	// remove unshieldIDs from WaitingUnshieldRequests
+	for _, unshieldID := range unshieldIDs {
+		keyWaitingUnshieldRequest := statedb.GenerateWaitingUnshieldRequestObjectKey(tokenID, unshieldID).String()
+		delete(currentPortalV4State.WaitingUnshieldRequests[tokenID], keyWaitingUnshieldRequest)
+	}
+
+	// add batch process to ProcessedUnshieldRequests
+	if currentPortalV4State.ProcessedUnshieldRequests == nil {
+		currentPortalV4State.ProcessedUnshieldRequests = map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
+	}
+	if currentPortalV4State.ProcessedUnshieldRequests[tokenID] == nil {
+		currentPortalV4State.ProcessedUnshieldRequests[tokenID] = map[string]*statedb.ProcessedUnshieldRequestBatch{}
+	}
+
+	keyProcessedUnshieldRequest := statedb.GenerateProcessedUnshieldRequestBatchObjectKey(tokenID, batchID).String()
+	currentPortalV4State.ProcessedUnshieldRequests[tokenID][keyProcessedUnshieldRequest] = statedb.NewProcessedUnshieldRequestBatchWithValue(
+		batchID, unshieldIDs, utxos, externalFees)
 }

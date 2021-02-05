@@ -2,6 +2,7 @@ package portaltokens
 
 import (
 	"fmt"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 
 	"github.com/binance-chain/go-sdk/types/msg"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
@@ -139,6 +140,11 @@ func ConvertIncPBNBAmountToExternalBNBAmount(incPBNBAmount int64) int64 {
 }
 
 // TODO:
-func (p PortalBNBTokenProcessor) CreateRawExternalTx() error {
-	return nil
+func (p PortalBNBTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, outputs []*OutputTx, memo string) (string, string, error){
+	return "", "", nil
+}
+
+// TODO:
+func (p PortalBNBTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
+	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldReqs)
 }

@@ -9,9 +9,10 @@ import (
 )
 
 type ProcessedUnshieldRequestBatch struct {
+	batchID      string
 	unshieldsID  []string
 	utxos        map[string][]*UTXO // map key (wallet address => list utxos)
-	externalFees map[uint64]uint   // beaconHeight => fee
+	externalFees map[uint64]uint    // beaconHeight => fee
 }
 
 func (us *ProcessedUnshieldRequestBatch) GetUTXOs() map[string][]*UTXO {
@@ -38,15 +39,25 @@ func (us *ProcessedUnshieldRequestBatch) SetExternalFees(externalFees map[uint64
 	us.externalFees = externalFees
 }
 
+func (us *ProcessedUnshieldRequestBatch) GetBatchID() string {
+	return us.batchID
+}
+
+func (us *ProcessedUnshieldRequestBatch) SetBatchID(batchID string) {
+	us.batchID = batchID
+}
+
 func (rq ProcessedUnshieldRequestBatch) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
-		UnshieldsID []string
-		UTXOs       map[string][]*UTXO
+		BatchID      string
+		UnshieldsID  []string
+		UTXOs        map[string][]*UTXO
 		ExternalFees map[uint64]uint
 	}{
-		UnshieldsID: rq.unshieldsID,
-		UTXOs:       rq.utxos,
-		ExternalFees:         rq.externalFees,
+		BatchID:      rq.batchID,
+		UnshieldsID:  rq.unshieldsID,
+		UTXOs:        rq.utxos,
+		ExternalFees: rq.externalFees,
 	})
 	if err != nil {
 		return []byte{}, err
@@ -56,8 +67,9 @@ func (rq ProcessedUnshieldRequestBatch) MarshalJSON() ([]byte, error) {
 
 func (rq *ProcessedUnshieldRequestBatch) UnmarshalJSON(data []byte) error {
 	temp := struct {
-		UnshieldsID []string
-		UTXOs       map[string][]*UTXO
+		BatchID      string
+		UnshieldsID  []string
+		UTXOs        map[string][]*UTXO
 		ExternalFees map[uint64]uint
 	}{}
 	err := json.Unmarshal(data, &temp)
@@ -71,12 +83,14 @@ func (rq *ProcessedUnshieldRequestBatch) UnmarshalJSON(data []byte) error {
 }
 
 func NewProcessedUnshieldRequestBatchWithValue(
+	batchID string,
 	unshieldsIDInput []string,
 	utxosInput map[string][]*UTXO,
 	externalFees map[uint64]uint) *ProcessedUnshieldRequestBatch {
 	return &ProcessedUnshieldRequestBatch{
-		unshieldsID: unshieldsIDInput,
-		utxos:       utxosInput,
+		batchID:      batchID,
+		unshieldsID:  unshieldsIDInput,
+		utxos:        utxosInput,
 		externalFees: externalFees,
 	}
 }

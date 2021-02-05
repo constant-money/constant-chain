@@ -22,7 +22,8 @@ type PortalTokenProcessor interface {
 	GetExternalTxHashFromProof(proof string) (string, error)
 	ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
-	CreateRawExternalTx() error
+	CreateRawExternalTx(inputs []*statedb.UTXO, outputs []*OutputTx, networkFee uint64, memo string, bc bMeta.ChainRetriever) (string, string, error)
+	//ExtractRawTx(rawTxStr string) ([]*statedb.UTXO, uint)
 }
 
 // set MinTokenAmount to avoid attacking with amount is less than smallest unit of cryptocurrency
@@ -37,6 +38,11 @@ type BroadcastTx struct {
 	UnshieldIDs []string
 }
 
+type OutputTx struct {
+	ReceiverAddress string
+	Amount          uint64
+}
+
 func (p PortalToken) GetExpectedMemoForShielding(incAddress string) string {
 	type shieldingMemoStruct struct {
 		IncAddress string `json:"ShieldingIncAddress"`
@@ -48,6 +54,7 @@ func (p PortalToken) GetExpectedMemoForShielding(incAddress string) string {
 	return memoShieldingStr
 }
 
+//todo:
 func (p PortalToken) GetExpectedMemoForRedeem(redeemID string, custodianAddress string) string {
 	type redeemMemoStruct struct {
 		RedeemID                  string `json:"RedeemID"`

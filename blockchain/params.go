@@ -4,6 +4,7 @@ import (
 	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portal/portaltokens"
+	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	portalTokensV4 "github.com/incognitochain/incognito-chain/portalv4/portaltokens"
 	"github.com/incognitochain/incognito-chain/portalv4"
 	"time"
@@ -276,7 +277,12 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				PortalTokens:                initPortalTokensV4ForTestNet(),
+				MultiSigWalletAddress: "", // // todo: should update before deploying
+				PortalTokens:          initPortalTokensV4ForTestNet(),
+				FeeUnshields: map[string]uint64{
+					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
+				},
+				BatchNumBlks: 60, // ~ 10 mins
 			},
 		},
 
@@ -376,7 +382,12 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				PortalTokens:                initPortalTokensV4ForTestNet(),
+				MultiSigWalletAddress: "", // // todo: should update before deploying
+				PortalTokens:          initPortalTokensV4ForTestNet(),
+				FeeUnshields: map[string]uint64{
+					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
+				},
+				BatchNumBlks: 60, // ~ 10 mins
 			},
 		},
 
@@ -474,7 +485,12 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				PortalTokens:                initPortalTokensV4ForMainNet(),
+				MultiSigWalletAddress: "", // todo: should update before deploying
+				PortalTokens:          initPortalTokensV4ForMainNet(),
+				FeeUnshields: map[string]uint64{
+					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
+				},
+				BatchNumBlks: 45, // ~ 30 mins
 			},
 		},
 

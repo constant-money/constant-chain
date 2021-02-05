@@ -12,7 +12,7 @@ import (
 type UTXO struct {
 	walletAddress string
 	txHash        string
-	outputIdx     int
+	outputIdx     uint32
 	outputAmount  uint64
 }
 
@@ -23,7 +23,7 @@ func NewUTXO() *UTXO {
 func NewUTXOWithValue(
 	walletAddress string,
 	txHash string,
-	outputIdx int,
+	outputIdx uint32,
 	outputAmount uint64,
 ) *UTXO {
 	return &UTXO{
@@ -58,11 +58,11 @@ func (uo *UTXO) SetOutputAmount(amount uint64) {
 	uo.outputAmount = amount
 }
 
-func (uo *UTXO) GetOutputIndex() int {
+func (uo *UTXO) GetOutputIndex() uint32 {
 	return uo.outputIdx
 }
 
-func (uo *UTXO) SetOutputIndex(index int) {
+func (uo *UTXO) SetOutputIndex(index uint32) {
 	uo.outputIdx = index
 }
 
@@ -70,7 +70,7 @@ func (uo *UTXO) MarshalJSON() ([]byte, error) {
 	data, err := json.Marshal(struct {
 		WalletAddress string
 		TxHash        string
-		OutputIdx     int
+		OutputIdx     uint32
 		OutputAmount  uint64
 	}{
 		WalletAddress: uo.walletAddress,
@@ -88,7 +88,7 @@ func (uo *UTXO) UnmarshalJSON(data []byte) error {
 	temp := struct {
 		WalletAddress string
 		TxHash        string
-		OutputIdx     int
+		OutputIdx     uint32
 		OutputAmount  uint64
 	}{}
 	err := json.Unmarshal(data, &temp)
@@ -157,10 +157,10 @@ func newUTXOObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*UT
 	}, nil
 }
 
-func GenerateUTXOObjectKey(tokenID string, walletAddress string, txHash string, outputIdx int) common.Hash {
+func GenerateUTXOObjectKey(tokenID string, walletAddress string, txHash string, outputIdx uint32) common.Hash {
 	prefixHash := GetWaitingUnshieldRequestPrefix(tokenID)
 	value := append([]byte(walletAddress), []byte(txHash)...)
-	value = append(value, []byte(strconv.Itoa(outputIdx))...)
+	value = append(value, []byte(strconv.Itoa(int(outputIdx)))...)
 	valueHash := common.HashH(value)
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
 }
