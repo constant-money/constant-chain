@@ -101,6 +101,7 @@ var (
 	// portal v4
 	portalUnshieldRequestStatusPrefix            = []byte("unshieldrequest-")
 	portalUnshielReplacementFeeBatchStatusPrefix = []byte("unshieldrequestbatchreplacementfeeprocessed-")
+	portalUnshielSubmitConfirmedTxStatusPrefix   = []byte("unshieldrequestsubmitconfirmedtx-")
 )
 
 func GetCommitteePrefixWithRole(role int, shardID int) []byte {
@@ -506,6 +507,10 @@ func PortalUnshieldRequestStatusPrefix() []byte {
 
 func PortalUnshielReplacementFeeBatchStatusPrefix() []byte {
 	return portalUnshielReplacementFeeBatchStatusPrefix
+}
+
+func PortalSubmitConfirmedTxStatusPrefix() []byte {
+	return portalUnshielSubmitConfirmedTxStatusPrefix
 }
 
 var _ = func() (_ struct{}) {

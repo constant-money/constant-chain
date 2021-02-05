@@ -117,3 +117,7 @@ func GetMaxKeyValue(input map[uint64]uint) (max uint64) {
 	}
 	return max
 }
+
+func UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State *CurrentPortalV4State, tokenIDStr, batchKey string) {
+	delete(currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr], batchKey)
+}

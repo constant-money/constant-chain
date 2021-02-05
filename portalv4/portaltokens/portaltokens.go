@@ -19,6 +19,8 @@ type PortalTokenProcessor interface {
 	GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string
 	ParseAndVerifyProof(
 		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error)
+	ParseAndVerifyUnshieldProof(
+		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectPaymentInfo map[string]uint64) (bool, []*statedb.UTXO, error)
 	GetExternalTxHashFromProof(proof string) (string, error)
 	ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 

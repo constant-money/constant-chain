@@ -277,8 +277,12 @@ var HttpHandler = map[string]httpHandler{
 	getValKeyState: (*HttpServer).handleGetValKeyState,
 
 	// portal v4
-	createAndSendTxWithShieldingRequest: (*HttpServer).handleCreateAndSendTxWithShieldingReq,
-	createAndSendTxWithPortalBurnPToken: (*HttpServer).handleCreateAndSendTxWithPortalBurnPToken,
+	createAndSendTxWithShieldingRequest:        (*HttpServer).handleCreateAndSendTxWithShieldingReq,
+	createAndSendTxWithPortalBurnPToken:        (*HttpServer).handleCreateAndSendTxWithPortalBurnPToken,
+	createAndSendTxWithPortalReplacementFee:    (*HttpServer).handleCreateAndSendTxWithPortalReplaceUnshieldFee,
+	getPortalReplacementFeeStatus:              (*HttpServer).handleGetPortalReplacementFeeRequestStatus,
+	createAndSendTxWithPortalSubmitConfirmedTx: (*HttpServer).handleCreateAndSendTxWithPortalPortalSubmitConfirmedTx,
+	getPortalSubmitConfirmedTx:                 (*HttpServer).handleGetPortalPortalSubmitConfirmedTxStatus,
 }
 
 // Commands that are available to a limited user

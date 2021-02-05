@@ -292,9 +292,13 @@ const (
 	getValKeyState = "getvalkeystate"
 
 	// portal v4
-	createAndSendTxWithShieldingRequest = "createandsendtxshieldingrequest"
-	getPortalShieldingRequestStatus     = "getportalshieldingrequeststatus"
-	createAndSendTxWithPortalBurnPToken = "createandsendtxwithportalburnptoken"
+	createAndSendTxWithShieldingRequest        = "createandsendtxshieldingrequest"
+	getPortalShieldingRequestStatus            = "getportalshieldingrequeststatus"
+	createAndSendTxWithPortalBurnPToken        = "createandsendtxwithportalburnptoken"
+	createAndSendTxWithPortalReplacementFee    = "createandsendtxwithportalreplacementfee"
+	getPortalReplacementFeeStatus              = "getportalreplacementfeestatus"
+	createAndSendTxWithPortalSubmitConfirmedTx = "createandsendtxwithportalsubmitconfirmedtx"
+	getPortalSubmitConfirmedTx                 = "getportalsubmitconfirmedtxstatus"
 )
 
 const (

@@ -10,6 +10,7 @@ const (
 
 	PortalUnshieldRequestMetaError
 	PortalReplacementFeeRequestMetaError
+	PortalSubmitConfirmedTxRequestMetaError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -18,8 +19,9 @@ var ErrCodeMessage = map[int]struct {
 }{
 	UnexpectedError: {-17000, "Unexpected error"},
 
-	PortalUnshieldRequestMetaError:       {-17001, "Portal unshield request metadata error"},
-	PortalReplacementFeeRequestMetaError: {-17002, "Portal batch unshield  request metadata error"},
+	PortalUnshieldRequestMetaError:          {-17001, "Portal unshield request metadata error"},
+	PortalReplacementFeeRequestMetaError:    {-17002, "Portal batch unshield  request metadata error"},
+	PortalSubmitConfirmedTxRequestMetaError: {-17003, "Portal submit external confirmed tx metadata error"},
 }
 
 type PortalV4MetadataError struct {

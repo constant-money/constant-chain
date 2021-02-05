@@ -131,6 +131,8 @@ const (
 
 	// portal v4
 	GetReqPTokenStatusV4Error
+	GetReplacementFeeRequestStatusV4Error
+	GetSubmitConfirmedTxStatusV4Error
 )
 
 // Standard JSON-RPC 2.0 errors.

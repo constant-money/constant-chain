@@ -184,6 +184,7 @@ const (
 	PortalBurnPTokenMeta            = 250
 	PortalShieldingRequestMeta      = 251
 	PortalReplacementFeeRequestMeta = 252
+	PortalSubmitConfirmedTxMeta     = 253
 )
 
 var portalMetas = []int{
@@ -244,4 +245,6 @@ var portalMetas = []int{
 var portalV4Metas = []int{
 	PortalShieldingRequestMeta,
 	PortalBurnPTokenMeta,
+	PortalReplacementFeeRequestMeta,
+	PortalSubmitConfirmedTxMeta,
 }

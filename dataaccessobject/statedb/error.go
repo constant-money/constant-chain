@@ -204,6 +204,8 @@ const (
 	StorePortalUnshieldRequestStatusError
 	GetPortalUnshieldBatchReplacementRequestStatusError
 	StorePortalUnshieldBatchReplacementRequestStatusError
+	GetPortalSubmitConfirmedTxRequestStatusError
+	StorePortalSubmitConfirmedTxRequestStatusError
 )
 
 var ErrCodeMessage = map[int]struct {
@@ -349,11 +351,15 @@ var ErrCodeMessage = map[int]struct {
 	InvalidStakerInfoTypeError:           {-15005, "Staker info invalid"},
 
 	// Portal v4
-	StorePortalListWaitingUnshieldRequestError: {-15006, "Store portal list waiting unshield request error"},
-	GetPortalShieldingRequestStatusError:       {-15007, "Get portal shielding request status error"},
-	StorePortalShieldingRequestStatusError:     {-15008, "Store portal shielding request status error"},
-	GetPortalUnshieldRequestStatusError:        {-15009, "Get portal unshielding request status error"},
-	StorePortalUnshieldRequestStatusError:      {-15010, "Store portal unshielding request status error"},
+	StorePortalListWaitingUnshieldRequestError:            {-15006, "Store portal list waiting unshield request error"},
+	GetPortalShieldingRequestStatusError:                  {-15007, "Get portal shielding request status error"},
+	StorePortalShieldingRequestStatusError:                {-15008, "Store portal shielding request status error"},
+	GetPortalUnshieldRequestStatusError:                   {-15009, "Get portal unshielding request status error"},
+	StorePortalUnshieldRequestStatusError:                 {-15010, "Store portal unshielding request status error"},
+	GetPortalUnshieldBatchReplacementRequestStatusError:   {-15011, "Get portal unshield batch replacement request status error"},
+	StorePortalUnshieldBatchReplacementRequestStatusError: {-15012, "Store portal unshield batch replacement request status error"},
+	GetPortalSubmitConfirmedTxRequestStatusError:          {-15013, "Get portal submit confirmed tx request status error"},
+	StorePortalSubmitConfirmedTxRequestStatusError:        {-15014, "Store portal submit confirmed tx request status error"},
 }
 
 type StatedbError struct {

@@ -1291,3 +1291,19 @@ func (blockService BlockService) GetPortalReqReplacementFeeStatus(reqTxID string
 
 	return &status, nil
 }
+
+func (blockService BlockService) GetPortalSubmitConfirmedTxStatus(reqTxID string) (*metadata2.PortalSubmitConfirmedTxStatus, error) {
+	stateDB := blockService.BlockChain.GetBeaconBestState().GetBeaconFeatureStateDB()
+	data, err := statedb.GetPortalSubmitConfirmedTxRequestStatus(stateDB, reqTxID)
+	if err != nil {
+		return nil, err
+	}
+
+	var status metadata2.PortalSubmitConfirmedTxStatus
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}

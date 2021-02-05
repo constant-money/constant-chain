@@ -455,3 +455,250 @@ func (p *portalReplacementFeeRequestProcessor) ProcessInsts(
 
 	return nil
 }
+
+/* =======
+Portal Submit external unshield tx confirmed Processor V4
+======= */
+
+type portalSubmitConfirmedTxProcessor struct {
+	*portalInstProcessor
+}
+
+func (p *portalSubmitConfirmedTxProcessor) GetActions() map[byte][][]string {
+	return p.actions
+}
+
+func (p *portalSubmitConfirmedTxProcessor) PutAction(action []string, shardID byte) {
+	_, found := p.actions[shardID]
+	if !found {
+		p.actions[shardID] = [][]string{action}
+	} else {
+		p.actions[shardID] = append(p.actions[shardID], action)
+	}
+}
+
+func (p *portalSubmitConfirmedTxProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
+	return nil, nil
+}
+
+// beacon build new instruction from instruction received from ShardToBeaconBlock
+func buildSubmitConfirmedTxInst(
+	tokenID string,
+	unshieldProof string,
+	utxos []*statedb.UTXO,
+	batchID string,
+	metaType int,
+	shardID byte,
+	txReqID common.Hash,
+	status string,
+) []string {
+	replacementRequestContent := pv4Meta.PortalSubmitConfirmedTxContent{
+		TokenID:       tokenID,
+		UnshieldProof: unshieldProof,
+		UTXOs:         utxos,
+		BatchID:       batchID,
+		TxReqID:       txReqID,
+	}
+	replacementRequestContentBytes, _ := json.Marshal(replacementRequestContent)
+	return []string{
+		strconv.Itoa(metaType),
+		strconv.Itoa(int(shardID)),
+		status,
+		string(replacementRequestContentBytes),
+	}
+}
+
+func (p *portalSubmitConfirmedTxProcessor) BuildNewInsts(
+	bc bMeta.ChainRetriever,
+	contentStr string,
+	shardID byte,
+	currentPortalV4State *CurrentPortalV4State,
+	beaconHeight uint64,
+	shardHeights map[byte]uint64,
+	portalParams portalv4.PortalParams,
+	optionalData map[string]interface{},
+) ([][]string, error) {
+	// parse instruction
+	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
+	if err != nil {
+		Logger.log.Errorf("ERROR: an error occured while decoding content string of portal replacement fee request action: %+v", err)
+		return nil, fmt.Errorf("ERROR: an error occured while decoding content string of portal replacement fee request action: %+v", err)
+	}
+	var actionData pv4Meta.PortalSubmitConfirmedTxAction
+	err = json.Unmarshal(actionContentBytes, &actionData)
+	if err != nil {
+		Logger.log.Errorf("ERROR: an error occured while unmarshal portal replacement fee request action: %+v", err)
+		return nil, fmt.Errorf("ERROR: an error occured while unmarshal portal replacement fee request action: %+v", err)
+	}
+
+	if currentPortalV4State == nil {
+		Logger.log.Warn("WARN - [Unshield Request]: Current Portal state V4 is null.")
+		return [][]string{}, nil
+	}
+
+	meta := actionData.Meta
+	listUTXO := []*statedb.UTXO{}
+	rejectInst := buildSubmitConfirmedTxInst(
+		meta.TokenID,
+		meta.UnshieldProof,
+		listUTXO,
+		meta.BatchID,
+		meta.Type,
+		actionData.ShardID,
+		actionData.TxReqID,
+		pCommon.PortalRequestRejectedChainStatus,
+	)
+
+	tokenIDStr := meta.TokenID
+	batchIDStr := meta.BatchID
+	keyUnshieldBatch := statedb.GenerateProcessedUnshieldRequestBatchObjectKey(tokenIDStr, batchIDStr).String()
+	if currentPortalV4State.ProcessedUnshieldRequests == nil ||
+		currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr] == nil {
+		Logger.log.Errorf("Error: currentPortalV4State.ProcessedUnshieldRequests not initialized yet")
+		return [][]string{rejectInst}, nil
+	}
+	_, ok := currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr][keyUnshieldBatch]
+	if !ok {
+		Logger.log.Errorf("Error: Submit non-exist unshield external transaction with tokenID: %v, batchid : %v.", tokenIDStr, batchIDStr)
+		return [][]string{rejectInst}, nil
+	}
+	portalTokenProcessor := portalParams.PortalTokens[meta.TokenID]
+	if portalTokenProcessor == nil {
+		Logger.log.Errorf("TokenID is not supported currently on Portal")
+		return [][]string{rejectInst}, nil
+	}
+
+	expectedMemo := meta.BatchID
+	// TODO: get this value from portal params and update expectedPaymentInfos
+	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
+	expectedPaymentInfos := make(map[string]uint64, 0)
+	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyUnshieldProof(meta.UnshieldProof, bc, expectedMemo, expectedMultisigAddress, expectedPaymentInfos)
+	if !isValid {
+		Logger.log.Errorf("Unshield Proof is invalid")
+		return [][]string{rejectInst}, nil
+	}
+
+	// build accept instruction
+	newInst := buildSubmitConfirmedTxInst(
+		meta.TokenID,
+		meta.UnshieldProof,
+		listUTXO,
+		meta.BatchID,
+		meta.Type,
+		actionData.ShardID,
+		actionData.TxReqID,
+		pCommon.PortalRequestAcceptedChainStatus,
+	)
+
+	// remove unshield being processed and update status
+	UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State, tokenIDStr, keyUnshieldBatch)
+	if len(listUTXO) > 0 {
+		UpdatePortalStateAfterShieldingRequest(currentPortalV4State, tokenIDStr, listUTXO)
+	}
+
+	return [][]string{newInst}, nil
+}
+
+func (p *portalSubmitConfirmedTxProcessor) ProcessInsts(
+	stateDB *statedb.StateDB,
+	beaconHeight uint64,
+	instructions []string,
+	currentPortalV4State *CurrentPortalV4State,
+	portalParams portalv4.PortalParams,
+	updatingInfoByTokenID map[common.Hash]bMeta.UpdatingInfo,
+) error {
+	if currentPortalV4State == nil {
+		Logger.log.Errorf("current portal state is nil")
+		return nil
+	}
+
+	if len(instructions) != 4 {
+		return nil // skip the instruction
+	}
+
+	// unmarshal instructions content
+	var actionData pv4Meta.PortalSubmitConfirmedTxContent
+	err := json.Unmarshal([]byte(instructions[3]), &actionData)
+	if err != nil {
+		Logger.log.Errorf("Can not unmarshal instruction content %v - Error %v\n", instructions[3], err)
+		return nil
+	}
+
+	reqStatus := instructions[2]
+	var portalSubmitConfirmedStatus pv4Meta.PortalSubmitConfirmedTxStatus
+
+	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
+		// update unshield batch
+		keyUnshieldBatch := statedb.GenerateProcessedUnshieldRequestBatchObjectKey(actionData.TokenID, actionData.BatchID).String()
+		unshieldRequests := currentPortalV4State.ProcessedUnshieldRequests[actionData.TokenID][keyUnshieldBatch].GetUnshieldRequests()
+		UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State, actionData.TokenID, keyUnshieldBatch)
+		if len(actionData.UTXOs) > 0 {
+			UpdatePortalStateAfterShieldingRequest(currentPortalV4State, actionData.TokenID, actionData.UTXOs)
+		}
+		// track status of unshield batch request by batchID
+		portalSubmitConfirmedStatus = pv4Meta.PortalSubmitConfirmedTxStatus{
+			TokenID:       actionData.TokenID,
+			BatchID:       actionData.BatchID,
+			UTXOs:         actionData.UTXOs,
+			UnshieldProof: actionData.UnshieldProof,
+			TxHash:        actionData.TxReqID.String(),
+			Status:        pCommon.PortalRequestAcceptedStatus,
+		}
+
+		// update unshield list to completed
+		for _, v := range unshieldRequests {
+			unshieldRequestBytes, err := statedb.GetPortalUnshieldRequestStatus(stateDB, v)
+			if err != nil {
+				Logger.log.Errorf("[processPortalSubmitConfirmedTx] Error when query unshield tx by unshieldID: %v\n err: %v", v, err)
+				return nil
+			}
+			var unshielRequest pv4Meta.PortalUnshieldRequestStatus
+			err = json.Unmarshal(unshieldRequestBytes, &unshielRequest)
+			if err != nil {
+				Logger.log.Errorf("Can not unmarshal instruction content %v - Error %v\n", unshieldRequestBytes, err)
+				return nil
+			}
+
+			unshieldRequestStatus := pv4Meta.PortalUnshieldRequestStatus{
+				IncAddressStr:  unshielRequest.IncAddressStr,
+				RemoteAddress:  unshielRequest.RemoteAddress,
+				TokenID:        unshielRequest.TokenID,
+				UnshieldAmount: unshielRequest.UnshieldAmount,
+				TxHash:         unshielRequest.TxHash,
+				Status:         pv4Common.PortalUnshieldReqCompletedStatus,
+			}
+			redeemRequestStatusBytes, _ := json.Marshal(unshieldRequestStatus)
+			err = statedb.StorePortalUnshieldRequestStatus(
+				stateDB,
+				actionData.TxReqID.String(),
+				redeemRequestStatusBytes)
+			if err != nil {
+				Logger.log.Errorf("[processPortalSubmitConfirmedTx] Error store completed unshield request unshieldID: %v\n err: %v", v, err)
+				return nil
+			}
+		}
+
+	} else if reqStatus == pCommon.PortalRequestRejectedChainStatus {
+		portalSubmitConfirmedStatus = pv4Meta.PortalSubmitConfirmedTxStatus{
+			TokenID:       actionData.TokenID,
+			BatchID:       actionData.BatchID,
+			UTXOs:         actionData.UTXOs,
+			UnshieldProof: actionData.UnshieldProof,
+			TxHash:        actionData.TxReqID.String(),
+			Status:        pCommon.PortalRequestRejectedStatus,
+		}
+	} else {
+		return nil
+	}
+	portalSubmitConfirmedStatusBytes, _ := json.Marshal(portalSubmitConfirmedStatus)
+	err = statedb.StorePortalSubmitConfirmedTxRequestStatus(
+		stateDB,
+		actionData.TxReqID.String(),
+		portalSubmitConfirmedStatusBytes)
+	if err != nil {
+		Logger.log.Errorf("[processPortalReplacementRequest] Error when storing status of replacement request: %v\n", err)
+		return nil
+	}
+
+	return nil
+}
