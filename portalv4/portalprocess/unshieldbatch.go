@@ -1,7 +1,6 @@
 package portalprocess
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
@@ -9,8 +8,8 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portalv4"
-	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
+	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 	"github.com/incognitochain/incognito-chain/portalv4/portaltokens"
 	"strconv"
 )
@@ -36,30 +35,7 @@ func (p *portalUnshieldBatchingProcessor) PutAction(action []string, shardID byt
 }
 
 func (p *portalUnshieldBatchingProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
-	// parse instruction
-	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
-	if err != nil {
-		Logger.log.Errorf("ERROR: an error occured while decoding content string of portal unshield request action: %+v", err)
-		return nil, fmt.Errorf("ERROR: an error occured while decoding content string of portal unshield request action: %+v", err)
-	}
-	var actionData pv4Meta.PortalUnshieldRequestAction
-	err = json.Unmarshal(actionContentBytes, &actionData)
-	if err != nil {
-		Logger.log.Errorf("ERROR: an error occured while unmarshal portal unshield request action: %+v", err)
-		return nil, fmt.Errorf("ERROR: an error occured while unmarshal portal unshield request action: %+v", err)
-	}
-
-	optionalData := make(map[string]interface{})
-
-	// Get unshield request with unshieldID from stateDB
-	unshieldRequestStatusBytes, err := statedb.GetPortalUnshieldRequestStatus(stateDB, actionData.TxReqID.String())
-	if err != nil {
-		Logger.log.Errorf("Unshield request: an error occurred while get unshield request by id from DB: %+v", err)
-		return nil, fmt.Errorf("Unshield request: an error occurred while get unshield request by id from DB: %+v", err)
-	}
-
-	optionalData["isExistUnshieldID"] = len(unshieldRequestStatusBytes) > 0
-	return optionalData, nil
+	return nil, nil
 }
 
 // beacon build new instruction from instruction received from ShardToBeaconBlock
@@ -90,9 +66,13 @@ func buildUnshieldBatchingInst(
 	}
 }
 
-func getBatchID(beaconHeight uint64, txHashStr string) string {
-	dataBytes := append([]byte(fmt.Sprintf("%d", beaconHeight)), []byte(txHashStr)...)
-	dataHash, _ := common.Hash{}.NewHash(dataBytes)
+// batchID is hash of current beacon height and unshieldIDs that processed
+func getBatchID(beaconHeight uint64, unshieldIDs []string) string {
+	dataBytes := []byte(fmt.Sprintf("%d", beaconHeight))
+	for _, id := range unshieldIDs {
+		dataBytes = append(dataBytes, []byte(id)...)
+	}
+	dataHash := common.HashH(dataBytes)
 	return dataHash.String()
 }
 
@@ -115,6 +95,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 	wUnshieldRequests := currentPortalV4State.WaitingUnshieldRequests
 	for tokenID, wReqs := range wUnshieldRequests {
 		portalTokenProcessor := portalParams.PortalTokens[tokenID]
+		// use default unshield fee
 		feeUnshield := portalParams.FeeUnshields[tokenID]
 		if portalTokenProcessor == nil {
 			Logger.log.Errorf("[Batch Unshield Request]: Portal token ID %v is null.", tokenID)
@@ -139,17 +120,15 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 				})
 				totalFee += feeUnshield
 			}
-			// memo in tx
-			//TODO: append memo into raw tx
-			//memo := portalTokenProcessor.GetExpectedMemoForRedeem()
-			memo := ""
+			// memo in tx: batchId
+			batchID := getBatchID(beaconHeight + 1, bcTx.UnshieldIDs)
+			memo := batchID
 
-			hexRawExtTxStr, txHashStr, err := portalTokenProcessor.CreateRawExternalTx(bcTx.UTXOs, outputTxs, totalFee, memo, bc)
+			hexRawExtTxStr, _, err := portalTokenProcessor.CreateRawExternalTx(bcTx.UTXOs, outputTxs, totalFee, memo, bc)
 			if err != nil {
 				Logger.log.Errorf("[Batch Unshield Request]: Error when creating raw external tx %v", err)
 				continue
 			}
-			batchID := getBatchID(beaconHeight + 1, txHashStr)
 
 			// build new instruction with new raw external tx
 			externalFees := map[uint64]uint{
@@ -163,7 +142,6 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 
 			// update current portal state
 			// remove chosen waiting unshield requests from waiting list
-
 			UpdatePortalStateAfterProcessBatchUnshieldRequest(
 				currentPortalV4State, batchID, chosenUTXOs, externalFees, bcTx.UnshieldIDs, tokenID, beaconHeight + 1)
 		}
@@ -202,7 +180,7 @@ func (p *portalUnshieldBatchingProcessor) ProcessInsts(
 		UpdatePortalStateAfterProcessBatchUnshieldRequest(
 			currentPortalV4State, actionData.BatchID, actionData.UTXOs, actionData.NetworkFee, actionData.UnshieldIDs, actionData.TokenID, beaconHeight + 1)
 
-		//todo: review
+		// todo: review
 		// update bridge/portal token info
 		//incTokenID, err := common.Hash{}.NewHashFromStr(actionData.TokenID)
 		//if err != nil {
