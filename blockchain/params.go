@@ -280,7 +280,7 @@ func SetupParam() {
 			0: {
 				// todo: should update before deploying
 				MultiSigAddresses: map[string]string{
-					pv4Common.PortalBTCIDStr: "",
+					pv4Common.PortalBTCIDStr: "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X",
 				},
 				MultiSigScriptHexEncode: map[string]string{
 					pv4Common.PortalBTCIDStr: "",
@@ -391,7 +391,7 @@ func SetupParam() {
 			0: {
 				// todo: should update before deploying
 				MultiSigAddresses: map[string]string{
-					pv4Common.PortalBTCIDStr: "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X",
+					pv4Common.PortalBTCIDStr: "",
 				},
 				MultiSigScriptHexEncode: map[string]string{
 					pv4Common.PortalBTCIDStr: "",
