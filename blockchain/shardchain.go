@@ -3,6 +3,8 @@ package blockchain
 import (
 	"encoding/json"
 	"github.com/incognitochain/incognito-chain/incdb"
+	"github.com/incognitochain/incognito-chain/portalv4"
+	"sort"
 	"sync"
 	"time"
 
@@ -268,4 +270,38 @@ func (chain *ShardChain) ValidatePreSignBlock(block common.BlockInterface) error
 
 func (chain *ShardChain) GetAllView() []multiview.View {
 	return chain.multiView.GetAllViewsWithBFS()
+}
+
+// Portal v4
+func (s *ShardChain) GetPortalParamsV4(beaconHeight uint64) portalv4.PortalParams {
+	portalParamMap := s.Blockchain.GetConfig().ChainParams.PortalV4Params
+	// only has one value - default value
+	if len(portalParamMap) == 1 {
+		return portalParamMap[0]
+	}
+
+	bchs := []uint64{}
+	for bch := range portalParamMap {
+		bchs = append(bchs, bch)
+	}
+	sort.Slice(bchs, func(i, j int) bool {
+		return bchs[i] < bchs[j]
+	})
+
+	bchKey := bchs[len(bchs)-1]
+
+	// beaconHeight = 0 : return the latest params
+	if beaconHeight == 0 {
+		return portalParamMap[bchKey]
+	}
+
+	for i := len(bchs) - 1; i >= 0; i-- {
+		if beaconHeight < bchs[i] {
+			continue
+		}
+		bchKey = bchs[i]
+		break
+	}
+
+	return portalParamMap[bchKey]
 }

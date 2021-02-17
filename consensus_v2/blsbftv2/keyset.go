@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common/base58"
 	signatureschemes2 "github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"sort"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -35,7 +36,7 @@ func (e BLSBFT_V2) SignData(data []byte) (string, error) {
 
 }
 
-func combineVotes(votes map[string]*BFTVote, committee []string) (aggSig []byte, brigSigs [][]byte, validatorIdx []int, err error) {
+func combineVotes(votes map[string]*BFTVote, committee []string) (aggSig []byte, brigSigs [][]byte, validatorIdx []int, portalSigs []*portalprocessv4.PortalSig, err error) {
 	var blsSigList [][]byte
 	for validator, vote := range votes {
 		if vote.isValid == 1 {
@@ -46,10 +47,12 @@ func combineVotes(votes map[string]*BFTVote, committee []string) (aggSig []byte,
 	for _, idx := range validatorIdx {
 		blsSigList = append(blsSigList, votes[committee[idx]].BLS)
 		brigSigs = append(brigSigs, votes[committee[idx]].BRI)
+		// combine portal sigs
+		portalSigs = append(portalSigs, votes[committee[idx]].PortalSigs...)
 	}
 	aggSig, err = blsmultisig.Combine(blsSigList)
 	if err != nil {
-		return nil, nil, nil, NewConsensusError(CombineSignatureError, err)
+		return nil, nil, nil, nil, NewConsensusError(CombineSignatureError, err)
 	}
 	return
 }

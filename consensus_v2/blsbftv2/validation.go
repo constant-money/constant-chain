@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -23,6 +24,7 @@ type ValidationData struct {
 	ValidatiorsIdx []int
 	AggSig         []byte
 	BridgeSig      [][]byte
+	PortalSig []*portalprocessv4.PortalSig
 }
 
 func DecodeValidationData(data string) (*ValidationData, error) {

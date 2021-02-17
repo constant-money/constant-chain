@@ -7,8 +7,9 @@ import (
 
 // todo: add more params for portal v4
 type PortalParams struct {
-	MultiSigWalletAddress string
-	PortalTokens          map[string]portaltokens.PortalTokenProcessor
+	MultiSigAddresses       map[string]string
+	MultiSigScriptHexEncode map[string]string
+	PortalTokens            map[string]portaltokens.PortalTokenProcessor
 
 	// for unshielding
 	FeeUnshields map[string]uint64

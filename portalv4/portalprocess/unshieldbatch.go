@@ -156,7 +156,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 				beaconHeight: uint(totalFee),
 			}
 			chosenUTXOs := map[string][]*statedb.UTXO {
-				portalParams.MultiSigWalletAddress : bcTx.UTXOs,
+				portalParams.MultiSigAddresses[tokenID]: bcTx.UTXOs,
 			}
 			newInst := buildUnshieldBatchingInst(batchID, hexRawExtTxStr, tokenID, bcTx.UnshieldIDs, chosenUTXOs, externalFees, bMeta.PortalUnshieldBatchingMeta, pv4Common.PortalRequestAcceptedChainStatus)
 			newInsts = append(newInsts, newInst)

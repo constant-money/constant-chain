@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"sort"
 	"time"
 
@@ -359,7 +360,7 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 			e.Logger.Error(err)
 			return
 		}
-		aggSig, brigSigs, validatorIdx, err := combineVotes(v.votes, committeeBLSString)
+		aggSig, brigSigs, validatorIdx, portalSigs, err := combineVotes(v.votes, committeeBLSString)
 		if err != nil {
 			e.Logger.Error(err)
 			return
@@ -373,6 +374,8 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 
 		valData.AggSig = aggSig
 		valData.BridgeSig = brigSigs
+		//TODO: need to be reviewed
+		valData.PortalSig = portalSigs
 		valData.ValidatiorsIdx = validatorIdx
 		validationDataString, _ := EncodeValidationData(*valData)
 		e.Logger.Infof("%v Validation Data", e.ChainKey, aggSig, brigSigs, validatorIdx, validationDataString)
@@ -431,8 +434,17 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 				return NewConsensusError(UnExpectedError, err)
 			}
 		}
+
+		// check and sign on unshielding external tx for Portal v4
+		portalParam := e.Chain.GetPortalParamsV4(0)
+		portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userKey.PriKey[common.BridgeConsensus], v.block.GetInstructions(),  portalParam)
+		if err != nil {
+			return NewConsensusError(UnExpectedError, err)
+		}
+
 		Vote.BLS = blsSig
 		Vote.BRI = bridgeSig
+		Vote.PortalSigs = portalSigs
 		Vote.BlockHash = v.block.Hash().String()
 
 		userPk := userKey.GetPublicKey()
@@ -488,7 +500,17 @@ func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, prop
 		return nil, NewConsensusError(BlockCreationError, errors.New("block is nil"))
 	}
 
+	// TODO: add portal sigs to validation data
 	var validationData ValidationData
+	// check and sign on unshielding external tx for Portal v4
+	portalParam := e.Chain.GetPortalParamsV4(0)
+	portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userMiningKey.PriKey[common.BridgeConsensus], block.GetInstructions(),  portalParam)
+	if err != nil {
+		return nil, NewConsensusError(UnExpectedError, err)
+	}
+	validationData.PortalSig = portalSigs
+
+	// producer bls sig
 	validationData.ProducerBLSSig, _ = userMiningKey.BriSignData(block.Hash().GetBytes())
 	validationDataString, _ := EncodeValidationData(validationData)
 	block.(blockValidation).AddValidationField(validationDataString)

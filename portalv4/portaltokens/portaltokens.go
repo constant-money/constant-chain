@@ -25,7 +25,8 @@ type PortalTokenProcessor interface {
 	ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
 	CreateRawExternalTx(inputs []*statedb.UTXO, outputs []*OutputTx, networkFee uint64, memo string, bc bMeta.ChainRetriever) (string, string, error)
-	//ExtractRawTx(rawTxStr string) ([]*statedb.UTXO, uint)
+	GeneratePrivateKeyFromSeed(seed []byte) ([]byte, error)
+	GenerateMultiSigWalletFromSeeds(bc bMeta.ChainRetriever, seeds [][]byte, numSigsRequired int) ([]byte, []string, string, error)
 }
 
 // set MinTokenAmount to avoid attacking with amount is less than smallest unit of cryptocurrency

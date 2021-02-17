@@ -3,7 +3,9 @@ package metadata
 import (
 	"encoding/json"
 	"github.com/incognitochain/incognito-chain/basemeta"
+	"github.com/incognitochain/incognito-chain/common"
 	"github.com/pkg/errors"
+	"strconv"
 )
 
 func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
@@ -34,4 +36,25 @@ func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 		return nil, err
 	}
 	return md, nil
+}
+
+// TODO: add more meta data types
+var portalMetasV4 = []string{
+	strconv.Itoa(basemeta.PortalUnshieldBatchingMeta),
+}
+
+func HasPortalInstructionsV4(instructions [][]string) bool {
+	for _, inst := range instructions {
+		for _, meta := range portalMetasV4 {
+			if len(inst) > 0 && inst[0] == meta {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func IsRequireBeaconSigForPortalV4Meta(inst []string) bool {
+	isExist, _ := common.SliceExists(portalMetasV4, inst[0])
+	return isExist
 }

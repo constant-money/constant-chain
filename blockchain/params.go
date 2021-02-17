@@ -277,8 +277,14 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				MultiSigWalletAddress: "", // // todo: should update before deploying
-				PortalTokens:          initPortalTokensV4ForTestNet(),
+				// todo: should update before deploying
+				MultiSigAddresses: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				MultiSigScriptHexEncode: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				PortalTokens:      initPortalTokensV4ForTestNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},
@@ -382,8 +388,14 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				MultiSigWalletAddress: "", // // todo: should update before deploying
-				PortalTokens:          initPortalTokensV4ForTestNet(),
+				// todo: should update before deploying
+				MultiSigAddresses: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				MultiSigScriptHexEncode: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				PortalTokens:      initPortalTokensV4ForTestNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},
@@ -485,8 +497,14 @@ func SetupParam() {
 		},
 		PortalV4Params: map[uint64]portalv4.PortalParams{
 			0: {
-				MultiSigWalletAddress: "", // todo: should update before deploying
-				PortalTokens:          initPortalTokensV4ForMainNet(),
+				// todo: should update before deploying
+				MultiSigAddresses: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				MultiSigScriptHexEncode: map[string]string{
+					pv4Common.PortalBTCIDStr: "",
+				},
+				PortalTokens:      initPortalTokensV4ForMainNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},

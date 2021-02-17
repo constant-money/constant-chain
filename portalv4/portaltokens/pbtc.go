@@ -220,13 +220,13 @@ func (p PortalBTCTokenProcessor) GenerateMultiSigWalletFromSeeds(bc bMeta.ChainR
 	builder.AddOp(byte(txscript.OP_1 - 1 + numSigsRequired))
 	for _, seed := range seeds {
 		BTCKeyBytes := pv4Common.GenBTCPrivateKey(seed)
-		pivKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), BTCKeyBytes)
+		privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), BTCKeyBytes)
 		// add the public key to redeem script
-		builder.AddData(pivKey.PubKey().SerializeCompressed())
-		bitcoinPrvKeys = append(bitcoinPrvKeys, pivKey)
-		bitcoinPrvKeyStrs = append(bitcoinPrvKeyStrs, hex.EncodeToString(pivKey.Serialize()))
+		builder.AddData(privKey.PubKey().SerializeCompressed())
+		bitcoinPrvKeys = append(bitcoinPrvKeys, privKey)
+		bitcoinPrvKeyStrs = append(bitcoinPrvKeyStrs, hex.EncodeToString(privKey.Serialize()))
 	}
-	// add the total number of public keys in the multi-sig screipt
+	// add the total number of public keys in the multi-sig script
 	builder.AddOp(byte(txscript.OP_1 - 1 + len(seeds)))
 	// add the check-multi-sig op-code
 	builder.AddOp(txscript.OP_CHECKMULTISIG)
@@ -240,6 +240,19 @@ func (p PortalBTCTokenProcessor) GenerateMultiSigWalletFromSeeds(bc bMeta.ChainR
 	addr, err := btcutil.NewAddressScriptHashFromHash(multiAddress, bc.GetBTCHeaderChain().GetChainParams())
 
 	return redeemScript, bitcoinPrvKeyStrs, addr.String(), nil
+}
+
+// GeneratePartPrivateKeyFromSeed generate private key from seed
+// return the private key serialized in bytes array
+func (p PortalBTCTokenProcessor) GeneratePrivateKeyFromSeed(seed []byte) ([]byte, error) {
+	if len(seed) == 0 {
+		return nil, errors.New("Invalid seed")
+	}
+
+	btcKeyBytes := pv4Common.GenBTCPrivateKey(seed)
+	privKey, _ := btcec.PrivKeyFromBytes(btcec.S256(), btcKeyBytes)
+
+	return privKey.Serialize(), nil
 }
 
 
@@ -292,8 +305,6 @@ func (p PortalBTCTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, out
 	}
 
 	hexRawTx := hex.EncodeToString(rawTxBytes.Bytes())
-	msgTx.TxHash()
-
 	return hexRawTx, msgTx.TxHash().String(), nil
 }
 
