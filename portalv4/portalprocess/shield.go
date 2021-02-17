@@ -147,8 +147,7 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 	}
 
 	expectedMemo := portalTokenProcessor.GetExpectedMemoForShielding(meta.IncogAddressStr)
-	// TODO: get this value from portal params
-	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
+	expectedMultisigAddress := portalParams.MultiSigAddresses[meta.TokenID]
 	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyProof(meta.ShieldingProof, bc, expectedMemo, expectedMultisigAddress)
 
 	if !isValid || err != nil {
