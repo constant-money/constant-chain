@@ -3,11 +3,13 @@ package transaction
 import (
 	"encoding/json"
 	"errors"
-	portalMeta "github.com/incognitochain/incognito-chain/portal/metadata"
-	"github.com/incognitochain/incognito-chain/basemeta"
 	"math"
 	"math/big"
 	"math/rand"
+
+	"github.com/incognitochain/incognito-chain/basemeta"
+	portalMeta "github.com/incognitochain/incognito-chain/portal/metadata"
+	portalMetaV4 "github.com/incognitochain/incognito-chain/portalv4/metadata"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
@@ -315,7 +317,6 @@ func BuildCoinBaseTxByCoinID(params *BuildCoinBaseTxByCoinIDParams) (basemeta.Tr
 	return nil, nil
 }
 
-
 func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 	if meta == nil {
 		return nil, nil
@@ -334,6 +335,9 @@ func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 	metaType := int(mtTemp["Type"].(float64))
 	if basemeta.IsPortalMetadata(metaType) {
 		return portalMeta.ParseMetadata(meta)
+	}
+	if basemeta.IsPortalV4Metadata(metaType) {
+		return portalMetaV4.ParseMetadata(meta)
 	}
 
 	return metadata.ParseMetadata(meta)

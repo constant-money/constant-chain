@@ -2,10 +2,11 @@ package metadata
 
 import (
 	"encoding/json"
+	"strconv"
+
 	"github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/pkg/errors"
-	"strconv"
 )
 
 func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
@@ -24,6 +25,8 @@ func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 	}
 	var md basemeta.Metadata
 	switch int(mtTemp["Type"].(float64)) {
+	case basemeta.PortalShieldingRequestMeta:
+		md = &PortalShieldingRequest{}
 	case basemeta.PortalBurnPTokenMeta:
 		md = &PortalUnshieldRequest{}
 	default:
