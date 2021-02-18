@@ -1,13 +1,14 @@
 package blockchain
 
 import (
+	"time"
+
 	"github.com/incognitochain/incognito-chain/portal"
 	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"github.com/incognitochain/incognito-chain/portal/portaltokens"
+	"github.com/incognitochain/incognito-chain/portalv4"
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	portalTokensV4 "github.com/incognitochain/incognito-chain/portalv4/portaltokens"
-	"github.com/incognitochain/incognito-chain/portalv4"
-	"time"
 
 	"github.com/incognitochain/incognito-chain/common"
 )
@@ -233,7 +234,7 @@ func SetupParam() {
 		EthContractAddressStr:            TestnetETHContractAddressStr,
 		IncognitoDAOAddress:              TestnetIncognitoDAOAddress,
 		CentralizedWebsitePaymentAddress: TestnetCentralizedWebsitePaymentAddress,
-		SlashLevels: []SlashLevel{
+		SlashLevels:                      []SlashLevel{
 			//SlashLevel{MinRange: 20, PunishedEpoches: 1},
 			//SlashLevel{MinRange: 50, PunishedEpoches: 2},
 			//SlashLevel{MinRange: 75, PunishedEpoches: 3},
@@ -279,12 +280,12 @@ func SetupParam() {
 			0: {
 				// todo: should update before deploying
 				MultiSigAddresses: map[string]string{
-					pv4Common.PortalBTCIDStr: "",
+					pv4Common.PortalBTCIDStr: "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X",
 				},
 				MultiSigScriptHexEncode: map[string]string{
 					pv4Common.PortalBTCIDStr: "",
 				},
-				PortalTokens:      initPortalTokensV4ForTestNet(),
+				PortalTokens: initPortalTokensV4ForTestNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},
@@ -345,7 +346,7 @@ func SetupParam() {
 		EthContractAddressStr:            Testnet2ETHContractAddressStr,
 		IncognitoDAOAddress:              Testnet2IncognitoDAOAddress,
 		CentralizedWebsitePaymentAddress: Testnet2CentralizedWebsitePaymentAddress,
-		SlashLevels: []SlashLevel{
+		SlashLevels:                      []SlashLevel{
 			//SlashLevel{MinRange: 20, PunishedEpoches: 1},
 			//SlashLevel{MinRange: 50, PunishedEpoches: 2},
 			//SlashLevel{MinRange: 75, PunishedEpoches: 3},
@@ -395,7 +396,7 @@ func SetupParam() {
 				MultiSigScriptHexEncode: map[string]string{
 					pv4Common.PortalBTCIDStr: "",
 				},
-				PortalTokens:      initPortalTokensV4ForTestNet(),
+				PortalTokens: initPortalTokensV4ForTestNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},
@@ -454,7 +455,7 @@ func SetupParam() {
 		EthContractAddressStr:            MainETHContractAddressStr,
 		IncognitoDAOAddress:              MainnetIncognitoDAOAddress,
 		CentralizedWebsitePaymentAddress: MainnetCentralizedWebsitePaymentAddress,
-		SlashLevels: []SlashLevel{
+		SlashLevels:                      []SlashLevel{
 			//SlashLevel{MinRange: 20, PunishedEpoches: 1},
 			//SlashLevel{MinRange: 50, PunishedEpoches: 2},
 			//SlashLevel{MinRange: 75, PunishedEpoches: 3},
@@ -504,7 +505,7 @@ func SetupParam() {
 				MultiSigScriptHexEncode: map[string]string{
 					pv4Common.PortalBTCIDStr: "",
 				},
-				PortalTokens:      initPortalTokensV4ForMainNet(),
+				PortalTokens: initPortalTokensV4ForMainNet(),
 				FeeUnshields: map[string]uint64{
 					pv4Common.PortalBTCIDStr: 10, // 10 satoshi // todo: should update before deploying
 				},
