@@ -47,7 +47,7 @@ func (httpServer *HttpServer) handleCreateRawTxWithShieldingReq(params interface
 	}
 
 	meta, _ := metadata.NewPortalShieldingRequest(
-		basemeta.PortalUserRequestPTokenMeta,
+		basemeta.PortalShieldingRequestMeta,
 		tokenID,
 		incognitoAddress,
 		portingProof,
