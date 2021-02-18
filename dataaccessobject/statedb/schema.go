@@ -100,6 +100,7 @@ var (
 
 	// portal v4
 	portalUnshieldRequestStatusPrefix            = []byte("unshieldrequest-")
+	portalBatchUnshieldRequestStatusPrefix            = []byte("batchunshieldrequest-")
 	portalUnshielReplacementFeeBatchStatusPrefix = []byte("unshieldrequestbatchreplacementfeeprocessed-")
 	portalUnshielSubmitConfirmedTxStatusPrefix   = []byte("unshieldrequestsubmitconfirmedtx-")
 )
@@ -503,6 +504,10 @@ func GetShieldingRequestPrefix(tokenID string) []byte {
 
 func PortalUnshieldRequestStatusPrefix() []byte {
 	return portalUnshieldRequestStatusPrefix
+}
+
+func PortalBatchUnshieldRequestStatusPrefix() []byte {
+	return portalBatchUnshieldRequestStatusPrefix
 }
 
 func PortalUnshielReplacementFeeBatchStatusPrefix() []byte {

@@ -202,6 +202,8 @@ const (
 	StorePortalListWaitingUnshieldRequestError
 	GetPortalUnshieldRequestStatusError
 	StorePortalUnshieldRequestStatusError
+	GetPortalBatchUnshieldRequestStatusError
+	StorePortalBatchUnshieldRequestStatusError
 	GetPortalUnshieldBatchReplacementRequestStatusError
 	StorePortalUnshieldBatchReplacementRequestStatusError
 	GetPortalSubmitConfirmedTxRequestStatusError
@@ -356,10 +358,12 @@ var ErrCodeMessage = map[int]struct {
 	StorePortalShieldingRequestStatusError:                {-15008, "Store portal shielding request status error"},
 	GetPortalUnshieldRequestStatusError:                   {-15009, "Get portal unshielding request status error"},
 	StorePortalUnshieldRequestStatusError:                 {-15010, "Store portal unshielding request status error"},
-	GetPortalUnshieldBatchReplacementRequestStatusError:   {-15011, "Get portal unshield batch replacement request status error"},
-	StorePortalUnshieldBatchReplacementRequestStatusError: {-15012, "Store portal unshield batch replacement request status error"},
-	GetPortalSubmitConfirmedTxRequestStatusError:          {-15013, "Get portal submit confirmed tx request status error"},
-	StorePortalSubmitConfirmedTxRequestStatusError:        {-15014, "Store portal submit confirmed tx request status error"},
+	GetPortalBatchUnshieldRequestStatusError:              {-15011, "Get portal batching unshield request status error"},
+	StorePortalBatchUnshieldRequestStatusError:            {-15012, "Store portal batching unshield request status error"},
+	GetPortalUnshieldBatchReplacementRequestStatusError:   {-15013, "Get portal unshield batch replacement request status error"},
+	StorePortalUnshieldBatchReplacementRequestStatusError: {-15014, "Store portal unshield batch replacement request status error"},
+	GetPortalSubmitConfirmedTxRequestStatusError:          {-15015, "Get portal submit confirmed tx request status error"},
+	StorePortalSubmitConfirmedTxRequestStatusError:        {-15016, "Store portal submit confirmed tx request status error"},
 }
 
 type StatedbError struct {

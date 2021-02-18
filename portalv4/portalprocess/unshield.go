@@ -217,11 +217,11 @@ func (p *portalUnshieldRequestProcessor) ProcessInsts(
 			TxHash:         actionData.TxReqID.String(),
 			Status:         pv4Common.PortalUnshieldReqWaitingStatus,
 		}
-		redeemRequestStatusBytes, _ := json.Marshal(unshieldRequestStatus)
+		unshieldRequestStatusBytes, _ := json.Marshal(unshieldRequestStatus)
 		err := statedb.StorePortalUnshieldRequestStatus(
 			stateDB,
 			actionData.TxReqID.String(),
-			redeemRequestStatusBytes)
+			unshieldRequestStatusBytes)
 		if err != nil {
 			Logger.log.Errorf("[processPortalRedeemRequest] Error when storing status of redeem request by redeemID: %v\n", err)
 			return nil

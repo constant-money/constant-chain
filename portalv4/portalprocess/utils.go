@@ -1,7 +1,9 @@
 package portalprocess
 
 import (
+	"encoding/json"
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
+	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 )
@@ -151,4 +153,37 @@ func GetMaxKeyValue(input map[uint64]uint) (max uint64) {
 
 func UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State *CurrentPortalV4State, tokenIDStr, batchKey string) {
 	delete(currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr], batchKey)
+}
+
+func UpdateNewStatusUnshieldRequest(unshieldID string, newStatus int, stateDB *statedb.StateDB) error {
+	// get unshield request by unshield ID
+	unshieldRequestBytes, err := statedb.GetPortalUnshieldRequestStatus(stateDB, unshieldID)
+	if err != nil {
+		return err
+	}
+	var unshieldRequest pv4Meta.PortalUnshieldRequestStatus
+	err = json.Unmarshal(unshieldRequestBytes, &unshieldRequest)
+	if err != nil {
+		Logger.log.Errorf("Can not unmarshal instruction content %v - Error %v\n", unshieldRequestBytes, err)
+		return err
+	}
+
+	// update new status and store to db
+	unshieldRequestNewStatus := pv4Meta.PortalUnshieldRequestStatus{
+		IncAddressStr:  unshieldRequest.IncAddressStr,
+		RemoteAddress:  unshieldRequest.RemoteAddress,
+		TokenID:        unshieldRequest.TokenID,
+		UnshieldAmount: unshieldRequest.UnshieldAmount,
+		TxHash:         unshieldRequest.TxHash,
+		Status:         newStatus,
+	}
+	unshieldRequestNewStatusBytes, _ := json.Marshal(unshieldRequestNewStatus)
+	err = statedb.StorePortalUnshieldRequestStatus(
+		stateDB,
+		unshieldID,
+		unshieldRequestNewStatusBytes)
+	if err != nil {
+		return err
+	}
+	return nil
 }

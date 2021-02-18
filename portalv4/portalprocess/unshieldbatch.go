@@ -184,6 +184,35 @@ func (p *portalUnshieldBatchingProcessor) ProcessInsts(
 		UpdatePortalStateAfterProcessBatchUnshieldRequest(
 			currentPortalV4State, actionData.BatchID, actionData.UTXOs, actionData.NetworkFee, actionData.UnshieldIDs, actionData.TokenID, beaconHeight + 1)
 
+		// update status of unshield request that processed
+		for _, unshieldID := range actionData.UnshieldIDs {
+			err := UpdateNewStatusUnshieldRequest(unshieldID, pv4Common.PortalUnshieldReqProcessedStatus, stateDB)
+			if err != nil {
+				Logger.log.Errorf("[processPortalBatchUnshieldRequest] Error when updating status of unshielding request with unshieldID %v: %v\n", unshieldID, err)
+				return nil
+			}
+		}
+
+		// store status of batch unshield by batchID
+		batchUnshieldRequestStatus := pv4Meta.PortalUnshieldRequestBatchStatus{
+			BatchID:       actionData.BatchID,
+			RawExternalTx: actionData.RawExternalTx,
+			TokenID:       actionData.TokenID,
+			UnshieldIDs:   actionData.UnshieldIDs,
+			UTXOs:         actionData.UTXOs,
+			NetworkFee:    actionData.NetworkFee,
+			Status:        pv4Common.PortalBatchUnshieldReqProcessedStatus,
+		}
+		batchUnshieldRequestStatusBytes, _ := json.Marshal(batchUnshieldRequestStatus)
+		err := statedb.StorePortalBatchUnshieldRequestStatus(
+			stateDB,
+			actionData.BatchID,
+			batchUnshieldRequestStatusBytes)
+		if err != nil {
+			Logger.log.Errorf("[processPortalBatchUnshieldRequest] Error when storing status of redeem request by redeemID: %v\n", err)
+			return nil
+		}
+
 		// todo: review
 		// update bridge/portal token info
 		//incTokenID, err := common.Hash{}.NewHashFromStr(actionData.TokenID)
