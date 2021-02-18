@@ -100,7 +100,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 			continue
 		}
 
-		// use default unshield fee
+		// use default unshield fee in nano ptoken
 		feeUnshield := portalParams.FeeUnshields[tokenID]
 
 		// choose waiting unshield IDs to process with current UTXOs
@@ -117,15 +117,18 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 				wUnshieldReq := wUnshieldRequests[tokenID][keyWaitingUnshieldRequest]
 				outputTxs = append(outputTxs, &portaltokens.OutputTx{
 					ReceiverAddress: wUnshieldReq.GetRemoteAddress(),
-					Amount:          wUnshieldReq.GetAmount() - feeUnshield,
+					Amount:          portalTokenProcessor.ConvertIncToExternalAmount(wUnshieldReq.GetAmount() - feeUnshield),
 				})
 				totalFee += feeUnshield
 			}
-			// memo in tx: batchId
+
+			// memo in tx: batchId: combine beacon height and list of unshieldIDs
 			batchID := getBatchID(beaconHeight + 1, bcTx.UnshieldIDs)
 			memo := batchID
 
-			hexRawExtTxStr, _, err := portalTokenProcessor.CreateRawExternalTx(bcTx.UTXOs, outputTxs, totalFee, memo, bc)
+			// create raw tx
+			hexRawExtTxStr, _, err := portalTokenProcessor.CreateRawExternalTx(
+				bcTx.UTXOs, outputTxs, portalTokenProcessor.ConvertIncToExternalAmount(totalFee), memo, bc)
 			if err != nil {
 				Logger.log.Errorf("[Batch Unshield Request]: Error when creating raw external tx %v", err)
 				continue
