@@ -8,6 +8,9 @@ import (
 	portalMeta "github.com/incognitochain/incognito-chain/portal/metadata"
 	"github.com/incognitochain/incognito-chain/portal/portalprocess"
 	"github.com/incognitochain/incognito-chain/portal/portaltokens"
+	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
+	portaltokensv4 "github.com/incognitochain/incognito-chain/portalv4/portaltokens"
 	"os"
 	"path/filepath"
 
@@ -130,6 +133,10 @@ func init() {
 	portalMeta.Logger.Init(portalMetaLogger)
 	portalprocess.Logger.Init(portalInstLogger)
 	portaltokens.Logger.Init(portalTokenLogger)
+
+	pv4Meta.Logger.Init(portalCommonLogger)
+	portalprocessv4.Logger.Init(portalMetaLogger)
+	portaltokensv4.Logger.Init(portalInstLogger)
 }
 
 // subsystemLoggers maps each subsystem identifier to its associated logger.
