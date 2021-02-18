@@ -171,7 +171,8 @@ func (p *portalUnshieldRequestProcessor) BuildNewInsts(
 	)
 
 	// add new waiting unshield request to waiting list
-	UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount, beaconHeight)
+	UpdatePortalStateAfterUnshieldRequest(
+		currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount, beaconHeight + 1)
 
 	return [][]string{newInst}, nil
 }
@@ -204,7 +205,8 @@ func (p *portalUnshieldRequestProcessor) ProcessInsts(
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
 		// add new waiting unshield request to waiting list
-		UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount, beaconHeight)
+		UpdatePortalStateAfterUnshieldRequest(
+			currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount, beaconHeight+1)
 
 		// track status of unshield request by unshieldID (txID)
 		unshieldRequestStatus := pv4Meta.PortalUnshieldRequestStatus{

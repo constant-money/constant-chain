@@ -95,15 +95,16 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 	wUnshieldRequests := currentPortalV4State.WaitingUnshieldRequests
 	for tokenID, wReqs := range wUnshieldRequests {
 		portalTokenProcessor := portalParams.PortalTokens[tokenID]
-		// use default unshield fee
-		feeUnshield := portalParams.FeeUnshields[tokenID]
 		if portalTokenProcessor == nil {
 			Logger.log.Errorf("[Batch Unshield Request]: Portal token ID %v is null.", tokenID)
 			continue
 		}
-		utxos := currentPortalV4State.UTXOs[tokenID]
+
+		// use default unshield fee
+		feeUnshield := portalParams.FeeUnshields[tokenID]
 
 		// choose waiting unshield IDs to process with current UTXOs
+		utxos := currentPortalV4State.UTXOs[tokenID]
 		broadCastTxs := portalTokenProcessor.ChooseUnshieldIDsFromCandidates(utxos, wReqs)
 
 		// create raw external txs

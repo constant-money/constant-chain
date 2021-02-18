@@ -118,6 +118,7 @@ func HandlePortalV4Insts(
 		}
 	}
 
+	//TODO:
 	// handle intervally
 	// handle batching process unshield requests
 	if (beaconHeight + 1) % uint64(portalParams.BatchNumBlks) == 0 {
@@ -208,7 +209,6 @@ func handleBatchingUnshieldRequests(
 	currentPortalState *CurrentPortalV4State,
 	portalParams portalv4.PortalParams,
 	pm *PortalV4Manager) ([][]string, error) {
-	insts, err := pm.PortalInstructions[basemeta.PortalUnshieldBatchingMeta].BuildNewInsts(
+	return pm.PortalInstructions[basemeta.PortalUnshieldBatchingMeta].BuildNewInsts(
 		bc, "", 0, currentPortalState, beaconHeight, shardHeights, portalParams, nil)
-	return insts, err
 }
