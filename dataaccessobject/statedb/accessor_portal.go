@@ -593,8 +593,8 @@ func IsPortingRequestIdExist(stateDB *StateDB, statusSuffix []byte) (bool, error
 	return true, nil
 }
 
-func IsShieldingExternalTxHashExists(stateDB *StateDB, tokenID string, externalTxHash string) (bool, error) {
-	key := GenerateShieldingRequestObjectKey(tokenID, externalTxHash)
+func IsShieldingProofTxHashExists(stateDB *StateDB, tokenID string, proofTxHash string) (bool, error) {
+	key := GenerateShieldingRequestObjectKey(tokenID, proofTxHash)
 	_, has, err := stateDB.getShieldingRequestByKey(key)
 
 	if err != nil {

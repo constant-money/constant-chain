@@ -140,9 +140,9 @@ func newShieldingRequestObjectWithValue(db *StateDB, key common.Hash, data inter
 	}, nil
 }
 
-func GenerateShieldingRequestObjectKey(tokenIDStr string, externalTxHash string) common.Hash {
+func GenerateShieldingRequestObjectKey(tokenIDStr string, proofTxHash string) common.Hash {
 	prefixHash := GetShieldingRequestPrefix(tokenIDStr)
-	valueHash := common.HashH([]byte(externalTxHash))
+	valueHash := common.HashH([]byte(proofTxHash))
 	return common.BytesToHash(append(prefixHash, valueHash[:][:prefixKeyLength]...))
 }
 
