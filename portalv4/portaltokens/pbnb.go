@@ -146,5 +146,5 @@ func (p PortalBNBTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, out
 
 // TODO:
 func (p PortalBNBTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
-	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldReqs)
+	return nil
 }

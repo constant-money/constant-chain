@@ -137,7 +137,7 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
 	outputs := btcTxProof.BTCTx.TxOut
 
 	for receiverAddress, amount := range expectPaymentInfo {
-		amountNeedToBeTransferInBTC := p.ConvertIncToExternalAmount(int64(amount))
+		amountNeedToBeTransferInBTC := p.ConvertIncToExternalAmount(amount)
 		isChecked := false
 		for _, out := range outputs {
 			addrStr, err := btcChain.ExtractPaymentAddrStrFromPkScript(out.PkScript)
@@ -148,7 +148,7 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
 			if addrStr != receiverAddress {
 				continue
 			}
-			if out.Value < amountNeedToBeTransferInBTC {
+			if out.Value < int64(amountNeedToBeTransferInBTC) {
 				Logger.log.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", addrStr, amountNeedToBeTransferInBTC, out.Value)
 				return false, nil, fmt.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", addrStr, amountNeedToBeTransferInBTC, out.Value)
 			} else {
@@ -376,7 +376,7 @@ func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[strin
 			unshieldItem{
 				key:   k,
 				value: statedb.NewWaitingUnshieldRequestStateWithValue(
-					req.GetRemoteAddress(), uint64(p.ConvertIncToExternalAmount(int64(req.GetAmount()))), req.GetUnshieldID(), req.GetBeaconHeight()),
+					req.GetRemoteAddress(), p.ConvertIncToExternalAmount(req.GetAmount()), req.GetUnshieldID(), req.GetBeaconHeight()),
 			})
 	}
 
