@@ -41,16 +41,16 @@ func (httpServer *HttpServer) handleCreateRawTxWithShieldingReq(params interface
 		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("metadata IncogAddressStr is invalid"))
 	}
 
-	portingProof, ok := data["PortingProof"].(string)
+	shieldingProof, ok := data["ShieldingProof"].(string)
 	if !ok {
-		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("metadata PortingProof param is invalid"))
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("metadata ShieldingProof param is invalid"))
 	}
 
 	meta, _ := metadata.NewPortalShieldingRequest(
 		basemeta.PortalShieldingRequestMeta,
 		tokenID,
 		incognitoAddress,
-		portingProof,
+		shieldingProof,
 	)
 
 	// create new param to build raw tx from param interface
