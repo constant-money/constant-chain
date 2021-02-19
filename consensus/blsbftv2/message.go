@@ -61,6 +61,7 @@ func MakeBFTVoteMsg(vote *BFTVote, chainKey string, ts int64, height uint64) (wi
 	msg.(*wire.MessageBFT).Type = MSG_VOTE
 	msg.(*wire.MessageBFT).TimeSlot = ts
 	msg.(*wire.MessageBFT).Timestamp = int64(height)
+	msg.(*wire.MessageBFT).PeerID = vote.Validator
 	return msg, nil
 }
 

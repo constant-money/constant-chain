@@ -254,13 +254,13 @@ func SetupParam() {
 				MinUnlockOverRateCollaterals:         25,
 			},
 		},
-		PortalTokens:                initPortalTokensForTestNet(),
-		EpochBreakPointSwapNewKey:   TestnetReplaceCommitteeEpoch,
-		ReplaceStakingTxHeight:      1,
-		IsBackup:                    false,
-		PreloadAddress:              "",
-		BCHeightBreakPointNewZKP:    2300000, //TODO: change this value when deployed testnet
-		ETHRemoveBridgeSigEpoch:     21920,
+		PortalTokens:              initPortalTokensForTestNet(),
+		EpochBreakPointSwapNewKey: TestnetReplaceCommitteeEpoch,
+		ReplaceStakingTxHeight:    1,
+		IsBackup:                  false,
+		PreloadAddress:            "",
+		BCHeightBreakPointNewZKP:  2300000, //TODO: change this value when deployed testnet
+		ETHRemoveBridgeSigEpoch:   21920,
 
 		PortalETHContractAddressStr: "0x6D53de7aFa363F779B5e125876319695dC97171E", // todo: update sc address
 		BCHeightBreakPointPortalV3:  30158,
@@ -352,7 +352,7 @@ func SetupParam() {
 		PreloadAddress:              "",
 		BCHeightBreakPointNewZKP:    1148608, //TODO: change this value when deployed testnet2
 		ETHRemoveBridgeSigEpoch:     2085,
-		PortalETHContractAddressStr: "0xF7befD2806afD96D3aF76471cbCa1cD874AA1F46",   // todo: update sc address
+		PortalETHContractAddressStr: "0xF7befD2806afD96D3aF76471cbCa1cD874AA1F46", // todo: update sc address
 		BCHeightBreakPointPortalV3:  1328816,
 	}
 	// END TESTNET-2

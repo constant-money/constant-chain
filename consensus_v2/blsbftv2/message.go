@@ -61,6 +61,7 @@ func MakeBFTVoteMsg(vote *BFTVote, chainKey string, ts int64, height uint64) (wi
 	msg.(*wire.MessageBFT).Content = voteCtnBytes
 	msg.(*wire.MessageBFT).Type = MSG_VOTE
 	msg.(*wire.MessageBFT).TimeSlot = ts
+	msg.(*wire.MessageBFT).PeerID = vote.Validator
 	msg.(*wire.MessageBFT).Timestamp = time.Now().UnixNano() / int64(time.Millisecond)
 	return msg, nil
 }

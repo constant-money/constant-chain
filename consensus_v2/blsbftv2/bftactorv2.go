@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/multiview"
 	"sort"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/multiview"
 
 	signatureschemes2 "github.com/incognitochain/incognito-chain/consensus_v2/signatureschemes"
 
@@ -273,9 +274,9 @@ func (e *BLSBFT_V2) run() error {
 					}
 					// e.Logger.Infof("[Monitor] bestview height %v, finalview height %v, block height %v %v", bestViewHeight, e.Chain.GetFinalView().GetHeight(), proposeBlockInfo.block.GetHeight(), proposeBlockInfo.block.GetProduceTime())
 					// check if propose block in current time
-					if e.currentTimeSlot == common.CalculateTimeSlot(proposeBlockInfo.block.GetProposeTime()) {
-						validProposeBlock = append(validProposeBlock, proposeBlockInfo)
-					}
+					// if e.currentTimeSlot == common.CalculateTimeSlot(proposeBlockInfo.block.GetProposeTime()) {
+					validProposeBlock = append(validProposeBlock, proposeBlockInfo)
+					// }
 
 					if proposeBlockInfo.block.GetHeight() < e.Chain.GetFinalView().GetHeight() {
 						delete(e.receiveBlockByHash, h)
@@ -478,7 +479,13 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 
 			v.isValid = true
 			e.voteHistory[v.block.GetHeight()] = v.block
-			e.Logger.Info(e.ChainKey, "sending vote...")
+			x := msg.(*wire.MessageBFT)
+			var xVote BFTVote
+			err = json.Unmarshal(x.Content, &xVote)
+			if err != nil {
+				e.Logger.Error(err)
+			}
+			e.Logger.Infof("sending vote for block %v %v...", Vote.BlockHash, xVote.BlockHash)
 			v.sendVote = true
 			go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 			go e.Node.PushMessageToChain(msg, e.Chain)
@@ -561,8 +568,10 @@ func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, prop
 	blockData, _ := json.Marshal(block)
 	var proposeCtn = new(BFTPropose)
 	proposeCtn.Block = blockData
-	proposeCtn.PeerID = e.Node.GetSelfPeerID().String()
+	pKey := userMiningKey.GetPublicKey()
+	proposeCtn.PeerID = pKey.GetMiningKeyBase58("bls")
 	msg, _ := MakeBFTProposeMsg(proposeCtn, e.ChainKey, e.currentTimeSlot, block.GetHeight())
+	e.Logger.Infof("[debugbft] BFT msg pubkey %v", msg.(*wire.MessageBFT).PeerID)
 	go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 	go e.Node.PushMessageToChain(msg, e.Chain)
 

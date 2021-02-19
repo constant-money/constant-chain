@@ -6,6 +6,7 @@ type MiningState struct {
 	Role    string
 	Layer   string
 	ChainID int
+	Index   int32 // Index of this public key in list committee PublicKey
 }
 
 type Validator struct {

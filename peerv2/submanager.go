@@ -48,7 +48,7 @@ type Subscriber interface {
 }
 
 type Registerer interface {
-	Register(context.Context, string, []string, []byte, peer.ID, string) ([]*proto.MessageTopicPair, *proto.UserRole, error)
+	Register(context.Context, string, []string, []byte, peer.ID, string, int32) ([]*proto.MessageTopicPair, *proto.UserRole, error)
 	Target() string
 	UpdateTarget(peer.ID)
 }
@@ -104,7 +104,7 @@ func (sub *SubManager) Subscribe(forced bool) error {
 		str := ""
 		for _, chainID := range shardIDs {
 			if newRole[chainID] != nil {
-				str += fmt.Sprintf("%v-%v", chainID, newRole[chainID].State.Role)
+				str += fmt.Sprintf("%v-%v-%v", chainID, newRole[chainID].State.Role, newRole[chainID].State.Index)
 			} else {
 				str += fmt.Sprintf("%v-", chainID)
 			}
@@ -126,12 +126,19 @@ func (sub *SubManager) Subscribe(forced bool) error {
 		validator := sub.consensusData.GetOneValidator()
 		if validator != nil {
 			nodePK = validator.MiningKey.GetPublicKeyBase58()
+		} else {
+			validator = &consensus.Validator{
+				State: consensus.MiningState{
+					Index: 0,
+				},
+			}
 		}
 		newTopics, _, err = sub.registerToProxy(
 			nodePK,
 			"",
 			"",
 			relayShardIDs,
+			validator.State.Index,
 		)
 		if err != nil {
 			return err
@@ -145,6 +152,7 @@ func (sub *SubManager) Subscribe(forced bool) error {
 					validator.State.Layer,
 					validator.State.Role,
 					[]byte{byte(chainID)},
+					validator.State.Index,
 				)
 				if err != nil {
 					return err // Don't save new role and topics since we need to retry later
@@ -167,6 +175,7 @@ func (sub *SubManager) Subscribe(forced bool) error {
 			"",
 			"netmonitor",
 			[]byte{255},
+			0,
 		)
 		if err != nil {
 			return err // Don't save new role and topics since we need to retry later
@@ -307,6 +316,7 @@ func (sub *SubManager) registerToProxy(
 	layer string,
 	role string,
 	shardID []byte,
+	pkIndex int32,
 ) (msgToTopics, userRole, error) {
 	messagesWanted := getMessagesForLayer(layer, shardID)
 	Logger.Infof("Registering: message: %v", messagesWanted)
@@ -324,6 +334,7 @@ func (sub *SubManager) registerToProxy(
 		shardID,
 		sub.peerID,
 		role,
+		pkIndex,
 	)
 	if err != nil {
 		return nil, userRole{}, err
