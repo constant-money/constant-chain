@@ -2,6 +2,7 @@ package portalprocess
 
 import (
 	"encoding/json"
+
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 
@@ -12,7 +13,7 @@ type CurrentPortalV4State struct {
 	WaitingUnshieldRequests   map[string]map[string]*statedb.WaitingUnshieldRequest        // tokenID : hash(tokenID || unshieldID) : value
 	UTXOs                     map[string]map[string]*statedb.UTXO                          // tokenID : hash(tokenID || walletAddress || txHash || index) : value
 	ProcessedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch // tokenID : hash(tokenID || batchID) : value
-	ShieldingExternalTx       map[string]map[string]*statedb.ShieldingRequest              // tokenID : hash(tokenID || txHash) : value
+	ShieldingExternalTx       map[string]map[string]*statedb.ShieldingRequest              // tokenID : hash(tokenID || proofHash) : value
 }
 
 //todo:
@@ -78,14 +79,14 @@ func UpdatePortalStateAfterShieldingRequest(currentPortalV4State *CurrentPortalV
 	}
 }
 
-func SaveShieldingExternalTxToStateDB(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingExternalTxHash string, incAddress string, amount uint64) {
+func SaveShieldingExternalTxToStateDB(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string, shieldingExternalTxHash string, incAddress string, amount uint64) {
 	if currentPortalV4State.ShieldingExternalTx == nil {
 		currentPortalV4State.ShieldingExternalTx = map[string]map[string]*statedb.ShieldingRequest{}
 	}
 	if currentPortalV4State.ShieldingExternalTx[tokenID] == nil {
 		currentPortalV4State.ShieldingExternalTx[tokenID] = map[string]*statedb.ShieldingRequest{}
 	}
-	currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingExternalTxHash).String()] = statedb.NewShieldingRequestWithValue(shieldingExternalTxHash, incAddress, amount)
+	currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingProofTxHash).String()] = statedb.NewShieldingRequestWithValue(shieldingExternalTxHash, incAddress, amount)
 }
 
 func UpdatePortalStateAfterUnshieldRequest(

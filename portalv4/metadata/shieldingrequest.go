@@ -34,6 +34,7 @@ type PortalShieldingRequestAction struct {
 type PortalShieldingRequestContent struct {
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
+	ProofHash       string
 	ShieldingUTXO   []*statedb.UTXO
 	TxReqID         common.Hash
 	ShardID         byte
@@ -44,6 +45,7 @@ type PortalShieldingRequestStatus struct {
 	Status          byte
 	TokenID         string // pTokenID in incognito chain
 	IncogAddressStr string
+	ProofHash       string
 	ShieldingUTXO   []*statedb.UTXO
 	TxReqID         common.Hash
 }

@@ -1,6 +1,7 @@
 package portalprocess
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -51,34 +52,30 @@ func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *s
 		return nil, fmt.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
 	}
 
-	portalParams := portalv4.PortalParams{}
-	portalTokenProcessor := portalParams.PortalTokens[actionData.Meta.TokenID]
-	if portalTokenProcessor == nil {
-		Logger.log.Errorf("TokenID is not supported currently on Portal")
-		return nil, nil
-	}
+	proofHash := hashProof(actionData.Meta.ShieldingProof)
 
-	externalTxHash, err := portalTokenProcessor.GetExternalTxHashFromProof(actionData.Meta.ShieldingProof)
-	if err != nil {
-		Logger.log.Error("Parse proof and verify shielding proof failed: %v", err)
-		return nil, nil
-	}
-
-	isExistExternalTxHash, err := statedb.IsShieldingExternalTxHashExists(stateDB, actionData.Meta.TokenID, externalTxHash)
+	isExistProofTxHash, err := statedb.IsShieldingProofTxHashExists(stateDB, actionData.Meta.TokenID, proofHash)
 	if err != nil {
 		Logger.log.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
 		return nil, fmt.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
 	}
 
 	optionalData := make(map[string]interface{})
-	optionalData["isExistExternalTxHash"] = isExistExternalTxHash
+	optionalData["isExistExternalTxHash"] = isExistProofTxHash
 	return optionalData, nil
+}
+
+func hashProof(proof string) string {
+	proofHashBytes := sha256.New()
+	proofHashBytes.Write([]byte(proof))
+	return string(proofHashBytes.Sum(nil))
 }
 
 // beacon build new instruction from instruction received from ShardToBeaconBlock
 func buildReqPTokensInstV4(
 	tokenID string,
 	incogAddressStr string,
+	proofHash string,
 	shieldingUTXO []*statedb.UTXO,
 	metaType int,
 	shardID byte,
@@ -88,6 +85,7 @@ func buildReqPTokensInstV4(
 	shieldingReqContent := portalMeta.PortalShieldingRequestContent{
 		TokenID:         tokenID,
 		IncogAddressStr: incogAddressStr,
+		ProofHash:       proofHash,
 		ShieldingUTXO:   shieldingUTXO,
 		TxReqID:         txReqID,
 		ShardID:         shardID,
@@ -128,6 +126,7 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 	rejectInst := buildReqPTokensInstV4(
 		meta.TokenID,
 		meta.IncogAddressStr,
+		"",
 		[]*statedb.UTXO{},
 		meta.Type,
 		shardID,
@@ -157,9 +156,12 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 
 	UpdatePortalStateAfterShieldingRequest(currentPortalState, meta.TokenID, listUTXO)
 
+	proofHash := hashProof(meta.ShieldingProof)
+
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
 		actionData.Meta.IncogAddressStr,
+		proofHash,
 		listUTXO,
 		actionData.Meta.Type,
 		shardID,
@@ -203,7 +205,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			shieldingAmount += utxo.GetOutputAmount()
 		}
 
-		SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
+		SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, actionData.ProofHash, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
 
 		// track shieldingReq status by txID into DB
 		shieldingReqTrackData := metadata.PortalShieldingRequestStatus{
