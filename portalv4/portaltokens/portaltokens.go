@@ -19,7 +19,7 @@ type PortalTokenProcessor interface {
 	ParseAndVerifyProof(
 		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error)
 	ParseAndVerifyUnshieldProof(
-		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectPaymentInfo map[string]uint64) (bool, []*statedb.UTXO, error)
+		proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectPaymentInfo map[string]uint64, utxos []*statedb.UTXO) (bool, []*statedb.UTXO, error)
 	GetExternalTxHashFromProof(proof string) (string, error)
 	ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx
 
@@ -80,5 +80,3 @@ func (p PortalToken) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool
 	C := 10
 	return A*num_utxos+B*num_unshield_id <= C
 }
-
-

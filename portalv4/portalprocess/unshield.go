@@ -11,6 +11,7 @@ import (
 	"github.com/incognitochain/incognito-chain/portalv4"
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
+	"github.com/incognitochain/incognito-chain/portalv4/portaltokens"
 	"strconv"
 )
 
@@ -171,8 +172,7 @@ func (p *portalUnshieldRequestProcessor) BuildNewInsts(
 	)
 
 	// add new waiting unshield request to waiting list
-	UpdatePortalStateAfterUnshieldRequest(
-		currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount, beaconHeight + 1)
+	UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, unshieldID, meta.TokenID, meta.RemoteAddress, meta.UnshieldAmount, beaconHeight)
 
 	return [][]string{newInst}, nil
 }
@@ -205,8 +205,7 @@ func (p *portalUnshieldRequestProcessor) ProcessInsts(
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
 		// add new waiting unshield request to waiting list
-		UpdatePortalStateAfterUnshieldRequest(
-			currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount, beaconHeight+1)
+		UpdatePortalStateAfterUnshieldRequest(currentPortalV4State, actionData.TxReqID.String(), actionData.TokenID, actionData.RemoteAddress, actionData.UnshieldAmount, beaconHeight)
 
 		// track status of unshield request by unshieldID (txID)
 		unshieldRequestStatus := pv4Meta.PortalUnshieldRequestStatus{
@@ -274,7 +273,51 @@ func (p *portalReplacementFeeRequestProcessor) PutAction(action []string, shardI
 }
 
 func (p *portalReplacementFeeRequestProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
-	return nil, nil
+	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
+	if err != nil {
+		Logger.log.Errorf("Replace fee request: an error occurred while decoding content string of replace fee unshield request action: %+v", err)
+		return nil, fmt.Errorf("Replace fee request: an error occurred while decoding content string of replace fee unshield request action: %+v", err)
+	}
+
+	var actionData pv4Meta.PortalReplacementFeeRequestAction
+	err = json.Unmarshal(actionContentBytes, &actionData)
+	if err != nil {
+		Logger.log.Errorf("Replace fee: an error occurred while unmarshal replace fee unshield request action: %+v", err)
+		return nil, fmt.Errorf("Replace fee: an error occurred while unmarshal replace fee unshield request action: %+v", err)
+	}
+
+	unshieldBatchBytes, err := statedb.GetPortalBatchUnshieldRequestStatus(stateDB, actionData.Meta.BatchID)
+	if err != nil {
+		Logger.log.Error("Can not get unshield batch: %v", err)
+		return nil, err
+	}
+
+	var processedUnshieldRequestBatch pv4Meta.PortalUnshieldRequestBatchStatus
+	err = json.Unmarshal(unshieldBatchBytes, &processedUnshieldRequestBatch)
+	if err != nil {
+		Logger.log.Errorf("Replace fee: an error occurred while unmarshal processedUnshieldRequestBatch status: %+v", err)
+		return nil, fmt.Errorf("Replace fee: an error occurred while unmarshal processedUnshieldRequestBatch status: %+v", err)
+	}
+
+	var outputs []*portaltokens.OutputTx
+	for _, v := range processedUnshieldRequestBatch.UnshieldIDs {
+		unshieldBytes, err := statedb.GetPortalUnshieldRequestStatus(stateDB, v)
+		if err != nil {
+			Logger.log.Error("Can not get unshield batch: %v", err)
+			return nil, err
+		}
+		var portalUnshieldRequestStatus pv4Meta.PortalUnshieldRequestStatus
+		err = json.Unmarshal(unshieldBytes, &portalUnshieldRequestStatus)
+		if err != nil {
+			Logger.log.Errorf("Replace fee: an error occurred while unmarshal PortalUnshieldRequestStatus: %+v", err)
+			return nil, fmt.Errorf("Replace fee: an error occurred while unmarshal PortalUnshieldRequestStatus: %+v", err)
+		}
+		outputs = append(outputs, &portaltokens.OutputTx{ReceiverAddress: portalUnshieldRequestStatus.RemoteAddress, Amount: portalUnshieldRequestStatus.UnshieldAmount})
+	}
+
+	optionalData := make(map[string]interface{})
+	optionalData["outputs"] = outputs
+	return optionalData, nil
 }
 
 // beacon build new instruction from instruction received from ShardToBeaconBlock
@@ -365,8 +408,10 @@ func (p *portalReplacementFeeRequestProcessor) BuildNewInsts(
 		Logger.log.Errorf("Error: Replace unshield batch with invalid fee: %v", meta.Fee)
 		return [][]string{rejectInst}, nil
 	}
-	// todo: create raw and sign tx
-	rawTx := ""
+
+	portalTokenProcessor := portalParams.PortalTokens[tokenIDStr]
+	multisigAddress := portalParams.MultiSigAddresses[tokenIDStr]
+	hexRawExtTxStr, _, err := portalTokenProcessor.CreateRawExternalTx(unshieldBatch.GetUTXOs()[multisigAddress], optionalData["outputs"].([]*portaltokens.OutputTx), uint64(meta.Fee), meta.BatchID, bc)
 
 	// build accept instruction
 	newInst := buildReplacementFeeRequestInst(
@@ -376,7 +421,7 @@ func (p *portalReplacementFeeRequestProcessor) BuildNewInsts(
 		meta.BatchID,
 		meta.Type,
 		actionData.ShardID,
-		rawTx,
+		hexRawExtTxStr,
 		actionData.TxReqID,
 		pCommon.PortalRequestAcceptedChainStatus,
 	)
@@ -480,7 +525,52 @@ func (p *portalSubmitConfirmedTxProcessor) PutAction(action []string, shardID by
 }
 
 func (p *portalSubmitConfirmedTxProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
-	return nil, nil
+	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
+	if err != nil {
+		Logger.log.Errorf("SubmitConfirmed request: an error occurred while decoding content string of SubmitConfirmed unshield request action: %+v", err)
+		return nil, fmt.Errorf("Replace fee request: an error occurred while decoding content string of SubmitConfirmed unshield request action: %+v", err)
+	}
+
+	var actionData pv4Meta.PortalSubmitConfirmedTxAction
+	err = json.Unmarshal(actionContentBytes, &actionData)
+	if err != nil {
+		Logger.log.Errorf("SubmitConfirmed request: an error occurred while unmarshal SubmitConfirmed unshield request action: %+v", err)
+		return nil, fmt.Errorf("SubmitConfirmed request: an error occurred while unmarshal SubmitConfirmed unshield request action: %+v", err)
+	}
+
+	unshieldBatchBytes, err := statedb.GetPortalBatchUnshieldRequestStatus(stateDB, actionData.Meta.BatchID)
+	if err != nil {
+		Logger.log.Error("Can not get unshield batch: %v", err)
+		return nil, err
+	}
+
+	var processedUnshieldRequestBatch pv4Meta.PortalUnshieldRequestBatchStatus
+	err = json.Unmarshal(unshieldBatchBytes, &processedUnshieldRequestBatch)
+	if err != nil {
+		Logger.log.Errorf("SubmitConfirmed request: an error occurred while unmarshal processedUnshieldRequestBatch status: %+v", err)
+		return nil, fmt.Errorf("SubmitConfirmed request: an error occurred while unmarshal processedUnshieldRequestBatch status: %+v", err)
+	}
+
+	outputs := make(map[string]uint64, 0)
+	for _, v := range processedUnshieldRequestBatch.UnshieldIDs {
+		unshieldBytes, err := statedb.GetPortalUnshieldRequestStatus(stateDB, v)
+		if err != nil {
+			Logger.log.Error("Can not get unshield batch: %v", err)
+			return nil, err
+		}
+		var portalUnshieldRequestStatus pv4Meta.PortalUnshieldRequestStatus
+		err = json.Unmarshal(unshieldBytes, &portalUnshieldRequestStatus)
+		if err != nil {
+			Logger.log.Errorf("SubmitConfirmed: an error occurred while unmarshal PortalUnshieldRequestStatus: %+v", err)
+			return nil, fmt.Errorf("SubmitConfirmed: an error occurred while unmarshal PortalUnshieldRequestStatus: %+v", err)
+		}
+		outputs[portalUnshieldRequestStatus.RemoteAddress] = portalUnshieldRequestStatus.UnshieldAmount
+	}
+
+	optionalData := make(map[string]interface{})
+	optionalData["outputs"] = outputs
+
+	return optionalData, nil
 }
 
 // beacon build new instruction from instruction received from ShardToBeaconBlock
@@ -559,7 +649,7 @@ func (p *portalSubmitConfirmedTxProcessor) BuildNewInsts(
 		Logger.log.Errorf("Error: currentPortalV4State.ProcessedUnshieldRequests not initialized yet")
 		return [][]string{rejectInst}, nil
 	}
-	_, ok := currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr][keyUnshieldBatch]
+	unshieldBatch, ok := currentPortalV4State.ProcessedUnshieldRequests[tokenIDStr][keyUnshieldBatch]
 	if !ok {
 		Logger.log.Errorf("Error: Submit non-exist unshield external transaction with tokenID: %v, batchid : %v.", tokenIDStr, batchIDStr)
 		return [][]string{rejectInst}, nil
@@ -571,11 +661,10 @@ func (p *portalSubmitConfirmedTxProcessor) BuildNewInsts(
 	}
 
 	expectedMemo := meta.BatchID
-	// TODO: get this value from portal params and update expectedPaymentInfos
-	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
-	expectedPaymentInfos := make(map[string]uint64, 0)
-	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyUnshieldProof(meta.UnshieldProof, bc, expectedMemo, expectedMultisigAddress, expectedPaymentInfos)
-	if !isValid {
+	expectedMultisigAddress := portalParams.MultiSigAddresses[tokenIDStr]
+	outputs := optionalData["outputs"].(map[string]uint64)
+	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyUnshieldProof(meta.UnshieldProof, bc, expectedMemo, expectedMultisigAddress, outputs, unshieldBatch.GetUTXOs()[tokenIDStr])
+	if !isValid || err != nil {
 		Logger.log.Errorf("Unshield Proof is invalid")
 		return [][]string{rejectInst}, nil
 	}
