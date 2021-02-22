@@ -437,7 +437,7 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 
 		// check and sign on unshielding external tx for Portal v4
 		portalParam := e.Chain.GetPortalParamsV4(0)
-		portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userKey.PriKey[common.BridgeConsensus], v.block.GetInstructions(),  portalParam)
+		portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userKey.PriKey[common.BridgeConsensus], v.block.GetInstructions(), portalParam)
 		if err != nil {
 			return NewConsensusError(UnExpectedError, err)
 		}
@@ -504,7 +504,7 @@ func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, prop
 	var validationData ValidationData
 	// check and sign on unshielding external tx for Portal v4
 	portalParam := e.Chain.GetPortalParamsV4(0)
-	portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userMiningKey.PriKey[common.BridgeConsensus], block.GetInstructions(),  portalParam)
+	portalSigs, err := portalprocessv4.CheckAndSignPortalUnshieldExternalTx(userMiningKey.PriKey[common.BridgeConsensus], block.GetInstructions(), portalParam)
 	if err != nil {
 		return nil, NewConsensusError(UnExpectedError, err)
 	}
@@ -587,4 +587,12 @@ func ExtractBridgeValidationData(block common.BlockInterface) ([][]byte, []int, 
 		return nil, nil, NewConsensusError(UnExpectedError, err)
 	}
 	return valData.BridgeSig, valData.ValidatiorsIdx, nil
+}
+
+func ExtractPortalV4ValidationData(block common.BlockInterface) ([]*portalprocessv4.PortalSig, error) {
+	valData, err := DecodeValidationData(block.GetValidationField())
+	if err != nil {
+		return nil, NewConsensusError(UnExpectedError, err)
+	}
+	return valData.PortalSig, nil
 }

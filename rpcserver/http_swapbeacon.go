@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/basemeta"
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"strconv"
 
 	"github.com/incognitochain/incognito-chain/incdb"
@@ -29,6 +30,7 @@ type swapProof struct {
 
 type ConsensusEngine interface {
 	ExtractBridgeValidationData(block common.BlockInterface) ([][]byte, []int, error)
+	ExtractPortalV4ValidationData(block common.BlockInterface) ([]*portalprocessv4.PortalSig, error)
 }
 
 // handleGetLatestBeaconSwapProof returns the latest proof of a change in bridge's committee
@@ -314,6 +316,10 @@ func (bb *beaconBlock) MetaHash() []byte {
 
 func (bb *beaconBlock) Sig(ce ConsensusEngine) ([][]byte, []int, error) {
 	return ce.ExtractBridgeValidationData(bb)
+}
+
+func (bb *beaconBlock) ProtalV4Sigs(ce ConsensusEngine) ([]*portalprocessv4.PortalSig, error) {
+	return ce.ExtractPortalV4ValidationData(bb)
 }
 
 type shardBlock struct {

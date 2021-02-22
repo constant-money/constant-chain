@@ -299,6 +299,8 @@ const (
 	getPortalReplacementFeeStatus              = "getportalreplacementfeestatus"
 	createAndSendTxWithPortalSubmitConfirmedTx = "createandsendtxwithportalsubmitconfirmedtx"
 	getPortalSubmitConfirmedTx                 = "getportalsubmitconfirmedtxstatus"
+	getSignedRawTransactionByBatchID           = "getporalsignedrawtransaction"
+	getSignedRawReplaceFeeTransaction          = "getporalsignedrawreplacefeetransaction"
 )
 
 const (

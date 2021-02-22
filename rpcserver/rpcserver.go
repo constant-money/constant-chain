@@ -1,6 +1,7 @@
 package rpcserver
 
 import (
+	portalprocessv4 "github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"net"
 	"net/http"
 	"sync"
@@ -92,6 +93,7 @@ type RpcServerConfig struct {
 		GetCurrentMiningPublicKey() (publickey string, keyType string)
 		GetAllMiningPublicKeys() []string
 		ExtractBridgeValidationData(block common.BlockInterface) ([][]byte, []int, error)
+		ExtractPortalV4ValidationData(block common.BlockInterface) ([]*portalprocessv4.PortalSig, error)
 		GetAllValidatorKeyState() map[string]consensus.MiningState
 	}
 	TxMemPool                   rpcservice.MempoolInterface
