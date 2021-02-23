@@ -27,6 +27,8 @@ func ParseMetadata(meta interface{}) (basemeta.Metadata, error) {
 	switch int(mtTemp["Type"].(float64)) {
 	case basemeta.PortalShieldingRequestMeta:
 		md = &PortalShieldingRequest{}
+	case basemeta.PortalShieldingResponseMeta:
+		md = &PortalShieldingResponse{}
 	case basemeta.PortalBurnPTokenMeta:
 		md = &PortalUnshieldRequest{}
 	default:

@@ -54,6 +54,12 @@ func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *s
 
 	proofHash := hashProof(actionData.Meta.ShieldingProof)
 
+	statusType := statedb.GetShieldingRequestPrefix(actionData.Meta.TokenID)
+	statusSuffix := []byte(proofHash)
+	key := statedb.GeneratePortalStatusObjectKey(statusType, statusSuffix)
+	Logger.log.Errorf("ProofHash get input: tokenID %+v, proofHash %+v", actionData.Meta.TokenID, proofHash)
+	Logger.log.Errorf("ProofHash get key: %+v", key)
+
 	isExistProofTxHash, err := statedb.IsShieldingProofTxHashExists(stateDB, actionData.Meta.TokenID, proofHash)
 	if err != nil {
 		Logger.log.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
@@ -61,14 +67,13 @@ func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *s
 	}
 
 	optionalData := make(map[string]interface{})
-	optionalData["isExistExternalTxHash"] = isExistProofTxHash
+	optionalData["isExistProofTxHash"] = isExistProofTxHash
 	return optionalData, nil
 }
 
 func hashProof(proof string) string {
-	proofHashBytes := sha256.New()
-	proofHashBytes.Write([]byte(proof))
-	return string(proofHashBytes.Sum(nil))
+	hash := sha256.Sum256([]byte(proof))
+	return fmt.Sprintf("%x", hash[:])
 }
 
 // beacon build new instruction from instruction received from ShardToBeaconBlock
@@ -145,6 +150,21 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
+	// check unique external proof from optionalData which get from statedb
+	if optionalData == nil {
+		Logger.log.Errorf("Shielding Request: optionalData is null")
+		return [][]string{rejectInst}, nil
+	}
+	isExist, ok := optionalData["isExistProofTxHash"].(bool)
+	if !ok {
+		Logger.log.Errorf("Shielding Request: optionalData isExistProofTxHash is invalid")
+		return [][]string{rejectInst}, nil
+	}
+	if isExist {
+		Logger.log.Errorf("Shielding Request: Shielding request proof exist in db %v", meta.ShieldingProof)
+		return [][]string{rejectInst}, nil
+	}
+
 	expectedMemo := portalTokenProcessor.GetExpectedMemoForShielding(meta.IncogAddressStr)
 	expectedMultisigAddress := portalParams.MultiSigAddresses[meta.TokenID]
 	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyProof(meta.ShieldingProof, bc, expectedMemo, expectedMultisigAddress)
@@ -212,6 +232,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			Status:          pCommon.PortalRequestAcceptedStatus,
 			TokenID:         actionData.TokenID,
 			IncogAddressStr: actionData.IncogAddressStr,
+			ProofHash:       actionData.ProofHash,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
 			TxReqID:         actionData.TxReqID,
 		}
@@ -222,7 +243,18 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			shieldingReqTrackDataBytes,
 		)
 		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while tracking shielding request tx: %+v", err)
+			Logger.log.Errorf("ERROR: an error occured while tracking shielding request by TxReqID: %+v", err)
+			return nil
+		}
+
+		err = statedb.StoreShieldingRequestProof(
+			stateDB,
+			actionData.TokenID,
+			actionData.ProofHash,
+			shieldingReqTrackDataBytes,
+		)
+		if err != nil {
+			Logger.log.Errorf("ERROR: an error occured while tracking shielding request by ProofHash: %+v", err)
 			return nil
 		}
 
@@ -251,6 +283,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			Status:          pCommon.PortalRequestRejectedStatus,
 			TokenID:         actionData.TokenID,
 			IncogAddressStr: actionData.IncogAddressStr,
+			ProofHash:       actionData.ProofHash,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
 			TxReqID:         actionData.TxReqID,
 		}

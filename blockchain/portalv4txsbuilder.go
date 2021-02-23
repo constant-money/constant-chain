@@ -43,7 +43,7 @@ func (curView *ShardBestState) buildPortalAcceptedShieldingRequestTx(
 		acceptedShieldingReq.IncogAddressStr,
 		shieldingAmount,
 		acceptedShieldingReq.TokenID,
-		basemeta.PortalShieldingRequestMeta,
+		basemeta.PortalShieldingResponseMeta,
 	)
 
 	keyWallet, err := wallet.Base58CheckDeserialize(acceptedShieldingReq.IncogAddressStr)
@@ -93,7 +93,7 @@ func (curView *ShardBestState) buildPortalAcceptedShieldingRequestTx(
 		),
 	)
 	if initErr != nil {
-		Logger.log.Errorf("ERROR: an error occured while initializing request ptoken response tx: %+v", initErr)
+		Logger.log.Errorf("ERROR: an error occured while initializing shielding response tx: %+v", initErr)
 		return nil, nil
 	}
 	return resTx, nil

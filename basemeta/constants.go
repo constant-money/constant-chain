@@ -82,6 +82,7 @@ var minerCreatedMetaTypes = []int{
 	PortalPortingResponseMeta,
 	PortalTopUpWaitingPortingResponseMeta,
 	PortalRedeemFromLiquidationPoolResponseMetaV3,
+	PortalShieldingResponseMeta,
 }
 
 // Special rules for shardID: stored as 2nd param of instruction of BeaconBlock
@@ -186,6 +187,8 @@ const (
 	PortalUnshieldBatchingMeta      = 252
 	PortalReplacementFeeRequestMeta = 253
 	PortalSubmitConfirmedTxMeta     = 254
+
+	PortalShieldingResponseMeta = 255
 )
 
 var portalMetas = []int{
@@ -245,6 +248,7 @@ var portalMetas = []int{
 // todo: add more
 var portalV4Metas = []int{
 	PortalShieldingRequestMeta,
+	PortalShieldingResponseMeta,
 	PortalBurnPTokenMeta,
 	PortalReplacementFeeRequestMeta,
 	PortalSubmitConfirmedTxMeta,

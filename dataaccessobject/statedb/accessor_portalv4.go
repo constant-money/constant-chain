@@ -2,6 +2,51 @@ package statedb
 
 import "github.com/incognitochain/incognito-chain/common"
 
+// ================= Shielding Request =================
+func StoreShieldingRequestStatus(stateDB *StateDB, txID string, statusContent []byte) error {
+	statusType := PortalShieldingRequestStatusPrefix()
+	statusSuffix := []byte(txID)
+	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
+	if err != nil {
+		return NewStatedbError(StorePortalShieldingRequestStatusError, err)
+	}
+
+	return nil
+}
+
+func GetShieldingRequestStatus(stateDB *StateDB, txID string) ([]byte, error) {
+	statusType := PortalShieldingRequestStatusPrefix()
+	statusSuffix := []byte(txID)
+	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
+	if err != nil {
+		return []byte{}, NewStatedbError(GetPortalShieldingRequestStatusError, err)
+	}
+
+	return data, nil
+}
+
+func StoreShieldingRequestProof(stateDB *StateDB, tokenID string, proofTxHash string, statusContent []byte) error {
+	statusType := GetShieldingRequestPrefix(tokenID)
+	statusSuffix := []byte(proofTxHash)
+	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
+	if err != nil {
+		return NewStatedbError(StorePortalShieldingRequestStatusError, err)
+	}
+
+	return nil
+}
+
+func IsShieldingProofTxHashExists(stateDB *StateDB, tokenID string, proofTxHash string) (bool, error) {
+	statusType := GetShieldingRequestPrefix(tokenID)
+	statusSuffix := []byte(proofTxHash)
+	key := GeneratePortalStatusObjectKey(statusType, statusSuffix)
+	_, has, err := stateDB.getPortalStatusByKey(key)
+	if err != nil {
+		return false, NewStatedbError(GetPortalStatusError, err)
+	}
+	return has, nil
+}
+
 // ================= List Waiting Unshielding Requests =================
 func GetWaitingUnshieldRequestsByTokenID(stateDB *StateDB, tokenID string) (map[string]*WaitingUnshieldRequest, error) {
 	return stateDB.getListWaitingUnshieldRequestsByTokenID(tokenID), nil

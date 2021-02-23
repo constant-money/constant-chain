@@ -593,17 +593,6 @@ func IsPortingRequestIdExist(stateDB *StateDB, statusSuffix []byte) (bool, error
 	return true, nil
 }
 
-func IsShieldingProofTxHashExists(stateDB *StateDB, tokenID string, proofTxHash string) (bool, error) {
-	key := GenerateShieldingRequestObjectKey(tokenID, proofTxHash)
-	_, has, err := stateDB.getShieldingRequestByKey(key)
-
-	if err != nil {
-		return false, NewStatedbError(GetPortalShieldingRequestStatusError, err)
-	}
-
-	return has, nil
-}
-
 //====================== Waiting Porting  ======================
 // getCustodianPoolState gets custodian pool state at beaconHeight
 func GetWaitingPortingRequests(
@@ -682,28 +671,6 @@ func GetRequestPTokenStatus(stateDB *StateDB, txID string) ([]byte, error) {
 	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
 	if err != nil {
 		return []byte{}, NewStatedbError(GetPortalRequestPTokenStatusError, err)
-	}
-
-	return data, nil
-}
-
-func StoreShieldingRequestStatus(stateDB *StateDB, txID string, statusContent []byte) error {
-	statusType := PortalShieldingRequestStatusPrefix()
-	statusSuffix := []byte(txID)
-	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
-	if err != nil {
-		return NewStatedbError(StorePortalShieldingRequestStatusError, err)
-	}
-
-	return nil
-}
-
-func GetShieldingRequestStatus(stateDB *StateDB, txID string) ([]byte, error) {
-	statusType := PortalShieldingRequestStatusPrefix()
-	statusSuffix := []byte(txID)
-	data, err := GetPortalStatus(stateDB, statusType, statusSuffix)
-	if err != nil {
-		return []byte{}, NewStatedbError(GetPortalShieldingRequestStatusError, err)
 	}
 
 	return data, nil
