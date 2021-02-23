@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -38,6 +39,7 @@ type TxBase struct {
 	sigPrivKey       []byte       // is ALWAYS private property of struct, if privacy: 64 bytes, and otherwise, 32 bytes
 	cachedHash       *common.Hash // cached hash data of tx
 	cachedActualSize *uint64      // cached actualsize data for tx
+	valEnv           *ValidationEnv
 }
 
 // Function that choose which version to create metadata Transaction
@@ -52,7 +54,7 @@ type TxPrivacyInitParams struct {
 	TokenID     *common.Hash // default is nil -> use for prv coin
 	MetaData    metadata.Metadata
 	Info        []byte // 512 bytes
-	Kvargs		map[string]interface{}
+	Kvargs      map[string]interface{}
 }
 
 func NewTxPrivacyInitParams(senderSK *privacy.PrivateKey,
@@ -66,7 +68,7 @@ func NewTxPrivacyInitParams(senderSK *privacy.PrivateKey,
 	info []byte) *TxPrivacyInitParams {
 	// make sure info is not nil ; zero value for it is []byte{}
 
-	if info==nil{
+	if info == nil {
 		info = []byte{}
 	}
 	params := &TxPrivacyInitParams{
@@ -79,7 +81,7 @@ func NewTxPrivacyInitParams(senderSK *privacy.PrivateKey,
 		PaymentInfo: paymentInfo,
 		SenderSK:    senderSK,
 		Info:        info,
-		Kvargs:		 nil,
+		Kvargs:      nil,
 	}
 	return params
 }
@@ -211,7 +213,7 @@ func (tx *TxBase) UnmarshalJSON(data []byte) error {
 	}
 
 	proofType := tx.Type
-	if proofType == common.TxTokenConversionType{
+	if proofType == common.TxTokenConversionType {
 		proofType = common.TxNormalType
 	}
 
@@ -281,27 +283,27 @@ func (tx TxBase) GetMetadata() metadata.Metadata { return tx.Metadata }
 
 func (tx *TxBase) SetMetadata(meta metadata.Metadata) { tx.Metadata = meta }
 
-func (tx TxBase) GetPrivateKey() []byte{
+func (tx TxBase) GetPrivateKey() []byte {
 	return tx.sigPrivKey
 }
 
-func (tx *TxBase) SetPrivateKey(sk []byte){
+func (tx *TxBase) SetPrivateKey(sk []byte) {
 	tx.sigPrivKey = sk
 }
 
-func (tx TxBase) GetCachedActualSize() *uint64{
+func (tx TxBase) GetCachedActualSize() *uint64 {
 	return tx.cachedActualSize
 }
 
-func (tx *TxBase) SetCachedActualSize(sz *uint64){
+func (tx *TxBase) SetCachedActualSize(sz *uint64) {
 	tx.cachedActualSize = sz
 }
 
-func (tx TxBase) GetCachedHash() *common.Hash{
+func (tx TxBase) GetCachedHash() *common.Hash {
 	return tx.cachedHash
 }
 
-func (tx *TxBase) SetCachedHash(h *common.Hash){
+func (tx *TxBase) SetCachedHash(h *common.Hash) {
 	tx.cachedHash = h
 }
 
@@ -569,16 +571,16 @@ func (tx TxBase) ValidateDoubleSpendWithBlockchain(shardID byte, stateDB *stated
 	for i := 0; i < len(inputCoins); i++ {
 		serialNumber := inputCoins[i].GetKeyImage().ToBytesS()
 		ok, err := statedb.HasSerialNumber(stateDB, *prvCoinID, serialNumber, shardID)
-		if err != nil{
+		if err != nil {
 			return err
 		}
 		if ok {
 			return errors.New("double spend")
 		}
 	}
-	for _, outCoin := range tx.GetProof().GetOutputCoins(){
+	for _, outCoin := range tx.GetProof().GetOutputCoins() {
 		otaPublicKey := outCoin.GetPublicKey().ToBytesS()
-		if wallet.IsPublicKeyBurningAddress(otaPublicKey){
+		if wallet.IsPublicKeyBurningAddress(otaPublicKey) {
 			continue
 		}
 
@@ -601,4 +603,16 @@ func (tx TxBase) ValidateTxReturnStaking(stateDB *statedb.StateDB) bool { return
 
 func (tx TxBase) ListOTAHashH() []common.Hash {
 	return []common.Hash{}
+}
+
+func (tx *TxBase) SetValidationEnv(valEnv metadata.ValidationEnviroment) {
+	tx.valEnv = valEnv
+}
+
+func (tx *TxBase) GetValidationEnv() metadata.ValidationEnviroment {
+	return tx.valEnv
+}
+
+func (tx TxBase) CheckValEnv() (bool, error) {
+	return false, errors.Errorf("Pls add more enviroment")
 }

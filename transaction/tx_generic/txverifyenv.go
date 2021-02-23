@@ -1,4 +1,4 @@
-package transaction
+package tx_generic
 
 import (
 	"github.com/incognitochain/incognito-chain/common"
@@ -177,4 +177,8 @@ func (vE *ValidationEnv) Version() int {
 }
 func (vE *ValidationEnv) BuilderSView() common.Hash {
 	return vE.builderSView
+}
+
+func (vE *ValidationEnv) TokenID() common.Hash {
+	return common.Hash{}
 }

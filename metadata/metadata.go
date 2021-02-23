@@ -97,7 +97,7 @@ type ShardViewRetriever interface {
 }
 
 type ValidationEnviroment interface {
-	// ShardView() ShardViewRetriever
+	TokenID() *common.Hash
 	BuilderSView() common.Hash
 	IsPrivacy() bool
 	IsConfimed() bool

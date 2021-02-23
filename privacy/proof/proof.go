@@ -1,6 +1,7 @@
 package proof
 
 import (
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/coin"
 	errhandler "github.com/incognitochain/incognito-chain/privacy/errorhandler"
@@ -29,5 +30,6 @@ type Proof interface {
 	ValidateSanity(interface{}) (bool, error)
 
 	Verify(boolParams map[string]bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, additionalData interface{}) (bool, error)
-}
 
+	LoadDataFromDB(txDB *state.StateDB) error
+}
