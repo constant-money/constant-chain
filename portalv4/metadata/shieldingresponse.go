@@ -59,7 +59,7 @@ func (iRes PortalShieldingResponse) ValidateSanityData(chainRetriever basemeta.C
 
 func (iRes PortalShieldingResponse) ValidateMetadataByItself() bool {
 	// The validation just need to check at tx level, so returning true here
-	return iRes.Type == basemeta.PortalShieldingRequestMeta
+	return iRes.Type == basemeta.PortalShieldingResponseMeta
 }
 
 func (iRes PortalShieldingResponse) Hash() *common.Hash {
