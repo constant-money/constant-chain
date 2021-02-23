@@ -5,13 +5,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/incognitochain/incognito-chain/basemeta"
-	"github.com/incognitochain/incognito-chain/portal/portalprocess"
 	"reflect"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/incognitochain/incognito-chain/basemeta"
+	"github.com/incognitochain/incognito-chain/portal/portalprocess"
 
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -1457,6 +1458,13 @@ func (blockchain *BlockChain) processStoreBeaconBlock(
 		return NewBlockChainError(ProcessPortalInstructionError, err)
 	}
 	//}
+
+	// execute, store Portal Instruction V4
+	//if (blockchain.config.ChainParams.Net == Mainnet) || (blockchain.config.ChainParams.Net == Testnet && beaconBlock.Header.Height > 1500000) {
+	err = blockchain.processPortalInstructionsV4(newBestState.featureStateDB, beaconBlock)
+	if err != nil {
+		return NewBlockChainError(ProcessPortalInstructionError, err)
+	}
 
 	// execute, store Ralaying Instruction
 	err = blockchain.processRelayingInstructions(beaconBlock)
