@@ -43,6 +43,7 @@ type PortalReplacementFeeRequestStatus struct {
 	Fee           uint
 	TxHash        string
 	ExternalRawTx string
+	BeaconHeight  uint64
 	Status        int
 }
 

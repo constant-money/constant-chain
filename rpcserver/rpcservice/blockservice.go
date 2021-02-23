@@ -1307,3 +1307,19 @@ func (blockService BlockService) GetPortalSubmitConfirmedTxStatus(reqTxID string
 
 	return &status, nil
 }
+
+func (blockService BlockService) GetPortalUnshieldBatchStatus(batchID string) (*metadata2.PortalUnshieldRequestBatchStatus, error) {
+	stateDB := blockService.BlockChain.GetBeaconBestState().GetBeaconFeatureStateDB()
+	data, err := statedb.GetPortalBatchUnshieldRequestStatus(stateDB, batchID)
+	if err != nil {
+		return nil, err
+	}
+
+	var status metadata2.PortalUnshieldRequestBatchStatus
+	err = json.Unmarshal(data, &status)
+	if err != nil {
+		return nil, err
+	}
+
+	return &status, nil
+}

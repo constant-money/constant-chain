@@ -194,6 +194,10 @@ func (blockchain *BlockChain) GetPortalReplacementAddress(beaconHeight uint64) s
 	return blockchain.GetPortalParamsV4(beaconHeight).PortalReplacementAddress
 }
 
+func (blockchain *BlockChain) GetMultiSigScriptHexEncode(beaconHeight uint64, tokenID string) string {
+	return blockchain.GetPortalParamsV4(beaconHeight).MultiSigScriptHexEncode[tokenID]
+}
+
 func (blockchain *BlockChain) GetMinAmountPortalToken(tokenIDStr string, beaconHeight uint64) (uint64, error) {
 	return blockchain.GetPortalParams(beaconHeight).GetMinAmountPortalToken(tokenIDStr)
 }

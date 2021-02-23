@@ -283,6 +283,8 @@ var HttpHandler = map[string]httpHandler{
 	getPortalReplacementFeeStatus:              (*HttpServer).handleGetPortalReplacementFeeRequestStatus,
 	createAndSendTxWithPortalSubmitConfirmedTx: (*HttpServer).handleCreateAndSendTxWithPortalPortalSubmitConfirmedTx,
 	getPortalSubmitConfirmedTx:                 (*HttpServer).handleGetPortalPortalSubmitConfirmedTxStatus,
+	getSignedRawTransactionByBatchID:           (*HttpServer).handleGetPortalTransactionSignedWithBatchID,
+	getSignedRawReplaceFeeTransaction:          (*HttpServer).handleGetPortalTransactionSignedWithFeeReplacementTx,
 }
 
 // Commands that are available to a limited user

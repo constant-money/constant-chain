@@ -29,7 +29,7 @@ func (p PortalBTCTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custo
 	return p.PortalToken.GetExpectedMemoForRedeem(redeemID, custodianIncAddress)
 }
 
-func (p PortalBTCTokenProcessor)  ConvertIncToExternalAmount(incAmt uint64) uint64 {
+func (p PortalBTCTokenProcessor) ConvertIncToExternalAmount(incAmt uint64) uint64 {
 	return incAmt / 10 // incAmt / 1^9 * 1^8
 }
 
@@ -101,7 +101,7 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 }
 
 func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
-	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectPaymentInfo map[string]uint64) (bool, []*statedb.UTXO, error) {
+	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string, expectPaymentInfo map[string]uint64, utxos []*statedb.UTXO) (bool, []*statedb.UTXO, error) {
 	btcChain := bc.GetBTCHeaderChain()
 	if btcChain == nil {
 		Logger.log.Error("BTC relaying chain should not be null")
@@ -128,17 +128,34 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
 		return false, nil, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
 	}
 	if btcAttachedMsg != expectedMemo {
-		Logger.log.Errorf("ShieldingId in the btc attached message is not matched with portingID in metadata")
-		return false, nil, fmt.Errorf("ShieldingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
+		Logger.log.Errorf("Submit confirmed tx in the btc attached message is not matched with portingID in metadata")
+		return false, nil, fmt.Errorf("Submit confirmed tx in the btc attached message %v is not matched with batchid in metadata %v", btcAttachedMsg, expectedMemo)
+	}
+
+	// verify spent outputs
+	if len(btcTxProof.BTCTx.TxIn) < 1 {
+		Logger.log.Errorf("Can not find the tx inputs in proof")
+		return false, nil, fmt.Errorf("Submit confirmed tx: no tx inputs in proof")
+	}
+	input := btcTxProof.BTCTx.TxIn[0]
+	isMached := false
+	for _, v := range utxos {
+		if v.GetTxHash() == input.PreviousOutPoint.Hash.String() && v.GetOutputIndex() == input.PreviousOutPoint.Index {
+			isMached = true
+			break
+		}
+	}
+	if !isMached {
+		Logger.log.Errorf("Submit confirmed: tx inputs from proof is diff utxos from unshield batch")
+		return false, nil, fmt.Errorf("Submit confirmed tx: tx inputs from proof is diff utxos from unshield batch")
 	}
 
 	// check whether amount transfer in txBNB is equal porting amount or not
 	// check receiver and amount in tx
 	outputs := btcTxProof.BTCTx.TxOut
 
-	for receiverAddress, amount := range expectPaymentInfo {
-		amountNeedToBeTransferInBTC := p.ConvertIncToExternalAmount(amount)
-		isChecked := false
+	for receiverAddress := range expectPaymentInfo {
+		isMached = false
 		for _, out := range outputs {
 			addrStr, err := btcChain.ExtractPaymentAddrStrFromPkScript(out.PkScript)
 			if err != nil {
@@ -148,15 +165,10 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
 			if addrStr != receiverAddress {
 				continue
 			}
-			if out.Value < int64(amountNeedToBeTransferInBTC) {
-				Logger.log.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", addrStr, amountNeedToBeTransferInBTC, out.Value)
-				return false, nil, fmt.Errorf("BTC-TxProof is invalid - the transferred amount to %s must be equal to or greater than %d, but got %d", addrStr, amountNeedToBeTransferInBTC, out.Value)
-			} else {
-				isChecked = true
-				break
-			}
+			isMached = true
+			break
 		}
-		if !isChecked {
+		if !isMached {
 			Logger.log.Error("BTC-TxProof is invalid")
 			return false, nil, errors.New("BTC-TxProof is invalid")
 		}
@@ -218,7 +230,7 @@ func (p PortalBTCTokenProcessor) GenerateMultiSigWalletFromSeeds(bc bMeta.ChainR
 		return nil, nil, "", errors.New("Invalid signature requirment")
 	}
 	bitcoinPrvKeys := make([]*btcec.PrivateKey, 0)
-	bitcoinPrvKeyStrs := make([]string, 0)  // btc private key hex encoded
+	bitcoinPrvKeyStrs := make([]string, 0) // btc private key hex encoded
 	// create redeem script for 2 of 3 multi-sig
 	builder := txscript.NewScriptBuilder()
 	// add the minimum number of needed signatures
@@ -260,10 +272,9 @@ func (p PortalBTCTokenProcessor) GeneratePrivateKeyFromSeed(seed []byte) ([]byte
 	return privKey.Serialize(), nil
 }
 
-
 // CreateRawExternalTx creates raw btc transaction (not include signatures of beacon validator)
 // TODO: networkFee
-func (p PortalBTCTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, outputs []*OutputTx, networkFee uint64, memo string, bc bMeta.ChainRetriever) (string, string, error){
+func (p PortalBTCTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, outputs []*OutputTx, networkFee uint64, memo string, bc bMeta.ChainRetriever) (string, string, error) {
 	msgTx := wire.NewMsgTx(wire.TxVersion)
 
 	// add TxIns into raw tx
@@ -374,7 +385,7 @@ func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[strin
 		wReqsArr = append(
 			wReqsArr,
 			unshieldItem{
-				key:   k,
+				key: k,
 				value: statedb.NewWaitingUnshieldRequestStateWithValue(
 					req.GetRemoteAddress(), p.ConvertIncToExternalAmount(req.GetAmount()), req.GetUnshieldID(), req.GetBeaconHeight()),
 			})

@@ -49,13 +49,13 @@ func buildUnshieldBatchingInst(
 	metaType int,
 	status string,
 ) []string {
-	unshieldBatchContent :=pv4Meta.PortalUnshieldRequestBatchContent{
+	unshieldBatchContent := pv4Meta.PortalUnshieldRequestBatchContent{
 		BatchID:       batchID,
 		RawExternalTx: rawExtTx,
 		TokenID:       tokenID,
 		UnshieldIDs:   unshieldIDs,
-		UTXOs: utxos,
-		NetworkFee: networkFee,
+		UTXOs:         utxos,
+		NetworkFee:    networkFee,
 	}
 	unshieldBatchContentBytes, _ := json.Marshal(unshieldBatchContent)
 	return []string{
@@ -123,7 +123,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 			}
 
 			// memo in tx: batchId: combine beacon height and list of unshieldIDs
-			batchID := getBatchID(beaconHeight + 1, bcTx.UnshieldIDs)
+			batchID := getBatchID(beaconHeight+1, bcTx.UnshieldIDs)
 			memo := batchID
 
 			// create raw tx
@@ -138,7 +138,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 			externalFees := map[uint64]uint{
 				beaconHeight: uint(totalFee),
 			}
-			chosenUTXOs := map[string][]*statedb.UTXO {
+			chosenUTXOs := map[string][]*statedb.UTXO{
 				portalParams.MultiSigAddresses[tokenID]: bcTx.UTXOs,
 			}
 			newInst := buildUnshieldBatchingInst(batchID, hexRawExtTxStr, tokenID, bcTx.UnshieldIDs, chosenUTXOs, externalFees, bMeta.PortalUnshieldBatchingMeta, pv4Common.PortalRequestAcceptedChainStatus)
@@ -147,7 +147,7 @@ func (p *portalUnshieldBatchingProcessor) BuildNewInsts(
 			// update current portal state
 			// remove chosen waiting unshield requests from waiting list
 			UpdatePortalStateAfterProcessBatchUnshieldRequest(
-				currentPortalV4State, batchID, chosenUTXOs, externalFees, bcTx.UnshieldIDs, tokenID, beaconHeight + 1)
+				currentPortalV4State, batchID, chosenUTXOs, externalFees, bcTx.UnshieldIDs, tokenID, beaconHeight+1)
 		}
 	}
 	return newInsts, nil
@@ -182,7 +182,7 @@ func (p *portalUnshieldBatchingProcessor) ProcessInsts(
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
 		// add new waiting unshield request to waiting list
 		UpdatePortalStateAfterProcessBatchUnshieldRequest(
-			currentPortalV4State, actionData.BatchID, actionData.UTXOs, actionData.NetworkFee, actionData.UnshieldIDs, actionData.TokenID, beaconHeight + 1)
+			currentPortalV4State, actionData.BatchID, actionData.UTXOs, actionData.NetworkFee, actionData.UnshieldIDs, actionData.TokenID, beaconHeight+1)
 
 		// update status of unshield request that processed
 		for _, unshieldID := range actionData.UnshieldIDs {
@@ -197,6 +197,7 @@ func (p *portalUnshieldBatchingProcessor) ProcessInsts(
 		batchUnshieldRequestStatus := pv4Meta.PortalUnshieldRequestBatchStatus{
 			BatchID:       actionData.BatchID,
 			RawExternalTx: actionData.RawExternalTx,
+			BeaconHeight:  beaconHeight,
 			TokenID:       actionData.TokenID,
 			UnshieldIDs:   actionData.UnshieldIDs,
 			UTXOs:         actionData.UTXOs,
