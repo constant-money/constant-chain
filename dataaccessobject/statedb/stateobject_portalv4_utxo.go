@@ -158,7 +158,7 @@ func newUTXOObjectWithValue(db *StateDB, key common.Hash, data interface{}) (*UT
 }
 
 func GenerateUTXOObjectKey(tokenID string, walletAddress string, txHash string, outputIdx uint32) common.Hash {
-	prefixHash := GetWaitingUnshieldRequestPrefix(tokenID)
+	prefixHash := GetPortalUTXOStatePrefix(tokenID)
 	value := append([]byte(walletAddress), []byte(txHash)...)
 	value = append(value, []byte(strconv.Itoa(int(outputIdx)))...)
 	valueHash := common.HashH(value)
@@ -194,11 +194,11 @@ func (t UTXOObject) GetValue() interface{} {
 }
 
 func (t UTXOObject) GetValueBytes() []byte {
-	WaitingUnshield, ok := t.GetValue().(*WaitingUnshieldRequest)
+	utxo, ok := t.GetValue().(*UTXO)
 	if !ok {
 		panic("wrong expected value type")
 	}
-	value, err := json.Marshal(WaitingUnshield)
+	value, err := json.Marshal(utxo)
 	if err != nil {
 		panic("failed to marshal redeem request")
 	}
@@ -230,6 +230,6 @@ func (t UTXOObject) IsDeleted() bool {
 
 // value is either default or nil
 func (t UTXOObject) IsEmpty() bool {
-	temp := NewWaitingUnshieldRequestState()
+	temp := NewUTXO()
 	return reflect.DeepEqual(temp, t.utxo) || t.utxo == nil
 }

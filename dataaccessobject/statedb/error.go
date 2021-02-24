@@ -208,6 +208,7 @@ const (
 	StorePortalUnshieldBatchReplacementRequestStatusError
 	GetPortalSubmitConfirmedTxRequestStatusError
 	StorePortalSubmitConfirmedTxRequestStatusError
+	StorePortalUTXOsError
 )
 
 var ErrCodeMessage = map[int]struct {

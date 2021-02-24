@@ -1703,6 +1703,26 @@ func (stateDB *StateDB) getShieldingRequestByKey(key common.Hash) (*ShieldingReq
 	return NewShieldingRequest(), false, nil
 }
 
+func (stateDB *StateDB) getUTXOsByTokenID(tokenID string) map[string]*UTXO {
+	utxos := make(map[string]*UTXO)
+	temp := stateDB.trie.NodeIterator(GetPortalUTXOStatePrefix(tokenID))
+	it := trie.NewIterator(temp)
+	for it.Next() {
+		key := it.Key
+		keyHash, _ := common.Hash{}.NewHash(key)
+		value := it.Value
+		newValue := make([]byte, len(value))
+		copy(newValue, value)
+		wr := NewUTXO()
+		err := json.Unmarshal(newValue, wr)
+		if err != nil {
+			panic("wrong expect type")
+		}
+		utxos[keyHash.String()] = wr
+	}
+	return utxos
+}
+
 func (stateDB *StateDB) getListWaitingUnshieldRequestsByTokenID(tokenID string) map[string]*WaitingUnshieldRequest {
 	waitingUnshieldRequests := make(map[string]*WaitingUnshieldRequest)
 	temp := stateDB.trie.NodeIterator(GetWaitingUnshieldRequestPrefix(tokenID))

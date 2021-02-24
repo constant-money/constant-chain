@@ -31,6 +31,15 @@ func InitCurrentPortalV4StateFromDB(
 		}
 	}
 
+	// load list of UTXOs
+	utxos := map[string]map[string]*statedb.UTXO{}
+	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
+		utxos[tokenID], err = statedb.GetUTXOsByTokenID(stateDB, tokenID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// load list of processed unshielding requests batch
 	//processedUnshieldRequestsBatch := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
 	//for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
@@ -42,7 +51,7 @@ func InitCurrentPortalV4StateFromDB(
 
 	return &CurrentPortalV4State{
 		WaitingUnshieldRequests:   waitingUnshieldRequests,
-		UTXOs:                     nil,
+		UTXOs:                     utxos,
 		ProcessedUnshieldRequests: nil,
 		ShieldingExternalTx:       nil,
 	}, nil
@@ -53,6 +62,12 @@ func StorePortalV4StateToDB(
 	currentPortalState *CurrentPortalV4State,
 ) error {
 	var err error
+	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
+		err = statedb.StoreUTXOs(stateDB, currentPortalState.UTXOs[tokenID])
+		if err != nil {
+			return err
+		}
+	}
 	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
 		err = statedb.StoreWaitingUnshieldRequests(stateDB, currentPortalState.WaitingUnshieldRequests[tokenID])
 		if err != nil {
