@@ -114,6 +114,10 @@ const (
 	BurningForDepositToSCRequestMetaV2 = 242
 	BurningConfirmForDepositToSCMeta   = 97
 	BurningConfirmForDepositToSCMetaV2 = 243
+
+	// transaction convert
+	ConvertingRequestMeta = 255
+	ConvertingResponseMeta = 256
 )
 
 var minerCreatedMetaTypes = []int{

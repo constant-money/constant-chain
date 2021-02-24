@@ -56,6 +56,12 @@ const (
 	PortalCustodianDepositV3ValidateSanityDataError
 	NewPortalCustodianDepositV3MetaFromMapError
 	PortalUnlockOverRateCollateralsError
+
+	// converting
+	ConvertingAmountError
+	ConvertingTokenIDError
+	ConvertingAddressError
+	ConvertingTxRandomError
 )
 
 var ErrCodeMessage = map[int]struct {
