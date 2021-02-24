@@ -209,6 +209,7 @@ const (
 	GetPortalSubmitConfirmedTxRequestStatusError
 	StorePortalSubmitConfirmedTxRequestStatusError
 	StorePortalUTXOsError
+	StorePortalShieldingRequestsError
 )
 
 var ErrCodeMessage = map[int]struct {

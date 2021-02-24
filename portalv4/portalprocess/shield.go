@@ -82,6 +82,7 @@ func buildReqPTokensInstV4(
 	incogAddressStr string,
 	proofHash string,
 	shieldingUTXO []*statedb.UTXO,
+	mintingAmt uint64,
 	metaType int,
 	shardID byte,
 	txReqID common.Hash,
@@ -92,6 +93,7 @@ func buildReqPTokensInstV4(
 		IncogAddressStr: incogAddressStr,
 		ProofHash:       proofHash,
 		ShieldingUTXO:   shieldingUTXO,
+		MintingAmount:   mintingAmt,
 		TxReqID:         txReqID,
 		ShardID:         shardID,
 	}
@@ -133,6 +135,7 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 		meta.IncogAddressStr,
 		"",
 		[]*statedb.UTXO{},
+		0,
 		meta.Type,
 		shardID,
 		actionData.TxReqID,
@@ -177,12 +180,18 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 	UpdatePortalStateAfterShieldingRequest(currentPortalState, meta.TokenID, listUTXO)
 
 	proofHash := hashProof(meta.ShieldingProof)
+	shieldingAmount := uint64(0)
+	for _, utxo := range listUTXO {
+		shieldingAmount += utxo.GetOutputAmount()
+	}
+	mintingAmount := portalTokenProcessor.ConvertExternalToIncAmount(shieldingAmount)
 
 	inst := buildReqPTokensInstV4(
 		actionData.Meta.TokenID,
 		actionData.Meta.IncogAddressStr,
 		proofHash,
 		listUTXO,
+		mintingAmount,
 		actionData.Meta.Type,
 		shardID,
 		actionData.TxReqID,
@@ -225,7 +234,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			shieldingAmount += utxo.GetOutputAmount()
 		}
 
-		SaveShieldingExternalTxToStateDB(currentPortalState, actionData.TokenID, actionData.ProofHash, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
+		SaveShieldingExternalTxToPortalState(currentPortalState, actionData.TokenID, actionData.ProofHash, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
 
 		// track shieldingReq status by txID into DB
 		shieldingReqTrackData := metadata.PortalShieldingRequestStatus{
@@ -234,6 +243,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			IncogAddressStr: actionData.IncogAddressStr,
 			ProofHash:       actionData.ProofHash,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
+			MintingAmount:   actionData.MintingAmount,
 			TxReqID:         actionData.TxReqID,
 		}
 		shieldingReqTrackDataBytes, _ := json.Marshal(shieldingReqTrackData)
@@ -285,6 +295,7 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 			IncogAddressStr: actionData.IncogAddressStr,
 			ProofHash:       actionData.ProofHash,
 			ShieldingUTXO:   actionData.ShieldingUTXO,
+			MintingAmount:   actionData.MintingAmount,
 			TxReqID:         actionData.TxReqID,
 		}
 		shieldingReqTrackDataBytes, _ := json.Marshal(shieldingReqTrackData)

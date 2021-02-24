@@ -97,6 +97,8 @@ func newStateObjectWithValue(db *StateDB, objectType int, hash common.Hash, valu
 		return newWaitingPortingRequestObjectWithValue(db, hash, value)
 	case PortalUTXOObjectType:
 		return newUTXOObjectWithValue(db, hash, value)
+	case PortalShieldingRequestObjectType:
+		return newShieldingRequestObjectWithValue(db, hash, value)
 	default:
 		panic("state object type not exist")
 	}
@@ -174,6 +176,8 @@ func newStateObject(db *StateDB, objectType int, hash common.Hash) StateObject {
 		return newWaitingUnshieldObject(db, hash)
 	case PortalUTXOObjectType:
 		return newUTXOObject(db, hash)
+	case PortalShieldingRequestObjectType:
+		return newShieldingRequestObject(db, hash)
 	default:
 		panic("state object type not exist")
 	}

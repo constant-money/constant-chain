@@ -47,6 +47,25 @@ func IsShieldingProofTxHashExists(stateDB *StateDB, tokenID string, proofTxHash 
 	return has, nil
 }
 
+func GetShieldingRequestsByTokenID(stateDB *StateDB, tokenID string) (map[string]*ShieldingRequest, error) {
+	return stateDB.getShieldingRequestsByTokenID(tokenID), nil
+}
+
+func StoreShieldingRequests(stateDB *StateDB, shieldingRequests map[string]*ShieldingRequest) error {
+	for keyStr, shieldingReq := range shieldingRequests {
+		key, err := common.Hash{}.NewHashFromStr(keyStr)
+		if err != nil {
+			return NewStatedbError(StorePortalShieldingRequestsError, err)
+		}
+		err = stateDB.SetStateObject(PortalShieldingRequestObjectType, *key, shieldingReq)
+		if err != nil {
+			return NewStatedbError(StorePortalShieldingRequestsError, err)
+		}
+	}
+
+	return nil
+}
+
 // ================= List UTXOs =================
 func GetUTXOsByTokenID(stateDB *StateDB, tokenID string) (map[string]*UTXO, error) {
 	return stateDB.getUTXOsByTokenID(tokenID), nil

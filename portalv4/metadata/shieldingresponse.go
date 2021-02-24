@@ -18,7 +18,7 @@ type PortalShieldingResponse struct {
 	RequestStatus    string
 	ReqTxID          common.Hash
 	RequesterAddrStr string
-	Amount           uint64
+	MintingAmount    uint64
 	IncTokenID       string
 }
 
@@ -38,7 +38,7 @@ func NewPortalShieldingResponse(
 		ReqTxID:          reqTxID,
 		MetadataBase:     metadataBase,
 		RequesterAddrStr: requesterAddressStr,
-		Amount:           amount,
+		MintingAmount:    amount,
 		IncTokenID:       tokenID,
 	}
 }
@@ -67,7 +67,7 @@ func (iRes PortalShieldingResponse) Hash() *common.Hash {
 	record += iRes.RequestStatus
 	record += iRes.ReqTxID.String()
 	record += iRes.RequesterAddrStr
-	record += strconv.FormatUint(iRes.Amount, 10)
+	record += strconv.FormatUint(iRes.MintingAmount, 10)
 	record += iRes.IncTokenID
 	// final hash
 	hash := common.HashH([]byte(record))
@@ -121,13 +121,8 @@ func (iRes PortalShieldingResponse) VerifyMinerCreatedTxBeforeGettingInBlock(
 		shardIDFromInst = shieldingReqContent.ShardID
 		txReqIDFromInst = shieldingReqContent.TxReqID
 		requesterAddrStrFromInst = shieldingReqContent.IncogAddressStr
-		utxosFromInst := shieldingReqContent.ShieldingUTXO
 		tokenIDStrFromInst = shieldingReqContent.TokenID
-
-		shieldingAmount := uint64(0)
-		for _, utxo := range utxosFromInst {
-			shieldingAmount += utxo.GetOutputAmount()
-		}
+		mintingAmount := shieldingReqContent.MintingAmount
 
 		if !bytes.Equal(iRes.ReqTxID[:], txReqIDFromInst[:]) ||
 			shardID != shardIDFromInst {
@@ -141,7 +136,7 @@ func (iRes PortalShieldingResponse) VerifyMinerCreatedTxBeforeGettingInBlock(
 
 		_, pk, paidAmount, assetID := tx.GetTransferData()
 		if !bytes.Equal(key.KeySet.PaymentAddress.Pk[:], pk[:]) ||
-			shieldingAmount != paidAmount ||
+			mintingAmount != paidAmount ||
 			tokenIDStrFromInst != assetID.String() {
 			continue
 		}

@@ -40,6 +40,15 @@ func InitCurrentPortalV4StateFromDB(
 		}
 	}
 
+	// load list of shielding requests
+	shieldingRequests := map[string]map[string]*statedb.ShieldingRequest{}
+	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
+		shieldingRequests[tokenID], err = statedb.GetShieldingRequestsByTokenID(stateDB, tokenID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// load list of processed unshielding requests batch
 	//processedUnshieldRequestsBatch := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
 	//for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
@@ -53,7 +62,7 @@ func InitCurrentPortalV4StateFromDB(
 		WaitingUnshieldRequests:   waitingUnshieldRequests,
 		UTXOs:                     utxos,
 		ProcessedUnshieldRequests: nil,
-		ShieldingExternalTx:       nil,
+		ShieldingExternalTx:       shieldingRequests,
 	}, nil
 }
 
@@ -69,12 +78,17 @@ func StorePortalV4StateToDB(
 		}
 	}
 	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
+		err = statedb.StoreShieldingRequests(stateDB, currentPortalState.ShieldingExternalTx[tokenID])
+		if err != nil {
+			return err
+		}
+	}
+	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
 		err = statedb.StoreWaitingUnshieldRequests(stateDB, currentPortalState.WaitingUnshieldRequests[tokenID])
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -94,7 +108,7 @@ func UpdatePortalStateAfterShieldingRequest(currentPortalV4State *CurrentPortalV
 	}
 }
 
-func SaveShieldingExternalTxToStateDB(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string, shieldingExternalTxHash string, incAddress string, amount uint64) {
+func SaveShieldingExternalTxToPortalState(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string, shieldingExternalTxHash string, incAddress string, amount uint64) {
 	if currentPortalV4State.ShieldingExternalTx == nil {
 		currentPortalV4State.ShieldingExternalTx = map[string]map[string]*statedb.ShieldingRequest{}
 	}

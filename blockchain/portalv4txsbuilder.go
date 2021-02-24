@@ -32,16 +32,11 @@ func (curView *ShardBestState) buildPortalAcceptedShieldingRequestTx(
 		return nil, nil
 	}
 
-	shieldingAmount := uint64(0)
-	for _, utxo := range acceptedShieldingReq.ShieldingUTXO {
-		shieldingAmount += utxo.GetOutputAmount()
-	}
-
 	meta := pMeta.NewPortalShieldingResponse(
 		"accepted",
 		acceptedShieldingReq.TxReqID,
 		acceptedShieldingReq.IncogAddressStr,
-		shieldingAmount,
+		acceptedShieldingReq.MintingAmount,
 		acceptedShieldingReq.TokenID,
 		basemeta.PortalShieldingResponseMeta,
 	)
@@ -52,7 +47,7 @@ func (curView *ShardBestState) buildPortalAcceptedShieldingRequestTx(
 		return nil, nil
 	}
 	receiverAddr := keyWallet.KeySet.PaymentAddress
-	receiveAmt := shieldingAmount
+	receiveAmt := acceptedShieldingReq.MintingAmount
 	tokenID, _ := new(common.Hash).NewHashFromStr(acceptedShieldingReq.TokenID)
 
 	// in case the returned currency is privacy custom token

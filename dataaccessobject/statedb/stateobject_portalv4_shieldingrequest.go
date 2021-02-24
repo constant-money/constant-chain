@@ -80,6 +80,7 @@ func (pr *ShieldingRequest) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
+	pr.externalTxHash = temp.ExternalTxHash
 	pr.incAddress = temp.IncAddress
 	pr.amount = temp.Amount
 	return nil

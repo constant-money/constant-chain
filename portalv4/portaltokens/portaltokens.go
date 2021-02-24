@@ -3,6 +3,7 @@ package portaltokens
 import (
 	"encoding/base64"
 	"encoding/json"
+
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -12,6 +13,7 @@ type PortalTokenProcessor interface {
 	IsValidRemoteAddress(address string, bcr bMeta.ChainRetriever) (bool, error)
 	GetChainID() string
 	GetMinTokenAmount() uint64
+	ConvertExternalToIncAmount(incAmt uint64) uint64
 	ConvertIncToExternalAmount(incAmt uint64) uint64
 
 	GetExpectedMemoForShielding(incAddress string) string

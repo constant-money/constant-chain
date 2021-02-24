@@ -36,6 +36,7 @@ type PortalShieldingRequestContent struct {
 	IncogAddressStr string
 	ProofHash       string
 	ShieldingUTXO   []*statedb.UTXO
+	MintingAmount   uint64
 	TxReqID         common.Hash
 	ShardID         byte
 }
@@ -47,6 +48,7 @@ type PortalShieldingRequestStatus struct {
 	IncogAddressStr string
 	ProofHash       string
 	ShieldingUTXO   []*statedb.UTXO
+	MintingAmount   uint64
 	TxReqID         common.Hash
 }
 
