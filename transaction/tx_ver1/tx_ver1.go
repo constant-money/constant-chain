@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/privacy/privacy_v1/zeroknowledge/oneoutofmany"
 	"math"
 	"math/big"
 	"time"
@@ -390,17 +391,43 @@ func validateSndFromOutputCoin(outputCoins []*privacy.CoinV1) error {
 }
 
 func getCommitmentsInDatabase(
-	proof *privacy.ProofV1, hasPrivacy bool,
-	pubKey privacy.PublicKey, transactionStateDB *statedb.StateDB,
-	shardID byte, tokenID *common.Hash, isBatch bool) (*[][privacy.CommitmentRingSize]*privacy.Point, error) {
+	proof privacy.Proof, transactionStateDB *statedb.StateDB,
+	shardID byte, tokenID *common.Hash) (*[][privacy.CommitmentRingSize]*privacy.Point, error) {
+	var oneOfManyProof []*oneoutofmany.OneOutOfManyProof
+	var commitmentIndices []uint64
+	var commitmentInputSecretKey, commitmentInputShardID *privacy.Point
+	var commitmentInputSND, commitmentInputValue []*privacy.Point
+
+
+
+	var proofV1 *privacy.ProofV1
+	var conversionProof *privacy.ConversionProof
+	var ok bool
+	proofV1, ok = proof.(*privacy.ProofV1)
+	if !ok {
+		conversionProof, ok = proof.(*privacy.ConversionProof)
+		if !ok {
+			return nil, fmt.Errorf("the input proof must be either a PaymentProofV1 or a ConversionProof")
+		}
+
+		oneOfManyProof = conversionProof.GetOneOfManyProof()
+		commitmentIndices = conversionProof.GetCommitmentIndices()
+		commitmentInputSND = conversionProof.GetCommitmentInputSND()
+		commitmentInputValue = conversionProof.GetCommitmentInputValue()
+		commitmentInputShardID = conversionProof.GetCommitmentInputShardID()
+		commitmentInputSecretKey = conversionProof.GetCommitmentInputSecretKey()
+	} else {
+		oneOfManyProof = proofV1.GetOneOfManyProof()
+		commitmentIndices = proofV1.GetCommitmentIndices()
+		commitmentInputSND = proofV1.GetCommitmentInputSND()
+		commitmentInputValue = proofV1.GetCommitmentInputValue()
+		commitmentInputShardID = proofV1.GetCommitmentInputShardID()
+		commitmentInputSecretKey = proofV1.GetCommitmentInputSecretKey()
+	}
+
 
 	// verify for input coins
-	oneOfManyProof := proof.GetOneOfManyProof()
-	commitmentIndices := proof.GetCommitmentIndices()
-	commitmentInputSND := proof.GetCommitmentInputSND()
-	commitmentInputValue := proof.GetCommitmentInputValue()
-	commitmentInputShardID := proof.GetCommitmentInputShardID()
-	commitmentInputSecretKey := proof.GetCommitmentInputSecretKey()
+
 
 	const sz int = privacy.CommitmentRingSize
 	commitments := make([][sz]*privacy.Point, len(oneOfManyProof))
@@ -478,10 +505,7 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 	if !ok {
 		isNewTransaction = false
 	}
-	isBatch, ok := boolParams["isBatch"]
-	if !ok {
-		isBatch = false
-	}
+
 
 	if tx.Proof == nil {
 		return true, nil
@@ -538,7 +562,7 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 		return false, utils.NewTransactionErr(utils.RejectTxVersion, errors.New("Wrong proof version"))
 	}
 
-	commitments, err := getCommitmentsInDatabase(txProofV1, hasPrivacy, tx.SigPubKey, transactionStateDB, shardID, tokenID, isBatch)
+	commitments, err := getCommitmentsInDatabase(txProofV1, transactionStateDB, shardID, tokenID)
 	if err != nil {
 		return false, err
 	}
@@ -713,6 +737,12 @@ func (tx Tx) ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, sh
 }
 
 func (tx Tx) ValidateTransaction(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, []privacy.Proof, error) {
+	//if tx is a conversion transaction => still accept after break point
+	if tx.GetMetadataType() == metadata.ConvertingRequestMeta {
+		valid, err := ValidateConversionTransaction(tx, transactionStateDB, shardID, tokenID)
+		return valid, nil, err
+	}
+
 	isMint, _, _, _ := tx.GetTxMintData()
 	if afterUpgrade, ok := boolParams["v2Only"]; ok && afterUpgrade && !isMint {
 		return false, nil, utils.NewTransactionErr(utils.RejectTxVersion, errors.New("old version is no longer supported"))
