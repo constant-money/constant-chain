@@ -2,6 +2,7 @@ package privacy
 
 import (
 	"errors"
+	"github.com/incognitochain/incognito-chain/privacy/privacy_conversion"
 
 	"github.com/incognitochain/incognito-chain/common"
 	zkp "github.com/incognitochain/incognito-chain/privacy/privacy_v1/zeroknowledge"
@@ -104,6 +105,9 @@ type Proof = proof.Proof
 type ProofV1 = zkp.PaymentProof
 type PaymentWitnessParam = zkp.PaymentWitnessParam
 type PaymentWitness = zkp.PaymentWitness
+type ConversionProof = privacy_conversion.ConversionProof
+type ConversionWitnessParam = privacy_conversion.ConversionWitnessParam
+type ConversionWitness = privacy_conversion.ConversionWitness
 type ProofV2 = privacy_v2.PaymentProofV2
 type ProofForConversion = privacy_v2.ConversionProofVer1ToVer2
 type AggregatedRangeProof = agg_interface.AggregatedRangeProof
