@@ -54,12 +54,6 @@ func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *s
 
 	proofHash := hashProof(actionData.Meta.ShieldingProof)
 
-	statusType := statedb.GetShieldingRequestPrefix(actionData.Meta.TokenID)
-	statusSuffix := []byte(proofHash)
-	key := statedb.GeneratePortalStatusObjectKey(statusType, statusSuffix)
-	Logger.log.Errorf("ProofHash get input: tokenID %+v, proofHash %+v", actionData.Meta.TokenID, proofHash)
-	Logger.log.Errorf("ProofHash get key: %+v", key)
-
 	isExistProofTxHash, err := statedb.IsShieldingProofTxHashExists(stateDB, actionData.Meta.TokenID, proofHash)
 	if err != nil {
 		Logger.log.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)

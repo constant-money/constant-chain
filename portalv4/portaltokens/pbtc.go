@@ -5,6 +5,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"sort"
+
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg/chainhash"
 	"github.com/btcsuite/btcd/txscript"
@@ -14,7 +16,6 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	btcrelaying "github.com/incognitochain/incognito-chain/relaying/btc"
-	"sort"
 )
 
 type PortalBTCTokenProcessor struct {
@@ -27,6 +28,10 @@ func (p PortalBTCTokenProcessor) GetExpectedMemoForShielding(portingID string) s
 
 func (p PortalBTCTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string {
 	return p.PortalToken.GetExpectedMemoForRedeem(redeemID, custodianIncAddress)
+}
+
+func (p PortalBTCTokenProcessor) ConvertExternalToIncAmount(externalAmt uint64) uint64 {
+	return externalAmt * 10
 }
 
 func (p PortalBTCTokenProcessor) ConvertIncToExternalAmount(incAmt uint64) uint64 {
@@ -61,8 +66,8 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 		return false, nil, fmt.Errorf("Could not extract attached message from BTC tx proof with err: %v", err)
 	}
 	if btcAttachedMsg != expectedMemo {
-		Logger.log.Errorf("ShieldingId in the btc attached message is not matched with portingID in metadata")
-		return false, nil, fmt.Errorf("ShieldingId in the btc attached message %v is not matched with portingID in metadata %v", btcAttachedMsg, expectedMemo)
+		Logger.log.Errorf("ShieldingIncAddress in the btc attached message is not matched with ShieldingIncAddress in metadata")
+		return false, nil, fmt.Errorf("ShieldingIncAddress in the btc attached message %v is not matched with ShieldingIncAddress in metadata %v", btcAttachedMsg, expectedMemo)
 	}
 
 	// check whether amount transfer in txBNB is equal porting amount or not
