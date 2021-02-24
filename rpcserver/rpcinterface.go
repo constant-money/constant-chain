@@ -277,6 +277,7 @@ var HttpHandler = map[string]httpHandler{
 	getValKeyState: (*HttpServer).handleGetValKeyState,
 
 	// portal v4
+	getPortalV4State:                           (*HttpServer).handleGetPortalV4State,
 	createAndSendTxWithShieldingRequest:        (*HttpServer).handleCreateAndSendTxWithShieldingReq,
 	createAndSendTxWithPortalBurnPToken:        (*HttpServer).handleCreateAndSendTxWithPortalBurnPToken,
 	createAndSendTxWithPortalReplacementFee:    (*HttpServer).handleCreateAndSendTxWithPortalReplaceUnshieldFee,

@@ -8,11 +8,78 @@ import (
 	"github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/common/base58"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/portalv4/metadata"
+	"github.com/incognitochain/incognito-chain/portalv4/portalprocess"
 	"github.com/incognitochain/incognito-chain/rpcserver/bean"
 	"github.com/incognitochain/incognito-chain/rpcserver/jsonresult"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 )
+
+func (httpServer *HttpServer) checkEnablePortalV4() *rpcservice.RPCError {
+	// if !httpServer.config.ChainParams.EnablePortalV3 {
+	// 	return rpcservice.NewRPCError(rpcservice.UnexpectedError, errors.New("This RPC wasn't supported on this chain version"))
+	// }
+	return nil
+}
+
+/*
+===== Get Portal State
+*/
+func (httpServer *HttpServer) handleGetPortalV4State(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+	checkPortalV4Error := httpServer.checkEnablePortalV4()
+	if checkPortalV4Error != nil {
+		return nil, checkPortalV4Error
+	}
+
+	arrayParams := common.InterfaceSlice(params)
+	if len(arrayParams) < 1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Param array must be at least one"))
+	}
+	data, ok := arrayParams[0].(map[string]interface{})
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Payload data is invalid"))
+	}
+	beaconHeight, err := common.AssertAndConvertStrToNumber(data["BeaconHeight"])
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, err)
+	}
+
+	//beaconFeatureStateDB := httpServer.config.BlockChain.GetBeaconBestState().GetCopiedFeatureStateDB()
+	beaconFeatureStateRootHash, err := httpServer.config.BlockChain.GetBeaconFeatureRootHash(httpServer.config.BlockChain.GetBeaconBestState(), uint64(beaconHeight))
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetPortalStateError, fmt.Errorf("Can't found FeatureStateRootHash of beacon height %+v, error %+v", beaconHeight, err))
+	}
+	beaconFeatureStateDB, err := statedb.NewWithPrefixTrie(beaconFeatureStateRootHash, statedb.NewDatabaseAccessWarper(httpServer.config.BlockChain.GetBeaconChainDatabase()))
+
+	portalState, err := portalprocess.InitCurrentPortalV4StateFromDB(beaconFeatureStateDB)
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetPortalStateError, err)
+	}
+
+	beaconBlocks, err := httpServer.config.BlockChain.GetBeaconBlockByHeight(uint64(beaconHeight))
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.GetPortalStateError, err)
+	}
+	beaconBlock := beaconBlocks[0]
+
+	type CurrentPortalState struct {
+		WaitingUnshieldRequests   map[string]map[string]*statedb.WaitingUnshieldRequest
+		UTXOs                     map[string]map[string]*statedb.UTXO
+		ProcessedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch
+		ShieldingExternalTx       map[string]map[string]*statedb.ShieldingRequest
+		BeaconTimeStamp           int64
+	}
+
+	result := CurrentPortalState{
+		BeaconTimeStamp:           beaconBlock.Header.Timestamp,
+		WaitingUnshieldRequests:   portalState.WaitingUnshieldRequests,
+		UTXOs:                     portalState.UTXOs,
+		ProcessedUnshieldRequests: portalState.ProcessedUnshieldRequests,
+		ShieldingExternalTx:       portalState.ShieldingExternalTx,
+	}
+	return result, nil
+}
 
 /*
 ===== Shielding request
