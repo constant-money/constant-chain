@@ -22,8 +22,8 @@ type PortalBTCTokenProcessor struct {
 	*PortalToken
 }
 
-func (p PortalBTCTokenProcessor) GetExpectedMemoForShielding(portingID string) string {
-	return p.PortalToken.GetExpectedMemoForShielding(portingID)
+func (p PortalBTCTokenProcessor) GetExpectedMemoForShielding(incAddress string) string {
+	return p.PortalToken.GetExpectedMemoForShielding(incAddress)
 }
 
 func (p PortalBTCTokenProcessor) GetExpectedMemoForRedeem(redeemID string, custodianIncAddress string) string {
@@ -38,9 +38,8 @@ func (p PortalBTCTokenProcessor) ConvertIncToExternalAmount(incAmt uint64) uint6
 	return incAmt / 10 // incAmt / 1^9 * 1^8
 }
 
-func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
-	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error) {
-	btcChain := bc.GetBTCHeaderChain()
+func (p PortalBTCTokenProcessor) parseAndVerifyProofBTCChain(
+	proof string, btcChain *btcrelaying.BlockChain, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error) {
 	if btcChain == nil {
 		Logger.log.Error("BTC relaying chain should not be null")
 		return false, nil, errors.New("BTC relaying chain should not be null")
@@ -103,6 +102,12 @@ func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
 	}
 
 	return true, listUTXO, nil
+}
+
+func (p PortalBTCTokenProcessor) ParseAndVerifyProof(
+	proof string, bc bMeta.ChainRetriever, expectedMemo string, expectedMultisigAddress string) (bool, []*statedb.UTXO, error) {
+	btcChain := bc.GetBTCHeaderChain()
+	return p.parseAndVerifyProofBTCChain(proof, btcChain, expectedMemo, expectedMultisigAddress)
 }
 
 func (p PortalBTCTokenProcessor) ParseAndVerifyUnshieldProof(
@@ -353,6 +358,14 @@ func (p PortalBTCTokenProcessor) CreateRawExternalTx(inputs []*statedb.UTXO, out
 //func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {
 //	return p.PortalToken.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldReqs)
 //}
+
+func (p PortalBTCTokenProcessor) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool {
+	// TODO: do experiments depend on external chain miner's habit
+	A := 1
+	B := 1
+	C := 10
+	return A*num_utxos+B*num_unshield_id <= C
+}
 
 // Choose list of pairs (UTXOs and unshield IDs) for broadcast external transactions
 func (p PortalBTCTokenProcessor) ChooseUnshieldIDsFromCandidates(utxos map[string]*statedb.UTXO, waitingUnshieldReqs map[string]*statedb.WaitingUnshieldRequest) []*BroadcastTx {

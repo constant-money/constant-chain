@@ -74,11 +74,3 @@ func (p PortalToken) GetExpectedMemoForRedeem(redeemID string, custodianAddress 
 	redeemMemoStr := base64.StdEncoding.EncodeToString(redeemMemoHashBytes)
 	return redeemMemoStr
 }
-
-func (p PortalToken) IsAcceptableTxSize(num_utxos int, num_unshield_id int) bool {
-	// TODO: do experiments depend on external chain miner's habit
-	A := 1
-	B := 1
-	C := 10
-	return A*num_utxos+B*num_unshield_id <= C
-}
