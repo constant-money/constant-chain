@@ -1,9 +1,18 @@
 package portaltokens
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
+	"time"
 
+	"github.com/blockcypher/gobcy"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
+	btcrelaying "github.com/incognitochain/incognito-chain/relaying/btc"
 )
 
 func insertUnshieldIDIntoStateDB(waitingUnshieldState map[string]*statedb.WaitingUnshieldRequest,
@@ -90,4 +99,111 @@ func TestChooseUnshieldIDsFromCandidates(t *testing.T) {
 
 	broadcastTxs = p.ChooseUnshieldIDsFromCandidates(utxos, waitingUnshieldState)
 	printBroadcastTxs(t, broadcastTxs)
+}
+
+func getBlockCypherAPI(networkName string) gobcy.API {
+	//explicitly
+	bc := gobcy.API{}
+	bc.Token = "029727206f7e4c8fb19301e4629c5793"
+	bc.Coin = "btc"        //options: "btc","bcy","ltc","doge"
+	bc.Chain = networkName //depending on coin: "main","test3","test"
+	return bc
+}
+
+func buildBTCBlockFromCypher(networkName string, blkHeight int) (*btcutil.Block, error) {
+	bc := getBlockCypherAPI(networkName)
+	cypherBlock, err := bc.GetBlock(blkHeight, "", nil)
+	if err != nil {
+		return nil, err
+	}
+	prevBlkHash, _ := chainhash.NewHashFromStr(cypherBlock.PrevBlock)
+	merkleRoot, _ := chainhash.NewHashFromStr(cypherBlock.MerkleRoot)
+	msgBlk := wire.MsgBlock{
+		Header: wire.BlockHeader{
+			Version:    int32(cypherBlock.Ver),
+			PrevBlock:  *prevBlkHash,
+			MerkleRoot: *merkleRoot,
+			Timestamp:  cypherBlock.Time,
+			Bits:       uint32(cypherBlock.Bits),
+			Nonce:      uint32(cypherBlock.Nonce),
+		},
+		Transactions: []*wire.MsgTx{},
+	}
+	blk := btcutil.NewBlock(&msgBlk)
+	blk.SetHeight(int32(blkHeight))
+	return blk, nil
+}
+
+func setGenesisBlockToChainParams(networkName string, genesisBlkHeight int) (*chaincfg.Params, error) {
+	blk, err := buildBTCBlockFromCypher(networkName, genesisBlkHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	// chainParams := chaincfg.MainNetParams
+	chainParams := chaincfg.TestNet3Params
+	chainParams.GenesisBlock = blk.MsgBlock()
+	chainParams.GenesisHash = blk.Hash()
+	return &chainParams, nil
+}
+
+func tearDownRelayBTCHeadersTest(dbName string, t *testing.T) {
+	testDbRoot := "btcdbs"
+	t.Logf("Tearing down RelayBTCHeadersTest...")
+	dbPath := filepath.Join(testDbRoot, dbName)
+	os.RemoveAll(dbPath)
+	os.RemoveAll(testDbRoot)
+}
+
+func TestParseAndVerifyProof(t *testing.T) {
+	expectedMultisigAddress := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
+
+	networkName := "test3"
+	genesisBlockHeight := int(1719640)
+
+	chainParams, err := setGenesisBlockToChainParams(networkName, genesisBlockHeight)
+	if err != nil {
+		t.Errorf("Could not set genesis block to chain params with err: %v", err)
+		return
+	}
+
+	dbName := "btc-blocks-test"
+	btcChain1, err := btcrelaying.GetChainV2(dbName, chainParams, int32(genesisBlockHeight))
+	defer tearDownRelayBTCHeadersTest(dbName, t)
+	if err != nil {
+		t.Errorf("Could not get chain instance with err: %v", err)
+		return
+	}
+
+	for i := genesisBlockHeight + 1; i <= genesisBlockHeight+10; i++ {
+		blk, err := buildBTCBlockFromCypher(networkName, i)
+		if err != nil {
+			t.Errorf("buildBTCBlockFromCypher fail on block %v: %v\n", i, err)
+			return
+		}
+		isMainChain, isOrphan, err := btcChain1.ProcessBlockV2(blk, 0)
+		if err != nil {
+			t.Errorf("ProcessBlock fail on block %v: %v\n", i, err)
+			return
+		}
+		if isOrphan {
+			t.Errorf("ProcessBlock incorrectly returned block %v "+
+				"is an orphan\n", i)
+			return
+		}
+		t.Logf("Block %s (%d) is on main chain: %t\n", blk.Hash(), blk.Height(), isMainChain)
+		time.Sleep(1 * time.Second)
+	}
+
+	t.Logf("Session 1: best block hash %s and block height %d\n", btcChain1.BestSnapshot().Hash.String(), btcChain1.BestSnapshot().Height)
+
+	p := PortalBTCTokenProcessor{}
+
+	shieldingIncAddress := "12S5Lrs1XeQLbqN4ySyKtjAjd2d7sBP2tjFijzmp6avrrkQCNFMpkXm3FPzj2Wcu2ZNqJEmh9JriVuRErVwhuQnLmWSaggobEWsBEci"
+	expectedMemo := p.GetExpectedMemoForShielding(shieldingIncAddress)
+	proof := ""
+
+	p.ParseAndVerifyProof(proof, btcChain1, expectedMemo, expectedMultisigAddress)
+
+	btcChain1.GetDB().Close()
 }
