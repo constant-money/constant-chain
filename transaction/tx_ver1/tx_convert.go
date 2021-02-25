@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/incognitokey"
 	"github.com/incognitochain/incognito-chain/metadata"
@@ -47,8 +48,8 @@ func validateTxConversionInitParam(params *tx_generic.TxPrivacyInitParams) error
 		}
 	}
 
-	if params.MetaData == nil || params.MetaData.GetType() != metadata.ConvertingRequestMeta {
-		return utils.NewTransactionErr(utils.UnexpectedError, fmt.Errorf("invalid metadata type: want %v, have %v", metadata.ConvertingRequestMeta, params.MetaData.GetType()))
+	if params.MetaData != nil && params.MetaData.GetType() != metadata.ConvertingRequestMeta {
+		return utils.NewTransactionErr(utils.UnexpectedError, fmt.Errorf("invalid metadata type: want %v, have %v", metadata.ConvertingRequestMeta, params.MetaData))
 	}
 	return nil
 }
@@ -111,21 +112,24 @@ func initConversionWitness(params *tx_generic.TxPrivacyInitParams, shardID byte)
 	}
 
 	conversionWitness := new(privacy.ConversionWitness)
-	err = conversionWitness.Init(conversionWitnessParam)
-
-	return conversionWitness, err
+	err1 := conversionWitness.Init(conversionWitnessParam)
+	if err1 != nil {
+		return nil, fmt.Errorf("witness init returns an error: %v", err1.Error())
+	}
+	return conversionWitness, nil
 }
 func proveAndSignConversion(tx *Tx, params *tx_generic.TxPrivacyInitParams) error {
 	shardID := common.GetShardIDFromLastByte(tx.PubKeyLastByteSender)
 
 	witness, err := initConversionWitness(params, shardID)
 	if err != nil {
+		utils.Logger.Log.Errorf("cannot init conversion witness: %v\n", err)
 		return utils.NewTransactionErr(utils.InitWithnessError, err)
 	}
 
-	conversionProof, err := witness.Prove()
-	if err != nil {
-		return utils.NewTransactionErr(utils.WithnessProveError, err)
+	conversionProof, err1 := witness.Prove()
+	if err1 != nil {
+		return utils.NewTransactionErr(utils.WithnessProveError, err1)
 	}
 	tx.Proof = conversionProof
 
@@ -133,8 +137,8 @@ func proveAndSignConversion(tx *Tx, params *tx_generic.TxPrivacyInitParams) erro
 	tx.SetPrivateKey(append(*params.SenderSK, randSK.ToBytesS()...))
 
 	// sign tx
-	signErr := tx.sign()
-	if signErr != nil {
+	err = tx.sign()
+	if err != nil {
 		utils.Logger.Log.Error(err)
 		return utils.NewTransactionErr(utils.SignTxError, err)
 	}
@@ -164,6 +168,75 @@ func (tx *Tx) InitConversion(params *tx_generic.TxPrivacyInitParams) error {
 	if txSize > common.MaxTxSize {
 		return utils.NewTransactionErr(utils.ExceedSizeTx, nil, strconv.Itoa(int(txSize)))
 	}
+	return nil
+}
+
+func (txToken *TxToken) InitTokenConversion(params *tx_generic.TxTokenParams) error {
+	txFeeParam := tx_generic.NewTxPrivacyInitParams(
+		params.SenderKey,
+		nil,
+		nil,
+		0,
+		true,
+		params.TransactionStateDB,
+		nil,
+		params.MetaData,
+		params.Info,
+	)
+	txToken.Tx = new(Tx)
+	if err := txToken.Tx.Init(txFeeParam); err != nil {
+		return utils.NewTransactionErr(utils.PrivacyTokenInitPRVError, err)
+	}
+	txToken.Tx.SetType(common.TxCustomTokenPrivacyType)
+
+	txToken.TxTokenData.SetType(1)
+	txToken.TxTokenData.SetPropertyName("")
+	txToken.TxTokenData.SetPropertySymbol("")
+
+	propertyID, _ := common.Hash{}.NewHashFromStr(params.TokenParams.PropertyID)
+	existed := statedb.PrivacyTokenIDExisted(params.TransactionStateDB, *propertyID)
+	if !existed {
+		isBridgeToken := false
+		allBridgeTokensBytes, err := statedb.GetAllBridgeTokens(params.BridgeStateDB)
+		if err != nil {
+			return utils.NewTransactionErr(utils.TokenIDExistedError, err)
+		}
+		if len(allBridgeTokensBytes) > 0 {
+			var allBridgeTokens []*rawdbv2.BridgeTokenInfo
+			err = json.Unmarshal(allBridgeTokensBytes, &allBridgeTokens)
+			if err != nil {
+				return utils.NewTransactionErr(utils.TokenIDExistedError, err)
+			}
+			for _, bridgeTokens := range allBridgeTokens {
+				if propertyID.IsEqual(bridgeTokens.TokenID) {
+					isBridgeToken = true
+					break
+				}
+			}
+		}
+		if !isBridgeToken {
+			return utils.NewTransactionErr(utils.TokenIDExistedError, fmt.Errorf("invalid Token ID"))
+		}
+	}
+
+	txToken.TxTokenData.SetPropertyID(*propertyID)
+	txToken.TxTokenData.SetMintable(false)
+
+	txNormal := new(Tx)
+	err := txNormal.InitConversion(tx_generic.NewTxPrivacyInitParams(params.SenderKey,
+		params.TokenParams.Receiver,
+		params.TokenParams.TokenInput,
+		0,
+		true,
+		params.TransactionStateDB,
+		propertyID,
+		nil,
+		nil))
+	if err != nil {
+		return utils.NewTransactionErr(utils.PrivacyTokenInitTokenDataError, err)
+	}
+
+	txToken.TxTokenData.TxNormal = txNormal
 	return nil
 }
 //END INIT FUNCTIONS
