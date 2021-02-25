@@ -92,7 +92,7 @@ func (witness *ConversionWitness) Init(witnessParam ConversionWitnessParam) *err
 	preIndex := 0
 	commitments := witnessParam.Commitments
 	for i, inputCoin := range witness.inputCoins {
-		if i == numInputCoins- 1 {
+		if i == numInputCoins - 1 {
 			randInputValue[i] = new(operation.Scalar).Sub(new(operation.Scalar).FromUint64(0), randInputValueAll)
 		} else {
 			randInputValue[i] = operation.RandomScalar()
@@ -142,6 +142,14 @@ func (witness *ConversionWitness) Init(witnessParam ConversionWitnessParam) *err
 		stmt := new(serialnumberprivacy.SerialNumberPrivacyStatement)
 		stmt.Set(inputCoin.GetKeyImage(), cmInputSK, witness.comInputSerialNumberDerivator[i])
 		witness.serialNumberWitness[i].Set(stmt, witness.privateKey, randInputSK, inputCoin.GetSNDerivator(), randInputSND[i])
+	}
+
+	for _, outCoin := range witness.outputCoins {
+		outCoin.CoinDetails.SetRandomness(operation.RandomScalar())
+		err := outCoin.CoinDetails.CommitAll()
+		if err != nil {
+			return errhandler.NewPrivacyErr(errhandler.UnexpectedErr, err)
+		}
 	}
 
 	return nil
