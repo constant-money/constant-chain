@@ -69,6 +69,7 @@ var (
 	btcRelayingLogger      = backendLog.Logger("BTC relaying log", false)
 	synckerLogger          = backendLog.Logger("Syncker log ", false)
 	privacyV1Logger        = backendLog.Logger("Privacy V1 log ", false)
+	conversionLogger       = backendLog.Logger("Conversion log ", false)
 	privacyV2Logger        = backendLog.Logger("Privacy V2 log ", false)
 )
 
@@ -114,6 +115,7 @@ func init() {
 	btcRelaying.Logger.Init(btcRelayingLogger)
 	syncker.Logger.Init(synckerLogger)
 	privacy.LoggerV1.Init(privacyV1Logger)
+	privacy.LoggerConversion.Init(conversionLogger)
 	privacy.LoggerV2.Init(privacyV2Logger)
 }
 

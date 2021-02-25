@@ -5,11 +5,11 @@ import (
 	bp "github.com/incognitochain/incognito-chain/privacy/privacy_v2/bulletproofs"
 )
 
-type PaymentConversionLogger struct {
+type LoggerConversion struct {
 	Log common.Logger
 }
 
-func (logger *PaymentConversionLogger) Init(inst common.Logger) {
+func (logger *LoggerConversion) Init(inst common.Logger) {
 	logger.Log = inst
 	bp.Logger.Init(inst)
 }
@@ -19,4 +19,4 @@ const (
 )
 
 // Global instant to use
-var Logger = PaymentConversionLogger{}
+var Logger = LoggerConversion{}
