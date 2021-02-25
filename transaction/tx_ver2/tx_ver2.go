@@ -720,9 +720,6 @@ func (tx Tx) ValidateTransaction(boolParams map[string]bool, transactionStateDB 
 		return valid, nil, err
 	case common.TxReturnStakingType:
 		return tx.ValidateTxReturnStaking(transactionStateDB), nil, nil
-	case common.TxConversionType:
-		valid, err := validateConversionVer1ToVer2(&tx, transactionStateDB, shardID, tokenID)
-		return valid, nil ,err
 	default:
 		valid, err := tx.Verify(boolParams, transactionStateDB, bridgeStateDB, shardID, tokenID)
 		resultProofs := []privacy.Proof{}

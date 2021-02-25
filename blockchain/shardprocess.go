@@ -335,7 +335,7 @@ func (blockchain *BlockChain) verifyPreProcessingShardBlock(curView *ShardBestSt
 	for _, tx := range shardBlock.Body.Transactions {
 		totalTxsFee[*tx.GetTokenID()] += tx.GetTxFee()
 		txType := tx.GetType()
-		if txType == common.TxCustomTokenPrivacyType || txType == common.TxTokenConversionType {
+		if txType == common.TxCustomTokenPrivacyType {
 			txTokenData := transaction.GetTxTokenDataFromTransaction(tx)
 			totalTxsFee[txTokenData.PropertyID] = txTokenData.TxNormal.GetTxFee()
 		}

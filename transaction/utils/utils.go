@@ -2,7 +2,7 @@ package utils
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -47,11 +47,13 @@ func NewCoinV2ArrayFromPaymentInfoArray(paymentInfo []*privacy.PaymentInfo, toke
 	return outputCoins, nil
 }
 
-func ParseProof(p interface{}, ver int8, txType string) (privacy.Proof, error) {
+func ParseProof(p interface{}, ver int8) (privacy.Proof, error) {
 	// If transaction is nonPrivacyNonInput then we do not have proof, so parse it as nil
 	if p == nil {
 		return nil, nil
 	}
+
+	Logger.Log.Infof("Parsing proof: %v\n", p)
 
 	proofInBytes, err := json.Marshal(p)
 	if err != nil {
@@ -61,31 +63,33 @@ func ParseProof(p interface{}, ver int8, txType string) (privacy.Proof, error) {
 		return nil, nil
 	}
 
-
 	var res privacy.Proof
-	switch txType {
-	case common.TxConversionType:
-		if ver == TxConversionVersion12Number {
-			res = new(privacy.ProofForConversion)
-			res.Init()
-		} else {
-			return nil, errors.New("ParseProof: TxConversion version is incorrect")
+	switch ver {
+	case 1:
+		res = new(privacy.ProofV1)
+		err = json.Unmarshal(proofInBytes, res)
+		if err != nil {
+			Logger.Log.Errorf("cannot parse to a ProofV1: %v\n", err)
+
+			res = new(privacy.ConversionProof)
+			err = json.Unmarshal(proofInBytes, res)
+			if err != nil {
+				Logger.Log.Errorf("cannot parse to a ConversionProof: %v\n", err)
+				return nil, err
+			}
+		}
+	case 2:
+		res = new(privacy.ProofV2)
+		res.Init()
+		err = json.Unmarshal(proofInBytes, res)
+		if err != nil {
+			Logger.Log.Errorf("cannot parse to a ProofV2: %v\n", err)
+			return nil, err
 		}
 	default:
-		switch ver {
-		case TxVersion1Number, TxVersion0Number:
-			res = new(privacy.ProofV1)
-		case TxVersion2Number:
-			res = new(privacy.ProofV2)
-			res.Init()
-		default:
-			return nil, errors.New("ParseProof: Tx.Version is incorrect")
-		}
+		Logger.Log.Errorf("proof version %v not valid\n", ver)
+		return nil, fmt.Errorf("proof version %v not valid\n", ver)
 	}
 
-	err = json.Unmarshal(proofInBytes, res)
-	if err != nil {
-		return nil, err
-	}
 	return res, nil
 }

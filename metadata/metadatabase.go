@@ -62,7 +62,7 @@ func (mb MetadataBase) HashWithoutSig() *common.Hash {
 }
 
 func (mb MetadataBase) CheckTransactionFee(tx Transaction, minFeePerKbTx uint64, beaconHeight int64, stateDB *statedb.StateDB) bool {
-	if tx.GetType() == common.TxCustomTokenPrivacyType || tx.GetType() == common.TxTokenConversionType {
+	if tx.GetMetadataType() == ConvertingRequestMeta {
 		feeNativeToken := tx.GetTxFee()
 		feePToken := tx.GetTxFeeToken()
 		if feePToken > 0 {

@@ -210,15 +210,10 @@ func (tx *TxBase) UnmarshalJSON(data []byte) error {
 		tx.SetMetadata(meta)
 	}
 
-	proofType := tx.Type
-	if proofType == common.TxTokenConversionType{
-		proofType = common.TxNormalType
-	}
-
 	if temp.Proof == nil {
 		tx.SetProof(nil)
 	} else {
-		proof, proofErr := utils.ParseProof(temp.Proof, tx.Version, proofType)
+		proof, proofErr := utils.ParseProof(temp.Proof, tx.Version)
 		if proofErr != nil {
 			utils.Logger.Log.Error(proofErr)
 			return proofErr

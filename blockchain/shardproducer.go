@@ -164,7 +164,7 @@ func (blockchain *BlockChain) NewBlockShard(curView *ShardBestState, version int
 
 	for _, tx := range newShardBlock.Body.Transactions {
 		totalTxsFee[*tx.GetTokenID()] += tx.GetTxFee()
-		if tx.GetType() == common.TxCustomTokenPrivacyType || tx.GetType() == common.TxTokenConversionType {
+		if tx.GetType() == common.TxCustomTokenPrivacyType {
 			totalTxsFee[*tx.GetTokenID()] = tx.GetTxFeeToken()
 		}
 	}

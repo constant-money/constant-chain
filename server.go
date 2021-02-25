@@ -774,7 +774,7 @@ func (serverObj *Server) TransactionPoolBroadcastLoop() {
 			if !txDesc.IsFowardMessage {
 				tx := txDesc.Desc.Tx
 				switch tx.GetType() {
-				case common.TxNormalType, common.TxConversionType:
+				case common.TxNormalType:
 					{
 						txMsg, err := wire.MakeEmptyMessage(wire.CmdTx)
 						if err != nil {
@@ -786,7 +786,7 @@ func (serverObj *Server) TransactionPoolBroadcastLoop() {
 							serverObj.memPool.MarkForwardedTransaction(*tx.Hash())
 						}
 					}
-				case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+				case common.TxCustomTokenPrivacyType:
 					{
 						txMsg, err := wire.MakeEmptyMessage(wire.CmdPrivacyCustomToken)
 						if err != nil {

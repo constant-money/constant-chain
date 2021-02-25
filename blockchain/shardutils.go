@@ -48,7 +48,7 @@ func CreateCrossShardByteArray(txList []metadata.Transaction, fromShardID byte) 
 	for _, tx := range txList {
 		var prvProof privacy.Proof
 		switch tx.GetType() {
-		case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+		case common.TxCustomTokenPrivacyType:
 			{
 				customTokenTx, ok := tx.(transaction.TransactionToken)
 				if !ok {
@@ -364,7 +364,7 @@ func getCrossShardDataHash(txList []metadata.Transaction) []common.Hash {
 		switch tx.GetType() {
 		//==================For PRV Transfer Only
 		//TxReturnStakingType cannot be crossshard tx
-		case common.TxNormalType, common.TxRewardType, common.TxConversionType:
+		case common.TxNormalType, common.TxRewardType:
 			{
 				// Proof Process
 				if tx.GetProof() != nil {
@@ -376,7 +376,7 @@ func getCrossShardDataHash(txList []metadata.Transaction) []common.Hash {
 					}
 				}
 			}
-		case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+		case common.TxCustomTokenPrivacyType:
 			{
 				customTokenPrivacyTx, ok := tx.(transaction.TransactionToken)
 				if !ok {
@@ -442,7 +442,7 @@ func getCrossShardData(txList []metadata.Transaction, shardID byte) ([]coin.Coin
 	for _, tx := range txList {
 		var prvProof privacy.Proof
 		
-		if tx.GetType() == common.TxCustomTokenPrivacyType || tx.GetType() == common.TxTokenConversionType {
+		if tx.GetType() == common.TxCustomTokenPrivacyType {
 			customTokenPrivacyTx, ok := tx.(transaction.TransactionToken)
 			if !ok {
 				return nil, nil, errors.New("Cannot cast transaction")

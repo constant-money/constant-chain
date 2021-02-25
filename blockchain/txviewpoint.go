@@ -166,7 +166,7 @@ func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, blo
 	prvCoinID.SetBytes(common.PRVCoinID[:])
 	for indexTx, tx := range transactions {
 		switch tx.GetType() {
-		case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType, common.TxConversionType:
+		case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType:
 			{
 				serialNumbers, commitments, outCoins, snDs, err := view.processFetchTxViewPointFromProof(stateDB, block.Header.ShardID, tx.GetProof(), prvCoinID)
 				if err != nil {
@@ -199,7 +199,7 @@ func (view *TxViewPoint) fetchTxViewPointFromBlock(stateDB *statedb.StateDB, blo
 					}
 				}
 			}
-		case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+		case common.TxCustomTokenPrivacyType:
 			{
 				tx, ok := tx.(transaction.TransactionToken)
 				if !ok{

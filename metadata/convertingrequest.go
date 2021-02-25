@@ -70,11 +70,11 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 	}
 
 	//Step 2
-	if tx.GetType() == common.TxConversionType && req.TokenID.String() != common.PRVIDStr {
+	if tx.GetType() == common.TxNormalType && req.TokenID.String() != common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert token %v in a PRV transaction", req.TokenID.String()))
 	}
 
-	if tx.GetType() == common.TxTokenConversionType && req.TokenID.String() == common.PRVIDStr {
+	if tx.GetType() == common.TxCustomTokenPrivacyType && req.TokenID.String() == common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert PRV in a token transaction"))
 	}
 

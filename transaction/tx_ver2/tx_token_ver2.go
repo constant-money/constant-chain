@@ -64,13 +64,9 @@ func makeTxToken(txPRV *Tx, pubkey, sig []byte, proof privacy.Proof) *Tx {
 		copy(clonedInfo, txPRV.Info)
 	}
 	var clonedProof privacy.Proof = nil
-	// feed the type to parse proof 
-	proofType := txPRV.Type
-	if proofType == common.TxTokenConversionType {
-		proofType = common.TxConversionType
-	}
+
 	if proof != nil {
-		clonedProof, err = utils.ParseProof(proof, txPRV.Version, proofType)
+		clonedProof, err = utils.ParseProof(proof, txPRV.Version)
 		if err != nil {
 			jsb, _ := json.Marshal(proof)
 			utils.Logger.Log.Errorf("Cannot parse proof %s using version %v - type %v", string(jsb), txPRV.Version, txPRV.Type)
@@ -628,39 +624,33 @@ func (txToken TxToken) ValidateTransaction(boolParams map[string]bool, transacti
 				return true, nil, nil
 			}
 		case utils.CustomTokenTransfer:
-			if txToken.GetType() == common.TxTokenConversionType {
-				valid, err := validateConversionVer1ToVer2(txn, transactionStateDB, shardID, &tokenID)
-				return valid, nil, err
-			} else {
-				isBatch, ok := boolParams["isBatch"]
-				if !ok {
-					isBatch = false
-				}
-
-				// for CA, bulletproof batching is not supported
-				boolParams["isBatch"] = false
-				boolParams["hasPrivacy"] = true
-				resTxTokenData, _, err := txn.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, &tokenID)
-				if err != nil {
-					return resTxTokenData, nil, err
-				}
-				txFeeProof := txToken.Tx.GetProof()
-				if txFeeProof == nil {
-					return false, nil, errors.New("Missing proof for PRV")
-				}
-
-				boolParams["isBatch"] = isBatch
-				boolParams["hasConfidentialAsset"] = false
-				// when batch-verifying for PRV, bulletproof will be skipped here & verified with the whole batch
-				bpValid, err := txFeeProof.Verify(boolParams, txToken.Tx.GetSigPubKey(), 0, shardID, &common.PRVCoinID, nil)
-				resultProofs := []privacy.Proof{}
-				if isBatch {
-					resultProofs = append(resultProofs, txFeeProof)
-				}
-
-				return bpValid && resTxTokenData, resultProofs, err
-
+			isBatch, ok := boolParams["isBatch"]
+			if !ok {
+				isBatch = false
 			}
+
+			// for CA, bulletproof batching is not supported
+			boolParams["isBatch"] = false
+			boolParams["hasPrivacy"] = true
+			resTxTokenData, _, err := txn.ValidateTransaction(boolParams, transactionStateDB, bridgeStateDB, shardID, &tokenID)
+			if err != nil {
+				return resTxTokenData, nil, err
+			}
+			txFeeProof := txToken.Tx.GetProof()
+			if txFeeProof == nil {
+				return false, nil, errors.New("Missing proof for PRV")
+			}
+
+			boolParams["isBatch"] = isBatch
+			boolParams["hasConfidentialAsset"] = false
+			// when batch-verifying for PRV, bulletproof will be skipped here & verified with the whole batch
+			bpValid, err := txFeeProof.Verify(boolParams, txToken.Tx.GetSigPubKey(), 0, shardID, &common.PRVCoinID, nil)
+			resultProofs := []privacy.Proof{}
+			if isBatch {
+				resultProofs = append(resultProofs, txFeeProof)
+			}
+
+			return bpValid && resTxTokenData, resultProofs, err
 		default:
 			return false, nil, errors.New("Cannot validate Tx Token. Unavailable type")
 		}
@@ -668,7 +658,7 @@ func (txToken TxToken) ValidateTransaction(boolParams map[string]bool, transacti
 }
 
 func (txToken TxToken) ValidateSanityData(chainRetriever metadata.ChainRetriever, shardViewRetriever metadata.ShardViewRetriever, beaconViewRetriever metadata.BeaconViewRetriever, beaconHeight uint64) (bool, error) {
-	if txToken.GetType() != common.TxCustomTokenPrivacyType && txToken.GetType() != common.TxTokenConversionType {
+	if txToken.GetType() != common.TxCustomTokenPrivacyType {
 		return false, utils.NewTransactionErr(utils.InvalidSanityDataPrivacyTokenError, errors.New("txCustomTokenPrivacy.Tx should have type tp"))
 	}
 	txn, ok := txToken.GetTxNormal().(*Tx)
@@ -1122,12 +1112,6 @@ func (txToken *TxToken) UnmarshalJSON(data []byte) error {
 	}
 
 	switch txToken.Tx.Type {
-	case common.TxTokenConversionType:
-		if txToken.Tx.Version != utils.TxConversionVersion12Number {
-			return utils.NewTransactionErr(utils.PrivacyTokenJsonError, errors.New("Error while unmarshalling TX token v2 : wrong proof version"))
-		}
-		txToken.TokenData.Proof = &privacy.ProofForConversion{}
-		txToken.TokenData.Proof.Init()
 	case common.TxCustomTokenPrivacyType:
 		if txToken.Tx.Version != utils.TxVersion2Number {
 			return utils.NewTransactionErr(utils.PrivacyTokenJsonError, errors.New("Error while unmarshalling TX token v2 : wrong proof version"))

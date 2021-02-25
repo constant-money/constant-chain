@@ -58,7 +58,7 @@ func NewTransactionDetail(tx metadata.Transaction, blockHash *common.Hash, block
 		blockHashStr = blockHash.String()
 	}
 	switch tx.GetType() {
-	case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType, common.TxConversionType:
+	case common.TxNormalType, common.TxRewardType, common.TxReturnStakingType:
 		{
 			var sigPubKeyStr string
 			txVersion := tx.GetVersion()
@@ -109,7 +109,7 @@ func NewTransactionDetail(tx metadata.Transaction, blockHash *common.Hash, block
 				result.ProofDetail.ConvertFromProof(result.Proof)
 			}
 		}
-	case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+	case common.TxCustomTokenPrivacyType:
 		{
 			txToken, ok := tx.(transaction.TransactionToken)
 			if !ok {

@@ -198,7 +198,7 @@ func ValidateSanity(tx metadata.Transaction, chainRetriever metadata.ChainRetrie
 
 	// check Type is normal or salary tx
 	switch tx.GetType() {
-	case common.TxNormalType, common.TxRewardType, common.TxCustomTokenPrivacyType, common.TxTokenConversionType, common.TxReturnStakingType, common.TxConversionType: //is valid
+	case common.TxNormalType, common.TxRewardType, common.TxCustomTokenPrivacyType, common.TxReturnStakingType: //is valid
 	default:
 		return false, utils.NewTransactionErr(utils.RejectTxType, fmt.Errorf("wrong tx type with %s", tx.GetType()))
 	}

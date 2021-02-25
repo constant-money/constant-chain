@@ -226,7 +226,7 @@ func NewTransactionFromJsonBytes(data []byte) (metadata.Transaction, error) {
 	// 	return nil, err
 	// }
 	// if txJsonVersion.Type == common.TxConversionType || txJsonVersion.Type == common.TxTokenConversionType {
-	// 	if txJsonVersion.Version == int8(utils.TxConversionVersion12Number) {
+	// 	if txJsonVersion.Version == int8(utils.TxConversionNumber) {
 	// 			tx := new(TxVersion2)
 	// 			if err := json.Unmarshal(data, tx); err != nil {
 	// 				return nil, err
@@ -274,7 +274,7 @@ func NewTransactionTokenFromJsonBytes(data []byte) (tx_generic.TransactionToken,
 	// }
 
 	// if txJsonVersion.Type == common.TxTokenConversionType {
-	// 	if txJsonVersion.Version == utils.TxConversionVersion12Number {
+	// 	if txJsonVersion.Version == utils.TxConversionNumber {
 	// 		tx := new(TxTokenVersion2)
 	// 		if err := json.Unmarshal(data, tx); err != nil {
 	// 			return nil, err
@@ -353,7 +353,7 @@ func DeserializeTransactionJSON(data []byte) (*TxChoice, error){
 				err := json.Unmarshal(data, result.Version1)
 				return result, err
 			}
-		case utils.TxVersion2Number: // the same as utils.TxConversionVersion12Number
+		case utils.TxVersion2Number: // the same as utils.TxConversionNumber
 			if isTokenTx{
 				// rejected
 				return nil, errors.New("Error unmarshalling TX from JSON : misplaced version")
@@ -451,14 +451,14 @@ func NewTransactionTokenFromParams(params *tx_generic.TxTokenParams) (tx_generic
 }
 
 func GetTxTokenDataFromTransaction(tx metadata.Transaction) *tx_generic.TxTokenData {
-	if tx.GetType() != common.TxCustomTokenPrivacyType && tx.GetType() != common.TxTokenConversionType {
+	if tx.GetType() != common.TxCustomTokenPrivacyType {
 		return nil
 	}
 	switch tx_specific := tx.(type) {
 	case *TxTokenVersion1:
 		// txTemp := tx.(*TxTokenVersion1)
 		return &tx_specific.TxTokenData
-	// } else if tx.GetVersion() == utils.TxVersion2Number || tx.GetVersion() == utils.TxConversionVersion12Number {
+	// } else if tx.GetVersion() == utils.TxVersion2Number || tx.GetVersion() == utils.TxConversionNumber {
 	case *TxTokenVersion2:
 		// txTemp := tx.(*TxTokenVersion2)
 		res := tx_specific.GetTxTokenData()
