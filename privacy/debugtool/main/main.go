@@ -122,7 +122,7 @@ func privateKeyToPublicKey(privkey string) []byte {
 
 func ConvertCoinVersion(tool *debugtool.DebugTool, privKey string) {
 	fmt.Println("========== CONVERT COIN ==========")
-	b, _ := tool.SwitchCoinVersion(privKey)
+	b, _ := tool.SwitchTokenCoinVersion(privKey, common.PRVIDStr)
 	fmt.Println(string(b))
 	fmt.Println("========== END CONVERT COIN ==========")
 }
