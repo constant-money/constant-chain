@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"reflect"
+	"github.com/incognitochain/incognito-chain/privacy/coin"
 	"strconv"
 )
 
@@ -52,20 +52,24 @@ func (req ConvertingRequest) ValidateTxWithBlockChain(tx Transaction, chainRetri
 }
 
 //ValidateSanityData performs the following verifications:
-//	1. Check if the convertedAmount is not zero
+//	1. Check the addressV2 is valid
 //	2. Check tx type and supported tokenID
 //	3. Check the burnedToken and convertedToken are the same
-//	4. Check if the burnedAmount equals the convertedAmount
+//	4. Check if the burnedAmount is valid
 func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, tx Transaction) (bool, bool, error) {
-	// Note: the metadata was already verified with *transaction.TxCustomToken level so no need to verify with *transaction.Tx level again as *transaction.Tx is embedding property of *transaction.TxCustomToken
-	if tx.GetType() == common.TxCustomTokenPrivacyType && reflect.TypeOf(tx).String() == "*transaction.Tx" {
-		return true, true, nil
+	//Step 1
+	recvPubKey, _, err := coin.ParseOTAInfoFromString(req.OTAStr, req.TxRandomStr)
+	if err != nil {
+		return false, false, fmt.Errorf("cannot parse OTA params (%v, %v): %v", req.OTAStr, req.TxRandomStr, err)
+	}
+	recvKeyBytes := recvPubKey.ToBytesS()
+	senderShardID := common.GetShardIDFromLastByte(tx.GetSenderAddrLastByte())
+	receiverShardID := common.GetShardIDFromLastByte(recvKeyBytes[len(recvKeyBytes) - 1])
+	if senderShardID != receiverShardID {
+		return false, false, fmt.Errorf("sender shardID and receiver shardID mismatch: %v != %v", senderShardID, receiverShardID)
 	}
 
-	if req.ConvertedAmount == 0 {
-		return false, false, NewMetadataTxError(ConvertingAmountError, fmt.Errorf("amount of a converting request cannot be 0"))
-	}
-
+	//Step 2
 	if tx.GetType() == common.TxConversionType && req.TokenID.String() != common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert token %v in a PRV transaction", req.TokenID.String()))
 	}
@@ -74,6 +78,7 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert PRV in a token transaction"))
 	}
 
+	//Step 3 + 4
 	isBurned, burnedCoin, burnedTokenID, err := tx.GetTxBurnData()
 	if err != nil || !isBurned {
 		if err != nil {
@@ -82,10 +87,15 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 		return false, false, fmt.Errorf("not a burn transaction: %v", err)
 	}
 
+	//- Step 3
 	if burnedTokenID.String() != req.TokenID.String() {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("burnedToken and convertedToken mismatch: %v != %v", burnedTokenID.String(), req.TokenID.String()))
 	}
 
+	//- Step 4
+	if req.ConvertedAmount == 0 {
+		return false, false, NewMetadataTxError(ConvertingAmountError, fmt.Errorf("amount of a converting request cannot be 0"))
+	}
 	if burnedCoin.GetValue() != req.ConvertedAmount {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("burnedAmount and convertedAmount mismatch: %v != %v", burnedCoin.GetValue(), req.ConvertedAmount))
 	}
