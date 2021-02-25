@@ -69,15 +69,16 @@ func ParseProof(p interface{}, ver int8) (privacy.Proof, error) {
 		res = new(privacy.ProofV1)
 		err = json.Unmarshal(proofInBytes, res)
 		if err != nil {
-			Logger.Log.Errorf("cannot parse to a ProofV1: %v\n", err)
-
 			res = new(privacy.ConversionProof)
-			err = json.Unmarshal(proofInBytes, res)
-			if err != nil {
-				Logger.Log.Errorf("cannot parse to a ConversionProof: %v\n", err)
-				return nil, err
+			err1 := json.Unmarshal(proofInBytes, res)
+			if err1 != nil {
+				Logger.Log.Errorf("cannot parse to a ProofV1: %v\n", err)
+				Logger.Log.Errorf("cannot parse to a ConversionProof: %v\n", err1)
+				return nil, fmt.Errorf("not a valid proof for tx version 1")
 			}
+			Logger.Log.Infof("Parse to ConversionProof successfully\n")
 		}
+		Logger.Log.Infof("Parse to ProofV1 successfully\n")
 	case 2:
 		res = new(privacy.ProofV2)
 		res.Init()
