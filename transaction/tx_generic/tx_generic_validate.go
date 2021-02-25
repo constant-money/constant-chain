@@ -112,7 +112,7 @@ func MdValidateWithBlockChain(tx metadata.Transaction, chainRetriever metadata.C
 func MdValidate(tx metadata.Transaction, hasPrivacy bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte) (bool, error) {
 	meta := tx.GetMetadata()
 	if meta != nil {
-		if hasPrivacy && tx.GetVersion() <= 1{
+		if hasPrivacy && tx.GetVersion() <= 1 && tx.GetMetadataType() != metadata.ConvertingRequestMeta {
 			return false, errors.New("Metadata can only exist in non-privacy tx")
 		}
 		validateMetadata := meta.ValidateMetadataByItself()
