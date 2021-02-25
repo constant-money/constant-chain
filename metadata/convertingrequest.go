@@ -104,7 +104,7 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 }
 
 func (req ConvertingRequest) ValidateMetadataByItself() bool {
-	return req.Type == PDECrossPoolTradeRequestMeta
+	return req.Type == ConvertingRequestMeta
 }
 
 func (req ConvertingRequest) Hash() *common.Hash {
