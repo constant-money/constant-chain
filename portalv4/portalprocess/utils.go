@@ -92,7 +92,7 @@ func StorePortalV4StateToDB(
 	return nil
 }
 
-func UpdatePortalStateAfterShieldingRequest(currentPortalV4State *CurrentPortalV4State, tokenID string, listUTXO []*statedb.UTXO) {
+func UpdatePortalStateUTXOs(currentPortalV4State *CurrentPortalV4State, tokenID string, listUTXO []*statedb.UTXO) {
 	if currentPortalV4State.UTXOs == nil {
 		currentPortalV4State.UTXOs = map[string]map[string]*statedb.UTXO{}
 	}
@@ -108,7 +108,7 @@ func UpdatePortalStateAfterShieldingRequest(currentPortalV4State *CurrentPortalV
 	}
 }
 
-func SaveShieldingExternalTxToPortalState(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string, shieldingExternalTxHash string, incAddress string, amount uint64) {
+func UpdatePortalStateShieldingExternalTx(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string, shieldingExternalTxHash string, incAddress string, amount uint64) {
 	if currentPortalV4State.ShieldingExternalTx == nil {
 		currentPortalV4State.ShieldingExternalTx = map[string]map[string]*statedb.ShieldingRequest{}
 	}
@@ -116,6 +116,17 @@ func SaveShieldingExternalTxToPortalState(currentPortalV4State *CurrentPortalV4S
 		currentPortalV4State.ShieldingExternalTx[tokenID] = map[string]*statedb.ShieldingRequest{}
 	}
 	currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingProofTxHash).String()] = statedb.NewShieldingRequestWithValue(shieldingExternalTxHash, incAddress, amount)
+}
+
+func IsExistsProof(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string) bool {
+	if currentPortalV4State.ShieldingExternalTx == nil {
+		return false
+	}
+	if currentPortalV4State.ShieldingExternalTx[tokenID] == nil {
+		return false
+	}
+	_, exists := currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingProofTxHash).String()]
+	return exists
 }
 
 func UpdatePortalStateAfterUnshieldRequest(

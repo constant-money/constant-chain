@@ -39,30 +39,7 @@ func (p *portalShieldingRequestProcessor) PutAction(action []string, shardID byt
 }
 
 func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
-	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
-	if err != nil {
-		Logger.log.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
-		return nil, fmt.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
-	}
-
-	var actionData portalMeta.PortalShieldingRequestAction
-	err = json.Unmarshal(actionContentBytes, &actionData)
-	if err != nil {
-		Logger.log.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
-		return nil, fmt.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
-	}
-
-	proofHash := hashProof(actionData.Meta.ShieldingProof)
-
-	isExistProofTxHash, err := statedb.IsShieldingProofTxHashExists(stateDB, actionData.Meta.TokenID, proofHash)
-	if err != nil {
-		Logger.log.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
-		return nil, fmt.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
-	}
-
-	optionalData := make(map[string]interface{})
-	optionalData["isExistProofTxHash"] = isExistProofTxHash
-	return optionalData, nil
+	return nil, nil
 }
 
 func hashProof(proof string) string {
@@ -147,17 +124,10 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	// check unique external proof from optionalData which get from statedb
-	if optionalData == nil {
-		Logger.log.Errorf("Shielding Request: optionalData is null")
-		return [][]string{rejectInst}, nil
-	}
-	isExist, ok := optionalData["isExistProofTxHash"].(bool)
-	if !ok {
-		Logger.log.Errorf("Shielding Request: optionalData isExistProofTxHash is invalid")
-		return [][]string{rejectInst}, nil
-	}
-	if isExist {
+	proofHash := hashProof(meta.ShieldingProof)
+
+	// check unique external proof from portal state
+	if IsExistsProof(currentPortalState, meta.TokenID, proofHash) {
 		Logger.log.Errorf("Shielding Request: Shielding request proof exist in db %v", meta.ShieldingProof)
 		return [][]string{rejectInst}, nil
 	}
@@ -171,13 +141,13 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	UpdatePortalStateAfterShieldingRequest(currentPortalState, meta.TokenID, listUTXO)
-
-	proofHash := hashProof(meta.ShieldingProof)
+	UpdatePortalStateUTXOs(currentPortalState, meta.TokenID, listUTXO)
 	shieldingAmount := uint64(0)
 	for _, utxo := range listUTXO {
 		shieldingAmount += utxo.GetOutputAmount()
 	}
+	UpdatePortalStateShieldingExternalTx(currentPortalState, meta.TokenID, proofHash, listUTXO[0].GetTxHash(), meta.IncogAddressStr, shieldingAmount)
+
 	mintingAmount := portalTokenProcessor.ConvertExternalToIncAmount(shieldingAmount)
 
 	inst := buildReqPTokensInstV4(
@@ -221,14 +191,13 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 
 	reqStatus := instructions[2]
 	if reqStatus == pCommon.PortalRequestAcceptedChainStatus {
-		UpdatePortalStateAfterShieldingRequest(currentPortalState, actionData.TokenID, actionData.ShieldingUTXO)
+		UpdatePortalStateUTXOs(currentPortalState, actionData.TokenID, actionData.ShieldingUTXO)
 		shieldingExternalTxHash := actionData.ShieldingUTXO[0].GetTxHash()
 		shieldingAmount := uint64(0)
 		for _, utxo := range actionData.ShieldingUTXO {
 			shieldingAmount += utxo.GetOutputAmount()
 		}
-
-		SaveShieldingExternalTxToPortalState(currentPortalState, actionData.TokenID, actionData.ProofHash, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
+		UpdatePortalStateShieldingExternalTx(currentPortalState, actionData.TokenID, actionData.ProofHash, shieldingExternalTxHash, actionData.IncogAddressStr, shieldingAmount)
 
 		// track shieldingReq status by txID into DB
 		shieldingReqTrackData := metadata.PortalShieldingRequestStatus{
@@ -248,17 +217,6 @@ func (p *portalShieldingRequestProcessor) ProcessInsts(
 		)
 		if err != nil {
 			Logger.log.Errorf("ERROR: an error occured while tracking shielding request by TxReqID: %+v", err)
-			return nil
-		}
-
-		err = statedb.StoreShieldingRequestProof(
-			stateDB,
-			actionData.TokenID,
-			actionData.ProofHash,
-			shieldingReqTrackDataBytes,
-		)
-		if err != nil {
-			Logger.log.Errorf("ERROR: an error occured while tracking shielding request by ProofHash: %+v", err)
 			return nil
 		}
 

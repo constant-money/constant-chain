@@ -25,28 +25,6 @@ func GetShieldingRequestStatus(stateDB *StateDB, txID string) ([]byte, error) {
 	return data, nil
 }
 
-func StoreShieldingRequestProof(stateDB *StateDB, tokenID string, proofTxHash string, statusContent []byte) error {
-	statusType := GetShieldingRequestPrefix(tokenID)
-	statusSuffix := []byte(proofTxHash)
-	err := StorePortalStatus(stateDB, statusType, statusSuffix, statusContent)
-	if err != nil {
-		return NewStatedbError(StorePortalShieldingRequestStatusError, err)
-	}
-
-	return nil
-}
-
-func IsShieldingProofTxHashExists(stateDB *StateDB, tokenID string, proofTxHash string) (bool, error) {
-	statusType := GetShieldingRequestPrefix(tokenID)
-	statusSuffix := []byte(proofTxHash)
-	key := GeneratePortalStatusObjectKey(statusType, statusSuffix)
-	_, has, err := stateDB.getPortalStatusByKey(key)
-	if err != nil {
-		return false, NewStatedbError(GetPortalStatusError, err)
-	}
-	return has, nil
-}
-
 func GetShieldingRequestsByTokenID(stateDB *StateDB, tokenID string) (map[string]*ShieldingRequest, error) {
 	return stateDB.getShieldingRequestsByTokenID(tokenID), nil
 }

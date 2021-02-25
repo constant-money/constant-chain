@@ -4,6 +4,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"strconv"
+
 	bMeta "github.com/incognitochain/incognito-chain/basemeta"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -12,7 +14,6 @@ import (
 	pv4Common "github.com/incognitochain/incognito-chain/portalv4/common"
 	pv4Meta "github.com/incognitochain/incognito-chain/portalv4/metadata"
 	"github.com/incognitochain/incognito-chain/portalv4/portaltokens"
-	"strconv"
 )
 
 /* =======
@@ -686,7 +687,7 @@ func (p *portalSubmitConfirmedTxProcessor) BuildNewInsts(
 	// remove unshield being processed and update status
 	UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State, tokenIDStr, keyUnshieldBatch)
 	if len(listUTXO) > 0 {
-		UpdatePortalStateAfterShieldingRequest(currentPortalV4State, tokenIDStr, listUTXO)
+		UpdatePortalStateUTXOs(currentPortalV4State, tokenIDStr, listUTXO)
 	}
 
 	return [][]string{newInst}, nil
@@ -726,7 +727,7 @@ func (p *portalSubmitConfirmedTxProcessor) ProcessInsts(
 		unshieldRequests := currentPortalV4State.ProcessedUnshieldRequests[actionData.TokenID][keyUnshieldBatch].GetUnshieldRequests()
 		UpdatePortalStateAfterSubmitConfirmedTx(currentPortalV4State, actionData.TokenID, keyUnshieldBatch)
 		if len(actionData.UTXOs) > 0 {
-			UpdatePortalStateAfterShieldingRequest(currentPortalV4State, actionData.TokenID, actionData.UTXOs)
+			UpdatePortalStateUTXOs(currentPortalV4State, actionData.TokenID, actionData.UTXOs)
 		}
 		// track status of unshield batch request by batchID
 		portalSubmitConfirmedStatus = pv4Meta.PortalSubmitConfirmedTxStatus{
