@@ -40,15 +40,6 @@ func InitCurrentPortalV4StateFromDB(
 		}
 	}
 
-	// load list of shielding requests
-	shieldingRequests := map[string]map[string]*statedb.ShieldingRequest{}
-	for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
-		shieldingRequests[tokenID], err = statedb.GetShieldingRequestsByTokenID(stateDB, tokenID)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	// load list of processed unshielding requests batch
 	//processedUnshieldRequestsBatch := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{}
 	//for _, tokenID := range pv4Common.PortalV4SupportedIncTokenIDs {
@@ -62,7 +53,7 @@ func InitCurrentPortalV4StateFromDB(
 		WaitingUnshieldRequests:   waitingUnshieldRequests,
 		UTXOs:                     utxos,
 		ProcessedUnshieldRequests: nil,
-		ShieldingExternalTx:       shieldingRequests,
+		ShieldingExternalTx:       nil,
 	}, nil
 }
 
@@ -118,7 +109,7 @@ func UpdatePortalStateShieldingExternalTx(currentPortalV4State *CurrentPortalV4S
 	currentPortalV4State.ShieldingExternalTx[tokenID][statedb.GenerateShieldingRequestObjectKey(tokenID, shieldingProofTxHash).String()] = statedb.NewShieldingRequestWithValue(shieldingExternalTxHash, incAddress, amount)
 }
 
-func IsExistsProof(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string) bool {
+func IsExistsProofInPortalState(currentPortalV4State *CurrentPortalV4State, tokenID string, shieldingProofTxHash string) bool {
 	if currentPortalV4State.ShieldingExternalTx == nil {
 		return false
 	}

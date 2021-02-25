@@ -39,7 +39,30 @@ func (p *portalShieldingRequestProcessor) PutAction(action []string, shardID byt
 }
 
 func (p *portalShieldingRequestProcessor) PrepareDataForBlockProducer(stateDB *statedb.StateDB, contentStr string) (map[string]interface{}, error) {
-	return nil, nil
+	actionContentBytes, err := base64.StdEncoding.DecodeString(contentStr)
+	if err != nil {
+		Logger.log.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
+		return nil, fmt.Errorf("Shielding request: an error occurred while decoding content string of pToken request action: %+v", err)
+	}
+
+	var actionData portalMeta.PortalShieldingRequestAction
+	err = json.Unmarshal(actionContentBytes, &actionData)
+	if err != nil {
+		Logger.log.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
+		return nil, fmt.Errorf("Shielding request: an error occurred while unmarshal shielding request action: %+v", err)
+	}
+
+	proofHash := hashProof(actionData.Meta.ShieldingProof)
+
+	isExistProofTxHash, err := statedb.IsExistsShieldingRequest(stateDB, actionData.Meta.TokenID, proofHash)
+	if err != nil {
+		Logger.log.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
+		return nil, fmt.Errorf("Shielding request: an error occurred while get pToken request proof from DB: %+v", err)
+	}
+
+	optionalData := make(map[string]interface{})
+	optionalData["isExistProofTxHash"] = isExistProofTxHash
+	return optionalData, nil
 }
 
 func hashProof(proof string) string {
@@ -124,10 +147,21 @@ func (p *portalShieldingRequestProcessor) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
+	// check unique external proof from optionalData which get from statedb
+	if optionalData == nil {
+		Logger.log.Errorf("Shielding Request: optionalData is null")
+		return [][]string{rejectInst}, nil
+	}
+	isExistInStateDB, ok := optionalData["isExistProofTxHash"].(bool)
+	if !ok {
+		Logger.log.Errorf("Shielding Request: optionalData isExistProofTxHash is invalid")
+		return [][]string{rejectInst}, nil
+	}
+
 	proofHash := hashProof(meta.ShieldingProof)
 
 	// check unique external proof from portal state
-	if IsExistsProof(currentPortalState, meta.TokenID, proofHash) {
+	if IsExistsProofInPortalState(currentPortalState, meta.TokenID, proofHash) || isExistInStateDB {
 		Logger.log.Errorf("Shielding Request: Shielding request proof exist in db %v", meta.ShieldingProof)
 		return [][]string{rejectInst}, nil
 	}

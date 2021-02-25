@@ -29,6 +29,15 @@ func GetShieldingRequestsByTokenID(stateDB *StateDB, tokenID string) (map[string
 	return stateDB.getShieldingRequestsByTokenID(tokenID), nil
 }
 
+func IsExistsShieldingRequest(stateDB *StateDB, tokenID string, proofHash string) (bool, error) {
+	keyStr := GenerateShieldingRequestObjectKey(tokenID, proofHash).String()
+	key, err := common.Hash{}.NewHashFromStr(keyStr)
+	if err != nil {
+		return false, NewStatedbError(GetPortalShieldingRequestsError, err)
+	}
+	return stateDB.Exist(PortalShieldingRequestObjectType, *key)
+}
+
 func StoreShieldingRequests(stateDB *StateDB, shieldingRequests map[string]*ShieldingRequest) error {
 	for keyStr, shieldingReq := range shieldingRequests {
 		key, err := common.Hash{}.NewHashFromStr(keyStr)
