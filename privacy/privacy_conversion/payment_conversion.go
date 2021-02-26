@@ -508,6 +508,14 @@ func (proof *ConversionProof) SetCommitmentIndices(comIndices []uint64) {
 	proof.comIndices = comIndices
 }
 
+// ValidateSanity performs sanity checks of the conversion proof with the following steps:
+//	1. Check the length constraints of input coins
+//	2. Check the number of output coins
+//	3. Check doubling serial number
+//	4. Check the validity of sigPubKey
+//	5. Check the validity of one-of-many proofs
+//	6. Check the validity of serial number proofs
+//	7. Check the validity of the commitment input secret key, commitment shardID, commitment SND, commitment indices
 func (proof ConversionProof) ValidateSanity(additionalData interface{}) (bool, error) {
 	if len(proof.inputCoins) > 255 {
 		return false, fmt.Errorf("input coins in tx are very large: %v", strconv.Itoa(len(proof.inputCoins)))
@@ -515,6 +523,10 @@ func (proof ConversionProof) ValidateSanity(additionalData interface{}) (bool, e
 
 	if len(proof.inputCoins) != len(proof.serialNumberProof) || len(proof.inputCoins) != len(proof.oneOfManyProof){
 		return false, fmt.Errorf("the number of input coins must be equal to the number of serialnumber proofs and the number of one-of-many proofs")
+	}
+
+	if len(proof.outputCoins) != 1 {
+		return false, fmt.Errorf("number of output coins (%v) must be 1", len(proof.outputCoins))
 	}
 
 	// check doubling a input coin in tx
@@ -638,11 +650,13 @@ func (proof ConversionProof) ValidateSanity(additionalData interface{}) (bool, e
 	return true, nil
 }
 
+// Verify verifies the correctness of a conversion proof by the following steps:
+//	1. Verify one-of-many proofs
+//	2. Verify serial number proofs
+//	3. Verify if the commitment of output coin has been calculated correctly
+//	4. Verify if the sum of input coins equals the output amount
 func (proof ConversionProof) Verify(boolParams map[string]bool, pubKey key.PublicKey, fee uint64, shardID byte, tokenID *common.Hash, additionalData interface{}) (bool, error) {
 	Logger.Log.Infof("Begin verifying ConversionProof\n")
-	if len(proof.outputCoins) != 1 {
-		return false, errhandler.NewPrivacyErr(errhandler.UnexpectedErr, fmt.Errorf("number of output coins (%v) must be 1", len(proof.outputCoins)))
-	}
 
 	// verify for input coins
 	commitmentsPtr := additionalData.(*[][privacy_util.CommitmentRingSize]*operation.Point)
@@ -705,6 +719,8 @@ func (proof ConversionProof) Verify(boolParams map[string]bool, pubKey key.Publi
 		Logger.Log.Error("VERIFICATION PAYMENT PROOF: Sum of input coins' value is not equal to sum of output coins' value")
 		return false, errhandler.NewPrivacyErr(errhandler.VerifyAmountPrivacyFailedErr, nil)
 	}
+
+	Logger.Log.Infof("End verifying conversion proof\n")
 
 	return true, nil
 }
