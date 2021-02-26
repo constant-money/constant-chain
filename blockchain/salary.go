@@ -333,6 +333,90 @@ func (blockchain *BlockChain) buildWithDrawTransactionResponse(view *ShardBestSt
 	return salaryTx, nil
 }
 
+func (blockchain *BlockChain) buildSalaryTransactionResponse(view *ShardBestState, txRequest *metadata.Transaction, blkProducerPrivateKey *privacy.PrivateKey, shardID byte) (metadata.Transaction, error) {
+	tmpTxRequest := *txRequest
+	var txParam transaction.TxSalaryOutputParams
+	makeMD := func(c privacy.Coin) metadata.Metadata{return nil}
+
+	switch tmpTxRequest.GetMetadataType() {
+	case metadata.WithDrawRewardRequestMeta:
+		requestDetail, ok := tmpTxRequest.GetMetadata().(*metadata.WithDrawRewardRequest)
+		if !ok {
+			return nil, fmt.Errorf("not a withdraw request: %v", tmpTxRequest.GetMetadata())
+		}
+
+		tempPublicKey := base58.Base58Check{}.Encode(requestDetail.PaymentAddress.Pk, common.Base58Version)
+		amount, err := statedb.GetCommitteeReward(blockchain.GetBestStateShardRewardStateDB(shardID), tempPublicKey, requestDetail.TokenID)
+		if (amount == 0) || (err != nil) {
+			return nil, fmt.Errorf("not enough reward")
+		}
+
+		txParam = transaction.TxSalaryOutputParams{Amount: amount, ReceiverAddress: &requestDetail.PaymentAddress, TokenID: &requestDetail.TokenID}
+
+		responseMeta, err := metadata.NewWithDrawRewardResponse(requestDetail, tmpTxRequest.Hash())
+		makeMD = func(c privacy.Coin) metadata.Metadata {
+			if c != nil && c.GetSharedRandom() != nil{
+				responseMeta.SetSharedRandom(c.GetSharedRandom().ToBytesS())
+			}
+			return responseMeta
+		}
+
+		salaryTx, err := txParam.BuildTxSalary(blkProducerPrivateKey, view.GetCopiedTransactionStateDB(), makeMD)
+		if err != nil {
+			return nil, errors.Errorf("cannot init salary tx for withdraw transaction. Error %v", err)
+		}
+		salaryTx.SetType(common.TxRewardType)
+		return salaryTx, nil
+
+	case metadata.ConvertingRequestMeta:
+		requestDetail, ok := tmpTxRequest.GetMetadata().(*metadata.ConvertingRequest)
+		if !ok {
+			return nil, fmt.Errorf("not a converting request: %v", tmpTxRequest.GetMetadata())
+		}
+
+		pubKeyBytes, _, err := base58.Base58Check{}.Decode(requestDetail.OTAStr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode the OTAStr %v", requestDetail.OTAStr)
+		}
+		pubKeyPoint, err := new(privacy.Point).FromBytesS(pubKeyBytes)
+		if err != nil {
+			return nil, fmt.Errorf("cannot set point from bytes: %v", pubKeyBytes)
+		}
+
+		txRandomBytes, _, err := base58.Base58Check{}.Decode(requestDetail.TxRandomStr)
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode the TxRandomStr %v", requestDetail.TxRandomStr)
+		}
+		txRandom := new(privacy.TxRandom)
+		err = txRandom.SetBytes(txRandomBytes)
+		if err != nil {
+			return nil, fmt.Errorf("cannot set txRandom from bytes: %v", txRandomBytes)
+		}
+
+		txParam = transaction.TxSalaryOutputParams{
+			Amount:          requestDetail.ConvertedAmount,
+			ReceiverAddress: nil,
+			PublicKey:       pubKeyPoint,
+			TxRandom:        txRandom,
+			TokenID:         &requestDetail.TokenID,
+		}
+
+		responseMeta, err := metadata.NewConvertingResponse(requestDetail, tmpTxRequest.Hash())
+		makeMD = func(c privacy.Coin) metadata.Metadata {
+			return responseMeta
+		}
+
+		salaryTx, err := txParam.BuildTxSalary(blkProducerPrivateKey, view.GetCopiedTransactionStateDB(), makeMD)
+		if err != nil {
+			return nil, errors.Errorf("cannot init salary tx for conversion transaction. Error %v", err)
+		}
+		salaryTx.SetType(common.TxRewardType)
+		return salaryTx, nil
+	default:
+		return nil, fmt.Errorf("can not understand this request (%v)", tmpTxRequest.GetMetadataType())
+	}
+}
+
 // mapPlusMap(src, dst): dst = dst + src
 func mapPlusMap(src, dst *map[common.Hash]uint64) {
 	if src != nil {

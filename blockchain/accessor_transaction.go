@@ -254,27 +254,44 @@ func (blockchain *BlockChain) InitTxSalaryByCoinID(
 	return transaction.BuildCoinBaseTxByCoinID(buildCoinBaseParams)
 }
 
-// @Notice: change from body.Transaction -> transactions
+// BuildResponseTransactionFromTxsWithMetadata builds salary transactions for some metadata requests.
+// It returns a list of transactions, each of which is a response for either a reward-withdrawing  or converting request.
 func (blockchain *BlockChain) BuildResponseTransactionFromTxsWithMetadata(view *ShardBestState, transactions []metadata.Transaction, blkProducerPrivateKey *privacy.PrivateKey, shardID byte) ([]metadata.Transaction, error) {
-	withdrawReqTable := make(map[string]metadata.Transaction)
+	reqTable := make(map[string]metadata.Transaction)
 	for _, tx := range transactions {
-		if tx.GetMetadataType() == metadata.WithDrawRewardRequestMeta {
-			metaReq := tx.GetMetadata().(*metadata.WithDrawRewardRequest)
-			mapKey := fmt.Sprintf("%s-%s", base58.Base58Check{}.Encode(metaReq.PaymentAddress.Pk, common.Base58Version), metaReq.TokenID.String())
-			if _, ok := withdrawReqTable[mapKey]; !ok {
-				withdrawReqTable[mapKey] = tx
+		switch tx.GetMetadataType(){
+		case metadata.WithDrawRewardRequestMeta:
+			metaReq, ok := tx.GetMetadata().(*metadata.WithDrawRewardRequest)
+			if !ok {
+				return nil, fmt.Errorf("cannot parse metadata to WithDrawRewardRequest")
 			}
+			mapKey := fmt.Sprintf("%s-%s", tx.Hash().String(), metaReq.TokenID.String())
+			if _, ok := reqTable[mapKey]; !ok {
+				reqTable[mapKey] = tx
+			}
+		case metadata.ConvertingRequestMeta:
+			metaReq, ok := tx.GetMetadata().(*metadata.ConvertingRequest)
+			if !ok {
+				return nil, fmt.Errorf("cannot parse metadata to ConvertingRequest")
+			}
+			mapKey := fmt.Sprintf("%s-%s", tx.Hash().String(), metaReq.TokenID.String())
+			if _, ok := reqTable[mapKey]; !ok {
+				reqTable[mapKey] = tx
+			}
+		default:
+			continue
 		}
 	}
+
 	txsResponse := []metadata.Transaction{}
-	for _, txRequest := range withdrawReqTable {
-		txResponse, err := blockchain.buildWithDrawTransactionResponse(view, &txRequest, blkProducerPrivateKey, shardID)
+	for _, txRequest := range reqTable {
+		txResponse, err := blockchain.buildSalaryTransactionResponse(view, &txRequest, blkProducerPrivateKey, shardID)
 		if err != nil {
-			Logger.log.Errorf("[Withdraw Reward] Build transactions response for tx %v return errors %v", txRequest, err)
+			Logger.log.Errorf("build transactions response for tx %v return errors %v", txRequest, err)
 			continue
 		}
 		txsResponse = append(txsResponse, txResponse)
-		Logger.log.Infof("[Withdraw Reward] - BuildWithDrawTransactionResponse for tx %+v, ok: %+v\n", txRequest, txResponse)
+		Logger.log.Infof("buildSalaryTransactionResponse for tx %+v, ok: %+v\n", txRequest, txResponse)
 	}
 	return append(transactions, txsResponse...), nil
 }

@@ -39,6 +39,7 @@ func (blockchain *BlockChain) verifyMinerCreatedTxBeforeGettingInBlock(
 			return nil, err
 		}
 		if !ok {
+			Logger.log.Infof("invalidTx found: %v", tx.Hash().String())
 			invalidTxs = append(invalidTxs, tx)
 		}
 	}
