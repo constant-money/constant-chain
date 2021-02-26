@@ -242,18 +242,32 @@ func (txToken *TxToken) InitTokenConversion(params *tx_generic.TxTokenParams) er
 //END INIT FUNCTIONS
 
 //VALIDATE FUNCTIONS
-func ValidateConversionTransaction(tx Tx, db *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
+
+// ValidateConversionTransaction performs the following checks:
+//	1. Fee must be 0
+//	2. Validate if the signature is valid
+//	2. Validate if the snd has been stored in the db (not necessary since output coin is sent to the burning address)
+//	3. Validate the validity of the conversion proof
+func ValidateConversionTransaction(tx Tx, boolParams map[string]bool, transactionDB, bridgeDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
 	jsb, _ := json.Marshal(tx)
 	utils.Logger.Log.Infof("Begin verifying TX %s", string(jsb))
 
 	var err error
+	if tx.GetTxFee() != 0{
+		errMessage := fmt.Sprintf("%v: transaction fee must be 0: have %v", tx.Hash().String(), tx.GetTxFee())
+		utils.Logger.Log.Error(errMessage)
+		return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, fmt.Errorf(errMessage))
+	}
+
 	if valid, err := tx.verifySig(); !valid {
 		if err != nil {
-			utils.Logger.Log.Errorf("Error verifying signature ver1 with tx hash %s: %+v \n", tx.Hash().String(), err)
-			return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, err)
+			errMessage := fmt.Sprintf("error verifying signature of tx conversion %v: %v", tx.Hash().String(), err)
+			utils.Logger.Log.Error(errMessage)
+			return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf(errMessage))
 		}
-		utils.Logger.Log.Errorf("FAILED VERIFICATION SIGNATURE ver1 with tx hash %s", tx.Hash().String())
-		return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf("FAILED VERIFICATION SIGNATURE ver1 with tx hash %s", tx.Hash().String()))
+		errMessage := fmt.Sprintf("failed to verify signature of tx conversion %v", tx.Hash().String())
+		utils.Logger.Log.Error(errMessage)
+		return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf(errMessage))
 	}
 
 	tokenID, err = tx_generic.ParseTokenID(tokenID)
@@ -261,22 +275,25 @@ func ValidateConversionTransaction(tx Tx, db *statedb.StateDB, shardID byte, tok
 		return false, err
 	}
 
-	outputCoins := tx.Proof.GetOutputCoins()
-	outputCoinsAsV1 := make([]*privacy.CoinV1, len(outputCoins))
-	for i := 0; i < len(outputCoins); i += 1 {
-		c, ok := outputCoins[i].(*privacy.CoinV1)
-		if !ok{
-			return false, utils.NewTransactionErr(utils.UnexpectedError, nil, fmt.Sprintf("Error when casting a coin to ver1"))
+	for _, outputCoin := range tx.GetProof().GetOutputCoins() {
+		// Check output coins' SND is not exists in SND list (Database)
+		if ok, err := checkSNDerivatorExistence(tokenID, outputCoin.GetSNDerivator(), transactionDB); ok || err != nil {
+			if err != nil {
+				errMessage := fmt.Sprintf("checkSNDerivatorExistence error: %v", err)
+				utils.Logger.Log.Error(errMessage)
+				return false, utils.NewTransactionErr(utils.SndExistedError, fmt.Errorf(errMessage))
+			}
+			errMessage := fmt.Sprintf("snd existed")
+			utils.Logger.Log.Error(errMessage)
+			return false, utils.NewTransactionErr(utils.SndExistedError, fmt.Errorf(errMessage))
 		}
-		outputCoinsAsV1[i] = c
-	}
-	if err := validateSndFromOutputCoin(outputCoinsAsV1); err != nil {
-		return false, err
 	}
 
-	commitments, err := getCommitmentsInDatabase(tx.Proof, db, shardID, tokenID)
+	commitments, err := getCommitmentsInDatabase(tx.Proof, transactionDB, shardID, tokenID)
 	if err != nil {
-		return false, err
+		errMessage := fmt.Sprintf("getCommitmentsInDatabase error: %v", err)
+		utils.Logger.Log.Error(errMessage)
+		return false, utils.NewTransactionErr(utils.SndExistedError, fmt.Errorf(errMessage))
 	}
 
 	if valid, err := tx.Proof.Verify(nil, tx.SigPubKey, tx.Fee, shardID, tokenID, commitments); !valid {
@@ -285,7 +302,60 @@ func ValidateConversionTransaction(tx Tx, db *statedb.StateDB, shardID byte, tok
 		}
 		return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, err, tx.Hash().String())
 	}
-	utils.Logger.Log.Debugf("SUCCESSED VERIFICATION PAYMENT PROOF ")
+	utils.Logger.Log.Debugf("SUCCESSED VERIFICATION CONVERSION PROOF")
 	return true, nil
+}
+
+// ValidateTokenConversionTransaction performs the following checks:
+//	1. Fee must be 0
+//	2. Validate the correctness of the txFee
+//		1.1. The proof must have no input, no output, no fee)
+//		1.2. The signature is valid
+//	2. Validate the correctness of the txNormal using the function ValidateConversionTransaction.
+func ValidateTokenConversionTransaction(txToken TxToken, boolParams map[string]bool, transactionDB, bridgeDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, error) {
+	jsb, _ := json.Marshal(txToken)
+	utils.Logger.Log.Infof("Begin verifying TxToken %s\n", string(jsb))
+
+	if txToken.GetTxFee() != 0{
+		errMessage := fmt.Sprintf("%v: transaction fee must be 0: have %v", txToken.Hash().String(), txToken.GetTxFee())
+		utils.Logger.Log.Error(errMessage)
+		return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, fmt.Errorf(errMessage))
+	}
+
+	txFee := txToken.GetTxBase()
+	txFeeProof := txFee.GetProof()
+	if txFeeProof != nil {
+		if len(txFeeProof.GetInputCoins()) != 0 {
+			errMessage := fmt.Sprintf("%v: no input coin is allowed in txFee of tx token conversion", txToken.Hash().String())
+			utils.Logger.Log.Error(errMessage)
+			return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, fmt.Errorf(errMessage))
+		}
+		if len(txFeeProof.GetOutputCoins()) != 0 {
+			errMessage := fmt.Sprintf("%v: no output coin is allowed in txFee of tx token conversion", txToken.Hash().String())
+			utils.Logger.Log.Error(errMessage)
+			return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, fmt.Errorf(errMessage))
+		}
+	}
+
+	if isValid, err := txFee.Verify(boolParams, transactionDB, bridgeDB, shardID, tokenID); !isValid {
+		if err != nil {
+			errMessage := fmt.Sprintf("error verifying signature of tx token conversion %v: %v", txToken.Hash().String(), err)
+			utils.Logger.Log.Error(errMessage)
+			return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf(errMessage))
+		}
+		errMessage := fmt.Sprintf("failed to verify signature of tx token conversion %v", txToken.Hash().String())
+		utils.Logger.Log.Error(errMessage)
+		return false, utils.NewTransactionErr(utils.VerifyTxSigFailError, fmt.Errorf(errMessage))
+	}
+
+	tmpTxNormal := txToken.GetTxNormal()
+	txNormal, ok := tmpTxNormal.(*Tx)
+	if !ok {
+		errMessage := fmt.Sprintf("cannot parse txNormal of %v as a txver1", txToken.Hash().String())
+		utils.Logger.Log.Error(errMessage)
+		return false, fmt.Errorf(errMessage)
+	}
+
+	return ValidateConversionTransaction(*txNormal, boolParams, transactionDB, bridgeDB, shardID, tokenID)
 }
 //END VALIDATE FUNCTIONS

@@ -213,6 +213,12 @@ func (txToken TxToken) ValidateTxByItself(boolParams map[string]bool, transactio
 }
 
 func (txToken TxToken) ValidateTransaction(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, []privacy.Proof, error) {
+	//if txToken is a token conversion transaction => still accept after check point
+	if txToken.GetMetadataType() == metadata.ConvertingRequestMeta {
+		valid, err := ValidateTokenConversionTransaction(txToken, boolParams, transactionStateDB, bridgeStateDB, shardID, tokenID)
+		return valid, nil, err
+	}
+
 	afterUpgrade, ok := boolParams["v2Only"]
 	if !ok {
 		afterUpgrade = false

@@ -77,8 +77,9 @@ func ParseProof(p interface{}, ver int8) (privacy.Proof, error) {
 				return nil, fmt.Errorf("not a valid proof for tx version 1")
 			}
 			Logger.Log.Infof("Parse to ConversionProof successfully\n")
+		} else {
+			Logger.Log.Infof("Parse to ProofV1 successfully\n")
 		}
-		Logger.Log.Infof("Parse to ProofV1 successfully\n")
 	case 2:
 		res = new(privacy.ProofV2)
 		res.Init()

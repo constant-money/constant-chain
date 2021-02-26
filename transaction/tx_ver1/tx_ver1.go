@@ -506,7 +506,6 @@ func (tx *Tx) Verify(boolParams map[string]bool, transactionStateDB *statedb.Sta
 		isNewTransaction = false
 	}
 
-
 	if tx.Proof == nil {
 		return true, nil
 	}
@@ -737,9 +736,9 @@ func (tx Tx) ValidateTxWithBlockChain(chainRetriever metadata.ChainRetriever, sh
 }
 
 func (tx Tx) ValidateTransaction(boolParams map[string]bool, transactionStateDB *statedb.StateDB, bridgeStateDB *statedb.StateDB, shardID byte, tokenID *common.Hash) (bool, []privacy.Proof, error) {
-	//if tx is a conversion transaction => still accept after break point
+	//if tx is a conversion transaction => still accept after check point
 	if tx.GetMetadataType() == metadata.ConvertingRequestMeta {
-		valid, err := ValidateConversionTransaction(tx, transactionStateDB, shardID, tokenID)
+		valid, err := ValidateConversionTransaction(tx, boolParams, transactionStateDB, bridgeStateDB, shardID, tokenID)
 		return valid, nil, err
 	}
 
