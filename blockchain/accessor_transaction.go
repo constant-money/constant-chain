@@ -146,15 +146,31 @@ func (blockchain *BlockChain) GetTransactionHashByReceiverV2(
 func (blockchain *BlockChain) ValidateResponseTransactionFromTxsWithMetadata(shardBlock *ShardBlock) error {
 	// filter double withdraw request
 	withdrawReqTable := make(map[string]privacy.PaymentAddress)
+	convertingReqTable := make(map[string]metadata.Transaction)
+	convertingRespTable := make(map[string]metadata.Transaction)
 	for _, tx := range shardBlock.Body.Transactions {
-		if tx.GetMetadataType() == metadata.WithDrawRewardRequestMeta {
+		switch tx.GetMetadataType() {
+		case metadata.WithDrawRewardRequestMeta:
 			metaRequest := tx.GetMetadata().(*metadata.WithDrawRewardRequest)
-			mapKey := fmt.Sprintf("%s-%s", base58.Base58Check{}.Encode(metaRequest.PaymentAddress .Pk, common.Base58Version), metaRequest.TokenID.String())
+			mapKey := fmt.Sprintf("%s-%s", base58.Base58Check{}.Encode(metaRequest.PaymentAddress.Pk, common.Base58Version), metaRequest.TokenID.String())
 			if _, ok := withdrawReqTable[mapKey]; !ok {
 				withdrawReqTable[mapKey] = metaRequest.PaymentAddress
 			}
+		case metadata.ConvertingRequestMeta:
+			if _, ok := convertingReqTable[tx.Hash().String()]; ok {
+				return fmt.Errorf("duplicate request transaction found: %v", tx.Hash().String())
+			} else {
+				convertingReqTable[tx.Hash().String()] = tx
+			}
+		case metadata.ConvertingResponseMeta:
+			if _, ok := convertingRespTable[tx.Hash().String()]; ok {
+				return fmt.Errorf("duplicate response transaction found: %v", tx.Hash().String())
+			} else {
+				convertingRespTable[tx.Hash().String()] = tx
+			}
 		}
 	}
+
 	// check tx withdraw response valid with the corresponding request
 	for _, tx := range shardBlock.Body.Transactions {
 		if tx.GetMetadataType() == metadata.WithDrawRewardResponseMeta {
@@ -188,6 +204,10 @@ func (blockchain *BlockChain) ValidateResponseTransactionFromTxsWithMetadata(sha
 				return errors.Errorf("[Mint Withdraw Reward] Mint Coin is invalid for receiver or amount")
 			}
 		}
+	}
+	err := blockchain.ValidateConversionResponseTransactions(convertingReqTable, convertingRespTable)
+	if err != nil {
+		return fmt.Errorf("ValidateConversionResponseTransactions returns an error: %v", err)
 	}
 
 	return nil
