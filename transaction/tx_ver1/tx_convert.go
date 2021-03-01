@@ -293,7 +293,7 @@ func ValidateConversionTransaction(tx Tx, boolParams map[string]bool, transactio
 	if err != nil {
 		errMessage := fmt.Sprintf("getCommitmentsInDatabase error: %v", err)
 		utils.Logger.Log.Error(errMessage)
-		return false, utils.NewTransactionErr(utils.SndExistedError, fmt.Errorf(errMessage))
+		return false, utils.NewTransactionErr(utils.GetCommitmentsInDatabaseError, fmt.Errorf(errMessage))
 	}
 
 	if valid, err := tx.Proof.Verify(nil, tx.SigPubKey, tx.Fee, shardID, tokenID, commitments); !valid {
@@ -302,7 +302,7 @@ func ValidateConversionTransaction(tx Tx, boolParams map[string]bool, transactio
 		}
 		return false, utils.NewTransactionErr(utils.TxProofVerifyFailError, err, tx.Hash().String())
 	}
-	utils.Logger.Log.Debugf("SUCCESSED VERIFICATION CONVERSION PROOF")
+	utils.Logger.Log.Debugf("SUCCEEDED VERIFICATION CONVERSION PROOF")
 	return true, nil
 }
 
@@ -337,7 +337,7 @@ func ValidateTokenConversionTransaction(txToken TxToken, boolParams map[string]b
 		}
 	}
 
-	if isValid, err := txFee.Verify(boolParams, transactionDB, bridgeDB, shardID, tokenID); !isValid {
+	if isValid, err := txFee.Verify(boolParams, transactionDB, bridgeDB, shardID, nil); !isValid {
 		if err != nil {
 			errMessage := fmt.Sprintf("error verifying signature of tx token conversion %v: %v", txToken.Hash().String(), err)
 			utils.Logger.Log.Error(errMessage)
