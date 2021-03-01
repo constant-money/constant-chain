@@ -413,9 +413,6 @@ func (tp *TxPool) checkFees(
 	beaconHeight int64,
 ) bool {
 	Logger.log.Info("Beacon height for checkFees: ", beaconHeight, tx.Hash().String())
-	if tx.GetMetadataType() == metadata.ConvertingRequestMeta {
-		return true
-	}
 
 	txType := tx.GetType()
 	if txType == common.TxCustomTokenPrivacyType {
