@@ -83,18 +83,27 @@ func (httpServer *HttpServer) handleCreateAndSendConversionTransaction(params in
 	if tokenID != nil && tokenID.String() != common.PRVIDStr {
 		Logger.log.Debugf("Send token transaction\n")
 		sendResult, err = httpServer.handleSendRawPrivacyCustomTokenTransaction(newParam, closeChan)
+		if err != nil {
+			Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v, err: %+v\n", nil, err)
+			return nil, rpcservice.NewRPCError(rpcservice.SendTxDataError, err)
+		}
+
+		result := jsonresult.NewCreateTransactionResult(nil, sendResult.(jsonresult.CreateTransactionTokenResult).TxID, nil, tx.ShardID)
+		Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v", result)
+		return result, nil
 	} else {
 		Logger.log.Debugf("Send PRV transaction\n")
 		sendResult, err = httpServer.handleSendRawTransaction(newParam, closeChan)
-	}
-	if err != nil {
-		Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v, err: %+v\n", nil, err)
-		return nil, rpcservice.NewRPCError(rpcservice.SendTxDataError, err)
+		if err != nil {
+			Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v, err: %+v\n", nil, err)
+			return nil, rpcservice.NewRPCError(rpcservice.SendTxDataError, err)
+		}
+
+		result := jsonresult.NewCreateTransactionResult(nil, sendResult.(jsonresult.CreateTransactionResult).TxID, nil, tx.ShardID)
+		Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v", result)
+		return result, nil
 	}
 
-	result := jsonresult.NewCreateTransactionResult(nil, sendResult.(jsonresult.CreateTransactionResult).TxID, nil, tx.ShardID)
-	Logger.log.Debugf("handleCreateAndSendConversionTransaction result: %+v", result)
-	return result, nil
 }
 
 // handleCreateAndSendTx - RPC creates transaction and send to network
