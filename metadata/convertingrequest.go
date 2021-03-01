@@ -1,8 +1,6 @@
 package metadata
 
 import (
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
@@ -22,15 +20,6 @@ type ConvertingRequestAction struct {
 	Meta    ConvertingRequest
 	TxReqID common.Hash
 	ShardID byte
-}
-
-type ConvertingAcceptedContent struct {
-	Address         string
-	TxRandomStr     string
-	ConvertedAmount uint64
-	TokenID         common.Hash
-	ShardID         byte
-	RequestedTxID   common.Hash
 }
 
 func NewConvertingRequest(convertingAddress string, txRandomStr string, convertingAmount uint64, tokenID common.Hash, metaType int) (*ConvertingRequest, error) {
@@ -73,7 +62,6 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 	if tx.GetType() == common.TxNormalType && req.TokenID.String() != common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert token %v in a PRV transaction", req.TokenID.String()))
 	}
-
 	if tx.GetType() == common.TxCustomTokenPrivacyType && req.TokenID.String() == common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot convert PRV in a token transaction"))
 	}
@@ -100,7 +88,7 @@ func (req ConvertingRequest) ValidateSanityData(chainRetriever ChainRetriever, s
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("burnedAmount and convertedAmount mismatch: %v != %v", burnedCoin.GetValue(), req.ConvertedAmount))
 	}
 
-	return true, true, nil
+	return false, true, nil
 }
 
 func (req ConvertingRequest) ValidateMetadataByItself() bool {
@@ -117,22 +105,6 @@ func (req ConvertingRequest) Hash() *common.Hash {
 	// final hash
 	hash := common.HashH([]byte(record))
 	return &hash
-}
-
-func (req *ConvertingRequest) BuildReqActions(tx Transaction, chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, shardID byte, shardHeight uint64) ([][]string, error) {
-	actionContent := ConvertingRequestAction{
-		Meta:    *req,
-		TxReqID: *tx.Hash(),
-		ShardID: shardID,
-	}
-
-	actionContentBytes, err := json.Marshal(actionContent)
-	if err != nil {
-		return [][]string{}, err
-	}
-	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
-	action := []string{strconv.Itoa(req.Type), actionContentBase64Str}
-	return [][]string{action}, nil
 }
 
 func (req *ConvertingRequest) CalculateSize() uint64 {
