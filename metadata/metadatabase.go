@@ -1,9 +1,7 @@
 package metadata
 
 import (
-	"fmt"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-	"math"
 	"strconv"
 
 	"github.com/incognitochain/incognito-chain/common"
@@ -62,29 +60,7 @@ func (mb MetadataBase) HashWithoutSig() *common.Hash {
 }
 
 func (mb MetadataBase) CheckTransactionFee(tx Transaction, minFeePerKbTx uint64, beaconHeight int64, stateDB *statedb.StateDB) bool {
-	if tx.GetMetadataType() == ConvertingRequestMeta {
-		feeNativeToken := tx.GetTxFee()
-		feePToken := tx.GetTxFeeToken()
-		if feePToken > 0 {
-			tokenID := tx.GetTokenID()
-			feePTokenToNativeTokenTmp, err := ConvertPrivacyTokenToNativeToken(feePToken, tx.GetTokenID(), beaconHeight, stateDB)
-			if err != nil {
-				fmt.Printf("transaction %+v: %+v %v can not convert to native token",
-					tx.Hash().String(), feePToken, tokenID)
-				return false
-			}
-			feePTokenToNativeToken := uint64(math.Ceil(feePTokenToNativeTokenTmp))
-			feeNativeToken += feePTokenToNativeToken
-		}
-		// get limit fee in native token
-		actualTxSize := tx.GetTxActualSize()
-		// check fee in native token
-		minFee := actualTxSize * minFeePerKbTx
-		if feeNativeToken < minFee {
-			fmt.Printf("transaction %+v has %d fees PRV which is under the required amount of %d, tx size %d",
-				tx.Hash().String(), feeNativeToken, minFee, actualTxSize)
-			return false
-		}
+	if tx.GetMetadataType() == ConvertingRequestMeta || tx.GetMetadataType() == ConvertingResponseMeta {
 		return true
 	}
 	// normal privacy tx
