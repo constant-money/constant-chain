@@ -193,6 +193,36 @@ func (blockchain *BlockChain) ValidateResponseTransactionFromTxsWithMetadata(sha
 	return nil
 }
 
+//ValidateConversionResponseTransactions validates request/response transaction pairs for converting coins.
+func (blockchain *BlockChain) ValidateConversionResponseTransactions(reqTxs map[string]metadata.Transaction, respTxs map[string]metadata.Transaction) error {
+	if len(reqTxs) != len(respTxs) {
+		return fmt.Errorf("list of request txs (%v) and response txs (%v) mismatch", len(reqTxs), len(respTxs))
+	}
+
+	for txReqStr, txResp := range respTxs {
+		txReq, ok := reqTxs[txReqStr]
+		if !ok {
+			return fmt.Errorf("txReq %v not found for txResp %v", txReqStr, txResp.String())
+		}
+
+		tmpRespMeta := txResp.GetMetadata()
+		respMeta, ok := tmpRespMeta.(*metadata.ConvertingResponse)
+		if !ok {
+			return fmt.Errorf("cannot parse metadata of txResp %v: %v", txResp.Hash().String(), respMeta)
+		}
+
+		isValid, err := respMeta.ValidateTxResponse(txReq, txResp)
+		if err != nil || !isValid {
+			if err != nil {
+				return fmt.Errorf("ValidateTxResponse of pair req(%v)/resp(%v) return an error: %v", txReq.Hash().String(), txResp.Hash().String(), err)
+			}
+			return fmt.Errorf("invalid req(%v)/resp(%v)", txReq.Hash().String(), txResp.Hash().String())
+		}
+	}
+
+	return nil
+}
+
 func (blockchain *BlockChain) ValidateResponseTransactionFromBeaconInstructions(
 	curView *ShardBestState,
 	shardBlock *ShardBlock,
