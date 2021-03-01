@@ -285,13 +285,25 @@ func (blockchain *BlockChain) BuildResponseTransactionFromTxsWithMetadata(view *
 
 	txsResponse := []metadata.Transaction{}
 	for _, txRequest := range reqTable {
-		txResponse, err := blockchain.buildSalaryTransactionResponse(view, &txRequest, blkProducerPrivateKey, shardID)
-		if err != nil {
-			Logger.log.Errorf("build transactions response for tx %v return errors %v", txRequest, err)
-			continue
+		var txResponse metadata.Transaction
+		var err error
+		if txRequest.GetMetadataType() == metadata.WithDrawRewardRequestMeta {
+			txResponse, err = blockchain.buildWithDrawTransactionResponse(view, &txRequest, blkProducerPrivateKey, shardID)
+			if err != nil {
+				Logger.log.Errorf("build withdraw transaction response for tx %v return errors %v", txRequest, err)
+				continue
+			}
+			Logger.log.Infof("buildTransactionResponse for tx %+v, ok: %+v\n", txRequest, txResponse)
+		} else if txRequest.GetMetadataType() == metadata.ConvertingRequestMeta {
+			txResponse, err = blockchain.buildConvertingTransactionResponse(view, &txRequest, blkProducerPrivateKey, shardID)
+			if err != nil {
+				Logger.log.Errorf("build converting transaction response for tx %v return errors %v", txRequest, err)
+				continue
+			}
+			Logger.log.Infof("buildTransactionResponse for tx %+v, ok: %+v\n", txRequest, txResponse)
 		}
+
 		txsResponse = append(txsResponse, txResponse)
-		Logger.log.Infof("buildSalaryTransactionResponse for tx %+v, ok: %+v\n", txRequest, txResponse)
 	}
 	return append(transactions, txsResponse...), nil
 }
