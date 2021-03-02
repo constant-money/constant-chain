@@ -144,68 +144,59 @@ func (blockchain *BlockChain) GetTransactionHashByReceiverV2(
 }
 
 func (blockchain *BlockChain) ValidateResponseTransactionFromTxsWithMetadata(shardBlock *ShardBlock) error {
-	// filter double withdraw request
-	withdrawReqTable := make(map[string]privacy.PaymentAddress)
+	// filter double requests/responses
+	withdrawReqTable := make(map[string]metadata.Transaction)
+	withdrawRespTable := make(map[string]metadata.Transaction)
 	convertingReqTable := make(map[string]metadata.Transaction)
 	convertingRespTable := make(map[string]metadata.Transaction)
 	for _, tx := range shardBlock.Body.Transactions {
 		switch tx.GetMetadataType() {
 		case metadata.WithDrawRewardRequestMeta:
-			metaRequest := tx.GetMetadata().(*metadata.WithDrawRewardRequest)
-			mapKey := fmt.Sprintf("%s-%s", base58.Base58Check{}.Encode(metaRequest.PaymentAddress.Pk, common.Base58Version), metaRequest.TokenID.String())
-			if _, ok := withdrawReqTable[mapKey]; !ok {
-				withdrawReqTable[mapKey] = metaRequest.PaymentAddress
+			if _, ok := withdrawReqTable[tx.Hash().String()]; ok {
+				return fmt.Errorf("duplicate withdraw request transaction found: %v", tx.Hash().String())
+			} else {
+				withdrawReqTable[tx.Hash().String()] = tx
 			}
+
+		case metadata.WithDrawRewardResponseMeta:
+			tmpMeta := tx.GetMetadata()
+			respMeta, ok := tmpMeta.(*metadata.WithDrawRewardResponse)
+			if !ok {
+				return fmt.Errorf("cannot parse metadata of txResp %v: %v", tx.Hash().String(), tmpMeta)
+			}
+			if _, ok := withdrawRespTable[respMeta.TxRequest.String()]; ok {
+				return fmt.Errorf("duplicate converting response transaction found: %v", tx.Hash().String())
+			} else {
+				withdrawRespTable[respMeta.TxRequest.String()] = tx
+			}
+
 		case metadata.ConvertingRequestMeta:
 			if _, ok := convertingReqTable[tx.Hash().String()]; ok {
-				return fmt.Errorf("duplicate request transaction found: %v", tx.Hash().String())
+				return fmt.Errorf("duplicate converting request transaction found: %v", tx.Hash().String())
 			} else {
 				convertingReqTable[tx.Hash().String()] = tx
 			}
+
 		case metadata.ConvertingResponseMeta:
-			if _, ok := convertingRespTable[tx.Hash().String()]; ok {
-				return fmt.Errorf("duplicate response transaction found: %v", tx.Hash().String())
-			} else {
-				convertingRespTable[tx.Hash().String()] = tx
-			}
-		}
-	}
-
-	// check tx withdraw response valid with the corresponding request
-	for _, tx := range shardBlock.Body.Transactions {
-		if tx.GetMetadataType() == metadata.WithDrawRewardResponseMeta {
-			//check valid info with tx request
-			metaResponse := tx.GetMetadata().(*metadata.WithDrawRewardResponse)
-			mapKey := fmt.Sprintf("%s-%s", base58.Base58Check{}.Encode(metaResponse.RewardPublicKey, common.Base58Version), metaResponse.TokenID.String())
-			rewardPaymentAddress, ok := withdrawReqTable[mapKey]
+			tmpMeta := tx.GetMetadata()
+			respMeta, ok := tmpMeta.(*metadata.ConvertingResponse)
 			if !ok {
-				return errors.Errorf("[Mint Withdraw Reward] This response dont match with any request in this block - Reward Address: %v", mapKey)
+				return fmt.Errorf("cannot parse metadata of txResp %v: %v", tx.Hash().String(), tmpMeta)
+			}
+			if _, ok := convertingRespTable[respMeta.TxRequest.String()]; ok {
+				return fmt.Errorf("duplicate converting response transaction found: %v", tx.Hash().String())
 			} else {
-				delete(withdrawReqTable, mapKey)
-			}
-			isMinted, mintCoin, coinID, err := tx.GetTxMintData()
-			//check tx mint
-			if err != nil || !isMinted {
-				return errors.Errorf("[Mint Withdraw Reward] It is not tx mint with error: %v", err)
-			}
-			//check tokenID
-			if cmp, err := metaResponse.TokenID.Cmp(coinID); err != nil || cmp != 0 {
-				return errors.Errorf("[Mint Withdraw Reward] Token dont match: %v and %v", metaResponse.TokenID.String(), coinID.String())
-			}
-
-			//check amount & receiver
-			rewardAmount, err := statedb.GetCommitteeReward(blockchain.GetBestStateShard(shardBlock.Header.ShardID).GetShardRewardStateDB(),
-				base58.Base58Check{}.Encode(metaResponse.RewardPublicKey, common.Base58Version), *coinID)
-			if err != nil {
-				return errors.Errorf("[Mint Withdraw Reward] Cannot get reward amount")
-			}
-			if ok := mintCoin.CheckCoinValid(rewardPaymentAddress, metaResponse.SharedRandom, rewardAmount); !ok {
-				Logger.log.Errorf("[Mint Withdraw Reward] CheckMintCoinValid: %v, %v, %v, %v, %v\n", mintCoin.GetVersion(), mintCoin.GetValue(), mintCoin.GetPublicKey(), rewardPaymentAddress, rewardPaymentAddress.GetPublicSpend().ToBytesS())
-				return errors.Errorf("[Mint Withdraw Reward] Mint Coin is invalid for receiver or amount")
+				convertingRespTable[respMeta.TxRequest.String()] = tx
 			}
 		}
 	}
-	err := blockchain.ValidateConversionResponseTransactions(convertingReqTable, convertingRespTable)
+
+	err := blockchain.ValidateWithdrawResponseTransactions(withdrawReqTable, withdrawRespTable, shardBlock.Header.ShardID)
+	if err != nil {
+		return fmt.Errorf("ValidateWithdrawResponseTransactions returns an error: %v", err)
+	}
+
+	err = blockchain.ValidateConversionResponseTransactions(convertingReqTable, convertingRespTable, shardBlock.Header.ShardID)
 	if err != nil {
 		return fmt.Errorf("ValidateConversionResponseTransactions returns an error: %v", err)
 	}
@@ -213,8 +204,40 @@ func (blockchain *BlockChain) ValidateResponseTransactionFromTxsWithMetadata(sha
 	return nil
 }
 
+//ValidateConversionResponseTransactions validates request/response transaction pairs for withdrawing rewards.
+func (blockchain *BlockChain) ValidateWithdrawResponseTransactions(reqTxs map[string]metadata.Transaction, respTxs map[string]metadata.Transaction, shardID byte) error {
+	if len(reqTxs) != len(respTxs) {
+		return fmt.Errorf("list of request txs (%v) and response txs (%v) mismatch", len(reqTxs), len(respTxs))
+	}
+
+	for txReqStr, txResp := range respTxs {
+		txReq, ok := reqTxs[txReqStr]
+		if !ok {
+			return fmt.Errorf("txReq %v not found for txResp %v", txReqStr, txResp.String())
+		}
+
+		respMeta := txResp.GetMetadata().(*metadata.WithDrawRewardResponse) //already checked type at outer layer
+		tokenID := respMeta.TokenID
+		rewardAmount, err := statedb.GetCommitteeReward(blockchain.GetBestStateShard(shardID).GetShardRewardStateDB(),
+			base58.Base58Check{}.Encode(respMeta.RewardPublicKey, common.Base58Version), tokenID)
+		if err != nil {
+			return fmt.Errorf("cannot get reward amount for public key %v, tokenID %v", respMeta.RewardPublicKey, tokenID.String())
+		}
+
+		isValid, err := respMeta.ValidateTxResponse(txReq, txResp, rewardAmount)
+		if err != nil || !isValid {
+			if err != nil {
+				return fmt.Errorf("ValidateTxResponse of pair req(%v)/resp(%v) return an error: %v", txReq.Hash().String(), txResp.Hash().String(), err)
+			}
+			return fmt.Errorf("invalid req(%v)/resp(%v)", txReq.Hash().String(), txResp.Hash().String())
+		}
+	}
+
+	return nil
+}
+
 //ValidateConversionResponseTransactions validates request/response transaction pairs for converting coins.
-func (blockchain *BlockChain) ValidateConversionResponseTransactions(reqTxs map[string]metadata.Transaction, respTxs map[string]metadata.Transaction) error {
+func (blockchain *BlockChain) ValidateConversionResponseTransactions(reqTxs map[string]metadata.Transaction, respTxs map[string]metadata.Transaction, shardID byte) error {
 	if len(reqTxs) != len(respTxs) {
 		return fmt.Errorf("list of request txs (%v) and response txs (%v) mismatch", len(reqTxs), len(respTxs))
 	}

@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"fmt"
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/pkg/errors"
@@ -63,7 +64,22 @@ func (withDrawRewardResponse *WithDrawRewardResponse) ValidateTxWithBlockChain(t
 	return true, nil
 }
 
+//ValidateSanityData performs the following verifications:
+//	1. Check tx type and supported tokenID
+//	2. Check the mintedToken and convertedToken are the same
 func (withDrawRewardResponse WithDrawRewardResponse) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, tx Transaction) (bool, bool, error) {
+	//Step 1
+	if tx.GetType() == common.TxRewardType && withDrawRewardResponse.TokenID.String() != common.PRVIDStr {
+		return false, false, NewMetadataTxError(UnexpectedError, fmt.Errorf("cannot mint token %v in a PRV transaction", withDrawRewardResponse.TokenID.String()))
+	}
+	if tx.GetType() == common.TxCustomTokenPrivacyType && withDrawRewardResponse.TokenID.String() == common.PRVIDStr {
+		return false, false, NewMetadataTxError(UnexpectedError, fmt.Errorf("cannot mint PRV in a token transaction"))
+	}
+
+	//Step 2
+	if tx.GetTokenID().String() != withDrawRewardResponse.TokenID.String() {
+		return false, false, NewMetadataTxError(UnexpectedError, fmt.Errorf("mintedToken and withdrawToken mismatch: %v != %v", tx.GetTokenID().String(), withDrawRewardResponse.TokenID.String()))
+	}
 	return false, true, nil
 }
 
@@ -76,49 +92,45 @@ func (withDrawRewardResponse *WithDrawRewardResponse) SetSharedRandom(r []byte) 
 	withDrawRewardResponse.SharedRandom = r
 }
 
-//func (withDrawRewardResponse WithDrawRewardResponse) VerifyMinerCreatedTxBeforeGettingInBlock(mintData *MintData, shardID byte,
-//	tx Transaction, chainRetriever ChainRetriever, ac *AccumulatedValues, shardViewRetriever ShardViewRetriever,
-//	beaconViewRetriever BeaconViewRetriever) (bool, error) {
-//
-//	if tx.IsPrivacy() {
-//		return false, errors.New("This transaction is not private")
-//	}
-//
-//	isMinted, mintCoin, coinID, err := tx.GetTxMintData()
-//	//check tx mint
-//	if err != nil || !isMinted {
-//		return false, errors.Errorf("It is not tx mint with error: %v", err)
-//	}
-//	//check tokenID
-//	if cmp, err := withDrawRewardResponse.TokenID.Cmp(coinID); err != nil || cmp != 0 {
-//		return false, errors.Errorf("Token dont match: %v and %v", withDrawRewardResponse.TokenID.String(), coinID.String())
-//	}
-//
-//	//check correct receiver
-//	_, _, _, txReq, err := chainRetriever.GetTransactionByHash(*withDrawRewardResponse.TxRequest)
-//	if err != nil {
-//		return false, errors.Errorf("Cannot get tx request from tx hash %v", withDrawRewardResponse.TxRequest.String())
-//	}
-//	//check value
-//	paymentAddressReq := txReq.GetMetadata().(*WithDrawRewardRequest).PaymentAddress
-//	if !bytes.Equal(withDrawRewardResponse.RewardPublicKey, paymentAddressReq.Pk[:]) {
-//		return false, errors.Errorf("Wrong reward receiver")
-//	}
-//
-//	pubkeyReqStr := base58.Base58Check{}.Encode(paymentAddressReq.Pk, common.Base58Version)
-//	if _, ok := mintData.WithdrawReward[pubkeyReqStr]; ok {
-//		return false, errors.New("Verify Miner Mint Tx: Double reward response tx in a block")
-//	} else {
-//		mintData.WithdrawReward[pubkeyReqStr] = true
-//	}
-//	rewardAmount, err := statedb.GetCommitteeReward(shardViewRetriever.GetShardRewardStateDB(), pubkeyReqStr, *coinID)
-//	fmt.Print("Check Mint Reward Response Valid", mintCoin)
-//	fmt.Print("Check Mint Reward Response Valid", paymentAddressReq)
-//	fmt.Print("Check Mint Reward Response Valid", withDrawRewardResponse)
-//	fmt.Print("Check Mint Reward Response Valid", rewardAmount)
-//	if ok := mintCoin.CheckCoinValid(paymentAddressReq, withDrawRewardResponse.SharedRandom, rewardAmount); !ok {
-//		return false, errors.New("Mint Coin is invalid")
-//	}
-//	fmt.Print("Check Mint Reward Response Valid OK OK OK")
-//	return true, nil
-//}
+//ValidateTxResponse validates if a withdraw response is a reply to the withdraw request by the following checks (logic obtained from accessor_transaction.go):
+//	1. Check if the request metadata type is valid
+//	2. Check the requested and minted tokenIDs
+//	3. Check the reward amount and minted value
+//	4. Check if minted coin is valid, i.e the minted coin is for the payment address in the txReq
+// TODO: reviews should double-check if the above validations are sufficient
+func (withDrawRewardResponse WithDrawRewardResponse) ValidateTxResponse(txReq, txResp Transaction, rewardAmount uint64) (bool, error) {
+	Logger.log.Infof("ValidateTxResponse for withdraw req(%v)/resp(%v)\n", txReq.Hash().String(), txResp.Hash().String())
+	//Step 1
+	if txReq.GetMetadataType() != WithDrawRewardRequestMeta {
+		return false, fmt.Errorf("txReq %v, type %v is not a withdraw request", txReq.Hash().String(), txReq.GetMetadataType())
+	}
+	tmpMeta := txReq.GetMetadata()
+	reqMeta, ok := tmpMeta.(*WithDrawRewardRequest)
+	if !ok {
+		return false, fmt.Errorf("cannot parse metadata of txReq %v: %v", txReq.Hash().String(), tmpMeta)
+	}
+
+	//Step 2
+	_, mintedCoin, mintedTokenID, err := txResp.GetTxMintData()
+	if err != nil {
+		return false, fmt.Errorf("cannot get tx minted data of txResp %v: %v", txResp.Hash().String(), err)
+	}
+	if reqMeta.TokenID.String() != mintedTokenID.String() {
+		return false, fmt.Errorf("txReq mintedTokenID and txResp mintedTokenID mismatch: %v != %v", reqMeta.TokenID.String(), mintedTokenID.String())
+	}
+
+	//Step 3
+	if mintedCoin.GetValue() != rewardAmount {
+		return false, fmt.Errorf("reward amount (%v) and minted value (%v) mismatch", rewardAmount, mintedCoin.GetValue())
+	}
+
+	//Step 4
+	if ok = mintedCoin.CheckCoinValid(reqMeta.PaymentAddress, withDrawRewardResponse.SharedRandom, rewardAmount); !ok {
+		Logger.log.Errorf("[Mint Withdraw Reward] CheckMintCoinValid: %v, %v, %v, %v, %v\n", mintedCoin.GetVersion(), mintedCoin.GetValue(), mintedCoin.GetPublicKey(), reqMeta.PaymentAddress, reqMeta.PaymentAddress.GetPublicSpend().ToBytesS())
+		return false, fmt.Errorf("the minted coin is not for the requester")
+	}
+
+	Logger.log.Infof("Finish ValidateTxResponse of pair req(%v)/resp(%v)\n", txReq.Hash().String(), txResp.Hash().String())
+
+	return true, nil
+}
