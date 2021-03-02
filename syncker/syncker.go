@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"sync"
 	"time"
 
@@ -259,18 +260,18 @@ func (synckerManager *SynckerManager) GetCrossShardBlocksForShardProducer(toShar
 					if synckerManager.crossShardPool[int(toShard)].HasHash(shardState.Hash) {
 						//validate crossShardBlock before add to result
 						blkXShard := synckerManager.crossShardPool[int(toShard)].GetBlock(shardState.Hash)
-						//beaconConsensusRootHash, err := bc.GetBeaconConsensusRootHash(bc.GetBeaconBestState(), beaconBlock.GetHeight()-1)
-						//if err != nil {
-						//	Logger.Error("Cannot get beacon consensus root hash from block ", beaconBlock.GetHeight()-1)
-						//	return nil
-						//}
-						//beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusRootHash, statedb.NewDatabaseAccessWarper(bc.GetBeaconChainDatabase()))
-						//committee := statedb.GetOneShardCommittee(beaconConsensusStateDB, byte(i))
-						//err = bc.ShardChain[byte(i)].ValidateBlockSignatures(blkXShard.(common.BlockInterface), committee)
-						//if err != nil {
-						//	Logger.Error("Validate crossshard block fail", blkXShard.GetHeight(), blkXShard.Hash())
-						//	return nil
-						//}
+						beaconConsensusRootHash, err := bc.GetBeaconConsensusRootHash(bc.GetBeaconBestState(), beaconBlock.GetHeight()-1)
+						if err != nil {
+							Logger.Error("Cannot get beacon consensus root hash from block ", beaconBlock.GetHeight()-1)
+							return nil
+						}
+						beaconConsensusStateDB, err := statedb.NewWithPrefixTrie(beaconConsensusRootHash, statedb.NewDatabaseAccessWarper(bc.GetBeaconChainDatabase()))
+						committee := statedb.GetOneShardCommittee(beaconConsensusStateDB, byte(i))
+						err = bc.ShardChain[byte(i)].ValidateBlockSignatures(blkXShard.(common.BlockInterface), committee)
+						if err != nil {
+							Logger.Error("Validate crossshard block fail", blkXShard.GetHeight(), blkXShard.Hash())
+							return nil
+						}
 						//add to result list
 						res[byte(i)] = append(res[byte(i)], blkXShard)
 						//has block in pool, update request pointer
