@@ -4,7 +4,6 @@ import (
 	"reflect"
 
 	"github.com/incognitochain/incognito-chain/common"
-	"github.com/incognitochain/incognito-chain/incognitokey"
 )
 
 const RUNNING_SYNC = "running_sync"
@@ -33,14 +32,15 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 			break
 		}
 	}
-	epochCommittee := chain.GetCommittee()
-	for i := len(sameCommitteeBlock) - 1; i >= 0; i-- {
-		if err := chain.ValidateBlockSignatures(sameCommitteeBlock[i], epochCommittee); err != nil {
-			sameCommitteeBlock = sameCommitteeBlock[:i]
-		} else {
-			break
-		}
-	}
+
+	//epochCommittee := chain.GetCommittee()
+	//for i := len(sameCommitteeBlock) - 1; i >= 0; i-- {
+	//	if err := chain.ValidateBlockSignatures(sameCommitteeBlock[i], epochCommittee); err != nil {
+	//		sameCommitteeBlock = sameCommitteeBlock[:i]
+	//	} else {
+	//		break
+	//	}
+	//}
 
 	for i, v := range sameCommitteeBlock {
 		if !chain.CheckExistedBlk(v) {
@@ -51,8 +51,8 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 				err = chain.InsertBlk(v, false)
 			}
 			if err != nil {
-				committeeStr, _ := incognitokey.CommitteeKeyListToString(epochCommittee)
-				Logger.Errorf("Insert block %v hash %v got error %v, Committee of epoch %v", v.GetHeight(), v.Hash(), err, committeeStr)
+				//committeeStr, _ := incognitokey.CommitteeKeyListToString(epochCommittee)
+				//Logger.Errorf("Insert block %v hash %v got error %v, Committee of epoch %v", v.GetHeight(), v.Hash(), err, committeeStr)
 				return 0, err
 			}
 		}
