@@ -10,8 +10,6 @@ import (
 
 	"github.com/incognitochain/incognito-chain/peerv2"
 
-	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
-
 	"github.com/incognitochain/incognito-chain/dataaccessobject/rawdbv2"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
@@ -260,7 +258,7 @@ func (synckerManager *SynckerManager) GetCrossShardBlocksForShardProducer(toShar
 				if shardState.Height == nextCrossShardInfo.NextCrossShardHeight {
 					if synckerManager.crossShardPool[int(toShard)].HasHash(shardState.Hash) {
 						//validate crossShardBlock before add to result
-						//blkXShard := synckerManager.crossShardPool[int(toShard)].GetBlock(shardState.Hash)
+						blkXShard := synckerManager.crossShardPool[int(toShard)].GetBlock(shardState.Hash)
 						//beaconConsensusRootHash, err := bc.GetBeaconConsensusRootHash(bc.GetBeaconBestState(), beaconBlock.GetHeight()-1)
 						//if err != nil {
 						//	Logger.Error("Cannot get beacon consensus root hash from block ", beaconBlock.GetHeight()-1)
