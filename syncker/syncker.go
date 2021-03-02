@@ -439,7 +439,9 @@ func (synckerManager *SynckerManager) SyncMissingShardBlock(ctx context.Context,
 		}
 		blk := <-ch
 		if !isNil(blk) {
+			fmt.Println("Syncker request: add block to pool", blk.(common.BlockPoolInterface).GetShardID(), blk.GetHeight(), blk.Hash().String())
 			if blk.(*blockchain.ShardBlock).GetHeight() <= synckerManager.config.Blockchain.ShardChain[sid].GetFinalViewHeight() {
+				fmt.Println("Syncker fail: not add block to pool", synckerManager.config.Blockchain.ShardChain[sid].GetFinalViewHeight())
 				return
 			}
 			synckerManager.shardPool[int(sid)].AddBlock(blk.(common.BlockPoolInterface))
