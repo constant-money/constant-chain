@@ -130,6 +130,15 @@ func (chain *BeaconChain) GetCommittee() []incognitokey.CommitteePublicKey {
 	return chain.multiView.GetBestView().(*BeaconBestState).GetBeaconCommittee()
 }
 
+func (chain *BeaconChain) GetLastCommittee() []incognitokey.CommitteePublicKey {
+	v := chain.multiView.GetViewByHash(*chain.GetBestView().GetPreviousHash())
+	if v == nil {
+		return nil
+	}
+	result := []incognitokey.CommitteePublicKey{}
+	return append(result, v.GetCommittee()...)
+}
+
 func (chain *BeaconChain) GetCommitteeByHeight(h uint64) ([]incognitokey.CommitteePublicKey, error) {
 	bcStateRootHash := chain.GetBestView().(*BeaconBestState).ConsensusStateDBRootHash
 	bcDB := chain.Blockchain.GetBeaconChainDatabase()

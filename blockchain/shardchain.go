@@ -120,6 +120,15 @@ func (chain *ShardChain) GetCommittee() []incognitokey.CommitteePublicKey {
 	return append(result, chain.GetBestState().ShardCommittee...)
 }
 
+func (chain *ShardChain) GetLastCommittee() []incognitokey.CommitteePublicKey {
+	v := chain.multiView.GetViewByHash(*chain.GetBestView().GetPreviousHash())
+	if v == nil {
+		return nil
+	}
+	result := []incognitokey.CommitteePublicKey{}
+	return append(result, v.GetCommittee()...)
+}
+
 func (chain *ShardChain) GetCommitteeByHeight(h uint64) ([]incognitokey.CommitteePublicKey, error) {
 	bcStateRootHash := chain.Blockchain.GetBeaconBestState().ConsensusStateDBRootHash
 	bcDB := chain.Blockchain.GetBeaconChainDatabase()
