@@ -475,7 +475,7 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 	for _, userKey := range e.UserKeySet {
 		pubKey := userKey.GetPublicKey()
 		if common.IndexOfStr(pubKey.GetMiningKeyBase58(e.GetConsensusName()), committeeBLSString) != -1 {
-			Vote, err := CreateVote(&userKey, v.block, e.Chain.GetBestView().GetCommittee())
+			Vote, err := CreateVote(&userKey, v.block, view.GetCommittee())
 			if err != nil {
 				e.Logger.Error(err)
 				return NewConsensusError(UnExpectedError, err)
