@@ -225,8 +225,7 @@ func (blockchain *BlockChain) ValidateConversionResponseTransactions(reqTxs map[
 			return fmt.Errorf("txReq %v not found for txResp %v", txReqStr, txResp.String())
 		}
 
-		tmpRespMeta := txResp.GetMetadata()
-		respMeta, ok := tmpRespMeta.(*metadata.ConvertingResponse)
+		respMeta := txResp.GetMetadata().(*metadata.ConvertingResponse) //already checked type at outer layer
 		if !ok {
 			return fmt.Errorf("cannot parse metadata of txResp %v: %v", txResp.Hash().String(), respMeta)
 		}

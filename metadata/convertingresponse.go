@@ -31,7 +31,7 @@ func NewConvertingResponse(metaRequest *ConvertingRequest, reqID *common.Hash) (
 //	2. Check the mintedToken and convertedToken are the same
 func (iRes ConvertingResponse) ValidateSanityData(chainRetriever ChainRetriever, shardViewRetriever ShardViewRetriever, beaconViewRetriever BeaconViewRetriever, beaconHeight uint64, tx Transaction) (bool, bool, error) {
 	//Step 1
-	if tx.GetType() == common.TxNormalType && iRes.TokenID.String() != common.PRVIDStr {
+	if tx.GetType() == common.TxRewardType && iRes.TokenID.String() != common.PRVIDStr {
 		return false, false, NewMetadataTxError(ConvertingTokenIDError, fmt.Errorf("cannot mint token %v in a PRV transaction", iRes.TokenID.String()))
 	}
 	if tx.GetType() == common.TxCustomTokenPrivacyType && iRes.TokenID.String() == common.PRVIDStr {
@@ -70,12 +70,13 @@ func (iRes ConvertingResponse) VerifyMinerCreatedTxBeforeGettingInBlock(mintData
 }
 
 //ValidateTxResponse validates if a converting response is a reply to the converting request by the following checks:
-//	1. Check the req/resp metadata types are valid
+//	1. Check if the req metadata type is valid
 //	2. Check the burned and minted tokenIDs
 //	3. Check the burned and minted value
 //	4. Check the OTA/TxRandom in request metadata and OTA/TxRandom in minted coin
+// TODO: reviews should double-check if the above validations are sufficient
 func (iRes ConvertingResponse) ValidateTxResponse(txReq, txResp Transaction) (bool, error) {
-	Logger.log.Infof("ValidateTxResponse for req(%v)/resp(%v)\n", txReq.Hash().String(), txResp.Hash().String())
+	Logger.log.Infof("ValidateTxResponse for converting req(%v)/resp(%v)\n", txReq.Hash().String(), txResp.Hash().String())
 	//Step 1
 	if txReq.GetMetadataType() != ConvertingRequestMeta {
 		return false, fmt.Errorf("txReq %v, type %v is not a converting request", txReq.Hash().String(), txReq.GetMetadataType())
@@ -110,10 +111,10 @@ func (iRes ConvertingResponse) ValidateTxResponse(txReq, txResp Transaction) (bo
 	if err != nil {
 		return false, fmt.Errorf("cannot parse OTA params (%v, %v): %v", otaStr, txRandomStr, err)
 	}
-	if bytes.Equal(recvPubKey.ToBytesS(), mintedCoin.GetPublicKey().ToBytesS()) {
+	if !bytes.Equal(recvPubKey.ToBytesS(), mintedCoin.GetPublicKey().ToBytesS()) {
 		return false, fmt.Errorf("recvPubkey in txReq (%v) and public key of minted coin (%v) mismatch", recvPubKey.ToBytesS(), mintedCoin.GetPublicKey().ToBytesS())
 	}
-	if bytes.Equal(txRandom.Bytes(), mintedCoin.GetTxRandom().Bytes()) {
+	if !bytes.Equal(txRandom.Bytes(), mintedCoin.GetTxRandom().Bytes()) {
 		return false, fmt.Errorf("txRandom in txReq (%v) and txRandom of minted coin (%v) mismatch", txRandom, mintedCoin.GetTxRandom())
 	}
 
