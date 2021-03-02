@@ -43,6 +43,7 @@ type Chain interface {
 	ValidateBlockSignatures(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error
 	//ValidateProducerPosition(block common.BlockInterface, committee []incognitokey.CommitteePublicKey) error
 	GetCommittee() []incognitokey.CommitteePublicKey
+	GetLastCommittee() []incognitokey.CommitteePublicKey
 	CurrentHeight() uint64
 	InsertBlk(block common.BlockInterface, shouldValidate bool) error
 	CheckExistedBlk(block common.BlockInterface) bool

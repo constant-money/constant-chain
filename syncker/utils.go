@@ -33,7 +33,7 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 			break
 		}
 	}
-	epochCommittee := chain.GetCommittee()
+	epochCommittee := chain.GetLastCommittee()
 	for i := len(sameCommitteeBlock) - 1; i >= 0; i-- {
 		if err := chain.ValidateBlockSignatures(sameCommitteeBlock[i], epochCommittee); err != nil {
 			sameCommitteeBlock = sameCommitteeBlock[:i]
