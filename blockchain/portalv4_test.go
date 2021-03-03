@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	pCommon "github.com/incognitochain/incognito-chain/portal/common"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -91,8 +92,8 @@ func (s *PortalTestSuiteV4) SetupTest() {
 		},
 		BatchNumBlks:               45,
 		PortalReplacementAddress:   "",
-		MaxFeeForEachStep:          0,
-		TimeSpaceForFeeReplacement: 0,
+		MaxFeeForEachStep:          500,
+		TimeSpaceForFeeReplacement: 10,
 	}
 	s.blockChain = &BlockChain{
 		config: Config{
@@ -581,6 +582,357 @@ func (s *PortalTestSuiteV4) TestUnshieldRequest() {
 	s.Equal(s.currentPortalStateForProcess, s.currentPortalStateForProducer)
 }
 
+/*
+	Feature 7: fee replacement
+*/
+
+const BatchID1 = "batch1"
+const BatchID2 = "batch2"
+const BatchID3 = "batch3"
+
+//const BTCMultiSigAddress = "btcmultisigaddress"
+type OutPut struct {
+	externalAddress string
+	amount          uint64
+}
+
+type TestCaseFeeReplacement struct {
+	custodianIncAddress string
+	batchID             string
+	fee                 uint
+	tokenID             string
+	outputs             []OutPut
+}
+
+type ExpectedResultFeeReplacement struct {
+	processedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch
+	numBeaconInsts            uint
+	statusInsts               []string
+}
+
+func (s *PortalTestSuiteV4) SetupTestFeeReplacement() {
+
+	btcMultiSigAddress := s.blockChain.GetPortalReplacementAddress(0)
+	processUnshield1 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID1,
+		[]string{"txid1", "txid2", "txid3"},
+		map[string][]*statedb.UTXO{
+			pv4Common.PortalBTCIDStr: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "7a4734c33040cc93794722b29c75020a9a8364cb294a525704f33712acbb41aa", 1, 1000000),
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "49491148bd2f7b5432a26472af97724e114f22a74d9d2fb20c619b4f79f19fd9", 0, 2000000),
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "b751ff30df21ad84ce3f509ee3981c348143bd6a5aa30f4256ecb663fab14fd1", 1, 3000000),
+			},
+		},
+		map[uint64]uint{
+			900: 900,
+		},
+	)
+
+	processUnshield2 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID2,
+		[]string{"txid4", "txid5"},
+		map[string][]*statedb.UTXO{
+			pv4Common.PortalBTCIDStr: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "7a4734c33040cc93794722b29c75020a9a8364cb294a525704f33712acbb41aa", 1, 1000000),
+			},
+		},
+		map[uint64]uint{
+			1000: 1000,
+		},
+	)
+
+	processedUnshieldRequests := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{
+		pv4Common.PortalBTCIDStr: {
+			BatchID1: processUnshield1,
+			BatchID2: processUnshield2,
+		},
+	}
+
+	s.currentPortalStateForProducer.ProcessedUnshieldRequests = processedUnshieldRequests
+	s.currentPortalStateForProcess.ProcessedUnshieldRequests = CloneUnshieldBatchRequests(processedUnshieldRequests)
+
+}
+
+func buildFeeReplacementActionsFromTcs(tcs []TestCaseFeeReplacement, shardID byte) []portalV4InstForProducer {
+	insts := []portalV4InstForProducer{}
+
+	for _, tc := range tcs {
+		inst := buildPortalFeeReplacementAction(
+			tc.custodianIncAddress,
+			tc.tokenID,
+			tc.batchID,
+			tc.fee,
+			shardID,
+		)
+		optionalData := make(map[string]interface{})
+		outputs := make(map[string]uint64, 0)
+		for _, v := range tc.outputs {
+			outputs[v.externalAddress] = v.amount
+		}
+		optionalData["outputs"] = outputs
+		insts = append(insts, portalV4InstForProducer{
+			inst:         inst,
+			optionalData: optionalData,
+		})
+	}
+
+	return insts
+}
+
+func buildPortalFeeReplacementAction(
+	incAddressStr string,
+	tokenID string,
+	batchID string,
+	fee uint,
+	shardID byte,
+) []string {
+	data := pv4Meta.PortalReplacementFeeRequest{
+		MetadataBase: basemeta.MetadataBase{
+			Type: basemeta.PortalReplacementFeeRequestMeta,
+		},
+		IncAddressStr: incAddressStr,
+		TokenID:       tokenID,
+		BatchID:       batchID,
+		Fee:           fee,
+	}
+
+	actionContent := pv4Meta.PortalReplacementFeeRequestAction{
+		Meta:    data,
+		TxReqID: common.Hash{},
+		ShardID: shardID,
+	}
+	actionContentBytes, _ := json.Marshal(actionContent)
+	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
+	return []string{strconv.Itoa(basemeta.PortalReplacementFeeRequestMeta), actionContentBase64Str}
+}
+
+func buildExpectedResultFeeReplacement(s *PortalTestSuiteV4) ([]TestCaseFeeReplacement, *ExpectedResultFeeReplacement) {
+
+	testcases := []TestCaseFeeReplacement{
+		// request replace fee successfully
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID1,
+			fee:                 1500,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request replace fee second times
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID1,
+			fee:                 2000,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request replace fee new batch id
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID2,
+			fee:                 1500,
+			outputs: []OutPut{
+				{
+					externalAddress: "18d9DFY9oGVCLUg7mPbqj3ZxePspypsUHo",
+					amount:          200,
+				},
+			},
+		},
+		// request replace fee with fee greater than maximum step
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID1,
+			fee:                 10000,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request replace fee with fee lower than latest fee
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID1,
+			fee:                 1000,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request replace fee with beacon height lower than next acceptable beacon height
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID1,
+			fee:                 2001,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request replace fee with non exist batch id
+		{
+			custodianIncAddress: CUS_INC_ADDRESS_1,
+			tokenID:             pv4Common.PortalBTCIDStr,
+			batchID:             BatchID3,
+			fee:                 1500,
+			outputs: []OutPut{
+				{
+					externalAddress: "18d9DFY9oGVCLUg7mPbqj3ZxePspypsUHo",
+					amount:          100,
+				},
+			},
+		},
+	}
+
+	btcMultiSigAddress := s.blockChain.GetPortalReplacementAddress(0)
+	processUnshield1 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID1,
+		[]string{"txid1", "txid2", "txid3"},
+		map[string][]*statedb.UTXO{
+			pv4Common.PortalBTCIDStr: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "7a4734c33040cc93794722b29c75020a9a8364cb294a525704f33712acbb41aa", 1, 1000000),
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "49491148bd2f7b5432a26472af97724e114f22a74d9d2fb20c619b4f79f19fd9", 0, 2000000),
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "b751ff30df21ad84ce3f509ee3981c348143bd6a5aa30f4256ecb663fab14fd1", 1, 3000000),
+			},
+		},
+		map[uint64]uint{
+			900: 900,
+		},
+	)
+
+	processUnshield2 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID2,
+		[]string{"txid4", "txid5"},
+		map[string][]*statedb.UTXO{
+			pv4Common.PortalBTCIDStr: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "163a6cc24df4efbd5c997aa623d4e319f1b7671be83a86bb0fa27bc701ae4a76", 1, 1000000),
+			},
+		},
+		map[uint64]uint{
+			1000: 1000,
+		},
+	)
+
+	processedUnshieldRequests := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{
+		pv4Common.PortalBTCIDStr: {
+			BatchID1: processUnshield1,
+			BatchID2: processUnshield2,
+		},
+	}
+
+	// build expected results
+	expectedRes := &ExpectedResultFeeReplacement{
+		processedUnshieldRequests: processedUnshieldRequests,
+		numBeaconInsts:            3,
+		statusInsts: []string{
+			pCommon.PortalCusUnlockOverRateCollateralsAcceptedChainStatus,
+			pCommon.PortalCusUnlockOverRateCollateralsAcceptedChainStatus,
+			pCommon.PortalCusUnlockOverRateCollateralsAcceptedChainStatus,
+		},
+	}
+
+	return testcases, expectedRes
+}
+
+func (s *PortalTestSuiteV4) TestFeeReplacement() {
+	fmt.Println("Running TestUnlockOverRateCollaterals - beacon height 1501 ...")
+	bc := s.blockChain
+	beaconHeight := uint64(1501)
+	shardHeights := map[byte]uint64{
+		0: uint64(1501),
+	}
+	shardID := byte(0)
+	pm := portalprocessv4.NewPortalV4Manager()
+
+	s.SetupTestFeeReplacement()
+
+	unshieldBatchPool := s.currentPortalStateForProducer.ProcessedUnshieldRequests
+	for key, unshieldBatch := range unshieldBatchPool {
+		fmt.Printf("cusKey %v - custodian address: %v\n", key, unshieldBatch)
+	}
+
+	testcases, expectedResult := buildExpectedResultFeeReplacement(s)
+
+	// build actions from testcases
+	instsForProducer := buildFeeReplacementActionsFromTcs(testcases, shardID)
+
+	newInsts, err := producerPortalInstructionsV4(
+		bc, beaconHeight-1, shardHeights, instsForProducer, &s.currentPortalStateForProducer, s.portalParams, shardID, pm)
+	s.Equal(nil, err)
+
+	// process new instructions
+	err = processPortalInstructionsV4(
+		bc, beaconHeight-1, newInsts, s.sdb, &s.currentPortalStateForProcess, s.portalParams, pm)
+
+	// check results
+	s.Equal(expectedResult.numBeaconInsts, uint(len(newInsts)))
+	s.Equal(nil, err)
+
+	for i, inst := range newInsts {
+		s.Equal(expectedResult.statusInsts[0], inst[2], "Instruction index %v", i)
+	}
+
+	s.Equal(expectedResult.processedUnshieldRequests, s.currentPortalStateForProducer.ProcessedUnshieldRequests)
+
+	s.Equal(s.currentPortalStateForProcess, s.currentPortalStateForProducer)
+}
+
 func TestPortalSuiteV4(t *testing.T) {
 	suite.Run(t, new(PortalTestSuiteV4))
+}
+
+// util functions
+func CloneUnshieldBatchRequests(processedUnshieldRequestBatch map[string]map[string]*statedb.ProcessedUnshieldRequestBatch) map[string]map[string]*statedb.ProcessedUnshieldRequestBatch {
+	newReqs := make(map[string]map[string]*statedb.ProcessedUnshieldRequestBatch, len(processedUnshieldRequestBatch))
+	for key, batch := range processedUnshieldRequestBatch {
+		newBatch := make(map[string]*statedb.ProcessedUnshieldRequestBatch, len(batch))
+		for key2, batch2 := range batch {
+			newBatch[key2] = statedb.NewProcessedUnshieldRequestBatchWithValue(
+				batch2.GetBatchID(),
+				batch2.GetUnshieldRequests(),
+				batch2.GetUTXOs(),
+				batch2.GetExternalFees(),
+			)
+		}
+		newReqs[key] = newBatch
+	}
+	return newReqs
 }
