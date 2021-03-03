@@ -56,22 +56,29 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 
 	//validate the last block
 	epochCommittee := chain.GetCommittee()
-
+	validBlockForInsert := sameCommitteeBlock[:]
 	for i := len(sameCommitteeBlock) - 1; i >= 0; i-- {
 		if err := chain.ValidateBlockSignatures(sameCommitteeBlock[i], epochCommittee); err != nil {
-			sameCommitteeBlock = sameCommitteeBlock[:i]
+			validBlockForInsert = sameCommitteeBlock[:i]
 		} else {
 			break
 		}
 	}
 
-	for i, v := range sameCommitteeBlock {
+	batchingValidate := true
+	//if no valid block, this could be a fork chain, try to insert all with full validation
+	if len(validBlockForInsert) == 0 {
+		validBlockForInsert = sameCommitteeBlock[:]
+		batchingValidate = false
+	}
+
+	for i, v := range validBlockForInsert {
 		if !chain.CheckExistedBlk(v) {
 			var err error
 			if i == 0 {
 				err = chain.InsertBlk(v, true)
 			} else {
-				err = chain.InsertBlk(v, false)
+				err = chain.InsertBlk(v, batchingValidate == false)
 			}
 			if err != nil {
 				//committeeStr, _ := incognitokey.CommitteeKeyListToString(epochCommittee)
@@ -79,10 +86,8 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 				return 0, err
 			}
 		}
-
 	}
-
-	return len(sameCommitteeBlock), nil
+	return len(validBlockForInsert), nil
 }
 
 //final block
