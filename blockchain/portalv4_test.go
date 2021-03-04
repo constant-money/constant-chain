@@ -905,6 +905,273 @@ func (s *PortalTestSuiteV4) TestFeeReplacement() {
 	s.Equal(s.currentPortalStateForProcess, s.currentPortalStateForProducer)
 }
 
+/*
+	Feature 8: submit confirmed external transaction
+*/
+
+const confirmedTxProof1 = "eyJNZXJrbGVQcm9vZnMiOlt7IlByb29mSGFzaCI6WzEwNCw2MywyMzUsMTMzLDE5NCw4MiwyMDEsMTU2LDE3Miw4MiwyLDc5LDc2LDIzLDUwLDIyNCwxMDgsMTU3LDc5LDEyOCwxNzcsMTkzLDE3Myw1MSw2LDAsMTE1LDIzNiw1NSwxMDAsMTYwLDY0XSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOlsyMTMsMTMzLDExLDc5LDIyNSwxMTcsMTgsMjQ3LDEyMSwxOTcsNjUsMTk4LDYxLDYyLDE4NSwyMTEsMTIsMjA5LDEzNCw2NSwyMzYsOTUsMTA0LDEyNywxMiwyMTEsMjE0LDMyLDE5Miw0MSwxNDcsMTcxXSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOlsxNjcsMjIzLDEyMCwyMjAsMTM1LDIyMCwyMzMsODgsMjQsMjQyLDQwLDEsMTU2LDIzMSwzNywyMTAsMTAzLDE3OCw3NCwyNTAsOTgsMTU1LDY3LDIzNyw5NSwxNjksMjIzLDE2OSw5LDE4OSw3MiwxNjBdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzcxLDEzLDc4LDU3LDU1LDEzOCwxNzIsMTk5LDczLDExMyw2OSwxMyw1OCwxMTksMjU1LDI0LDIyLDQsMjMyLDIyMyw0NiwxNzgsMTkyLDE2MiwxNzMsMjE3LDE5MCwxOTUsMTk0LDIxNSwxNTAsMzVdLCJJc0xlZnQiOnRydWV9LHsiUHJvb2ZIYXNoIjpbMTIsMzUsMTgyLDE5NywxOTYsMTg2LDE0MywxNTEsNDMsMTAzLDI1NSwxNiwxNjEsMjQwLDEzOSwxNjgsMTcxLDk4LDg2LDEwNyw5NywyMTIsOTAsMTY1LDE0OSw2MiwzMCw2NSw3NSwyMjgsNjcsMTgxXSwiSXNMZWZ0Ijp0cnVlfSx7IlByb29mSGFzaCI6WzQ3LDE2NCw2MCw3LDgwLDE0LDc0LDE2NSwxOTUsMTg2LDExNiw2NCwxMTgsMTAyLDE5NSwxLDEzMSw0NCw1OSwxNzEsMjAxLDE1Nyw3Niw1Myw4Miw5LDEzOCwxNzksOTEsNiw0LDQ0XSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOlsyMzUsMjQxLDE2OCwzNCwxODMsMTc4LDQxLDI1MywxMDIsMTM2LDE4Niw4NywxODgsMjM0LDM4LDE1OCwxMTEsMjI1LDEyMiwyMzAsMjI5LDQ4LDE4MiwxMDYsMjcsNjUsMjE0LDQyLDE1Myw0MiwzMCw5MF0sIklzTGVmdCI6ZmFsc2V9LHsiUHJvb2ZIYXNoIjpbNiwxODQsMjgsMjQ4LDE3MiwzNCwxNDMsMjUxLDE3MCwxMywyMTcsNzksMjI3LDEwNiwyMTIsNTUsOTEsMjAzLDEwMyw5MCw5MCwyMiwyNDYsNjUsNDgsMjEzLDI1NSwxOTksMzgsMTEzLDE5MSwyMV0sIklzTGVmdCI6ZmFsc2V9LHsiUHJvb2ZIYXNoIjpbMjgsMTk0LDE0MiwzMyw0Myw4NywyMSwyMzQsMTksMTkxLDE2MywyMTIsMjE3LDI1LDQ5LDE5OSwyMDMsMTcyLDI1LDcsMTYxLDEzNiwxNjMsMzMsNzksMTg3LDQ0LDcxLDEwMSwyOSwxODUsMjUzXSwiSXNMZWZ0IjpmYWxzZX1dLCJCVENUeCI6eyJWZXJzaW9uIjoxLCJUeEluIjpbeyJQcmV2aW91c091dFBvaW50Ijp7Ikhhc2giOlsxMDgsNTcsNjAsMTA0LDE0LDE0Niw4NywxNTcsNTgsNDUsMjEzLDE5NiwyMzAsNzgsMjQzLDE2NiwyMTgsMTQwLDIxLDIxMiwxNDUsMjQzLDk3LDE3NSwxMDYsMjA1LDE4OSwxMDMsNTEsMTgsNTksMTA2XSwiSW5kZXgiOjJ9LCJTaWduYXR1cmVTY3JpcHQiOiJTREJGQWlFQXM2Y0lidmJBQ0VNNXRMSFdGMmpVMHZtaVJkaE0rR2FuajhxdTVXK3lvM2NDSUhhcjNKNU85cVRGeWZFVGNNZEFSNmFhcTZNQjNLK29jcnNxR3UxSEI5T29BU0VEenlBVFQxWkk0dmJ4ZDZaVkt5VzZsK1JiRklWT1R4TXFTdkQrZmFrL3hQdz0iLCJXaXRuZXNzIjpudWxsLCJTZXF1ZW5jZSI6NDI5NDk2NzI5NX1dLCJUeE91dCI6W3siVmFsdWUiOjAsIlBrU2NyaXB0IjoiYWl4M1JFMTZlV1o0ZGxkU1kyOXdPR2xqY0hsd1NXMDViMUpUTWtaTWRYRkJZVkZ1TjJkUFIweHlTVTlaUFE9PSJ9LHsiVmFsdWUiOjQwMCwiUGtTY3JpcHQiOiJxUlFuSjZkdjh2bzVYY1VsWktqcktxdU0vbEhJZG9jPSJ9LHsiVmFsdWUiOjIyMTk3MiwiUGtTY3JpcHQiOiJkcWtVZ3Z5NmxRaStFaVF5OTd1UTJsOTBBVUNtVzRpSXJBPT0ifV0sIkxvY2tUaW1lIjowfSwiQmxvY2tIYXNoIjpbMTcyLDIzNiwxNjgsMTA1LDEzNCwzMywxMzUsMTMyLDEyLDIyNSwxMjMsMjEyLDM5LDI0NSwxNSwxOTMsMTQ2LDEyMywxMDUsMTEyLDM2LDE4MCwxODIsMTA1LDQyLDIwNywxMTUsMjE4LDAsMCwwLDBdfQ=="
+const confirmedTxProof2 = "eyJNZXJrbGVQcm9vZnMiOlt7IlByb29mSGFzaCI6WzEwOCw1Nyw2MCwxMDQsMTQsMTQ2LDg3LDE1Nyw1OCw0NSwyMTMsMTk2LDIzMCw3OCwyNDMsMTY2LDIxOCwxNDAsMjEsMjEyLDE0NSwyNDMsOTcsMTc1LDEwNiwyMDUsMTg5LDEwMyw1MSwxOCw1OSwxMDZdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzQ4LDE4MiwxMTYsMjUwLDM5LDEwOCwxOTUsMTQ0LDIxLDc5LDIyMiw3NCwxOTcsMTYxLDEwNywxNjAsMjEsMzAsMjA2LDI0OSwxNzksMTExLDIyMywzMiw0NywxMzksMTUzLDI4LDE5MiwyMjAsMTQ2LDI1XSwiSXNMZWZ0Ijp0cnVlfSx7IlByb29mSGFzaCI6WzEzOCw1LDM5LDc0LDI0LDc1LDgxLDYwLDE2Nyw0NiwxODYsMTA2LDE1MCw0NCwyMDAsMjEsMjM4LDQxLDIzNCwzOSwyMjUsOTIsMTEsMjM0LDE0MCwxMDcsMjQ4LDI0NCwxNDQsMTE2LDIxOSwxMzZdLCJJc0xlZnQiOnRydWV9LHsiUHJvb2ZIYXNoIjpbMTgyLDEwNiw5MSwxNjEsMTQ1LDEzMywyNDYsNzUsMjA5LDc0LDE4MSwxODIsOTIsMjU0LDQ5LDE5Myw1MSwyMzMsMTU3LDE4NSw1NCw3Myw1MCwyNDQsMTA3LDMyLDMxLDE4OSw0Myw0LDExMiwxMjhdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzEyLDM1LDE4MiwxOTcsMTk2LDE4NiwxNDMsMTUxLDQzLDEwMywyNTUsMTYsMTYxLDI0MCwxMzksMTY4LDE3MSw5OCw4NiwxMDcsOTcsMjEyLDkwLDE2NSwxNDksNjIsMzAsNjUsNzUsMjI4LDY3LDE4MV0sIklzTGVmdCI6dHJ1ZX0seyJQcm9vZkhhc2giOls0NywxNjQsNjAsNyw4MCwxNCw3NCwxNjUsMTk1LDE4NiwxMTYsNjQsMTE4LDEwMiwxOTUsMSwxMzEsNDQsNTksMTcxLDIwMSwxNTcsNzYsNTMsODIsOSwxMzgsMTc5LDkxLDYsNCw0NF0sIklzTGVmdCI6ZmFsc2V9LHsiUHJvb2ZIYXNoIjpbMjM1LDI0MSwxNjgsMzQsMTgzLDE3OCw0MSwyNTMsMTAyLDEzNiwxODYsODcsMTg4LDIzNCwzOCwxNTgsMTExLDIyNSwxMjIsMjMwLDIyOSw0OCwxODIsMTA2LDI3LDY1LDIxNCw0MiwxNTMsNDIsMzAsOTBdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzYsMTg0LDI4LDI0OCwxNzIsMzQsMTQzLDI1MSwxNzAsMTMsMjE3LDc5LDIyNywxMDYsMjEyLDU1LDkxLDIwMywxMDMsOTAsOTAsMjIsMjQ2LDY1LDQ4LDIxMywyNTUsMTk5LDM4LDExMywxOTEsMjFdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzI4LDE5NCwxNDIsMzMsNDMsODcsMjEsMjM0LDE5LDE5MSwxNjMsMjEyLDIxNywyNSw0OSwxOTksMjAzLDE3MiwyNSw3LDE2MSwxMzYsMTYzLDMzLDc5LDE4Nyw0NCw3MSwxMDEsMjksMTg1LDI1M10sIklzTGVmdCI6ZmFsc2V9XSwiQlRDVHgiOnsiVmVyc2lvbiI6MSwiVHhJbiI6W3siUHJldmlvdXNPdXRQb2ludCI6eyJIYXNoIjpbMTY0LDEwNywxNTYsMTE4LDEzMSwxNTksNjcsNTIsMjA1LDEzMSw2MywyNDEsNTgsNTMsNTYsMzEsMjE2LDQ2LDEyOSwxMzcsMjM0LDM3LDI1LDI1NSw2OCwxNDksNTMsMjAxLDkxLDE5MiwxOTEsMTU5XSwiSW5kZXgiOjJ9LCJTaWduYXR1cmVTY3JpcHQiOiJTREJGQWlFQXJZQkpDV1VDUWhTSFZuc3k2UWJkNXlhK0k1bWxZc01GaU1pck8wTkdiRGdDSUdEOW5DRFZVUHBvQkNDYVY4YWZPc0lBOHU1aU43Q240M2NvT0krd0tYNGpBU0VEenlBVFQxWkk0dmJ4ZDZaVkt5VzZsK1JiRklWT1R4TXFTdkQrZmFrL3hQdz0iLCJXaXRuZXNzIjpudWxsLCJTZXF1ZW5jZSI6NDI5NDk2NzI5NX1dLCJUeE91dCI6W3siVmFsdWUiOjAsIlBrU2NyaXB0IjoiYWl4U1RVcFBiQ3RvTTA1RmJsSTBOblJoTkZKRWRDdDBUSE5tV0hGS2JqazBhRVpJZUM5a1RuWjJTVkJSUFE9PSJ9LHsiVmFsdWUiOjMwMCwiUGtTY3JpcHQiOiJxUlFuSjZkdjh2bzVYY1VsWktqcktxdU0vbEhJZG9jPSJ9LHsiVmFsdWUiOjIyNjk3MiwiUGtTY3JpcHQiOiJkcWtVZ3Z5NmxRaStFaVF5OTd1UTJsOTBBVUNtVzRpSXJBPT0ifV0sIkxvY2tUaW1lIjowfSwiQmxvY2tIYXNoIjpbMTcyLDIzNiwxNjgsMTA1LDEzNCwzMywxMzUsMTMyLDEyLDIyNSwxMjMsMjEyLDM5LDI0NSwxNSwxOTMsMTQ2LDEyMywxMDUsMTEyLDM2LDE4MCwxODIsMTA1LDQyLDIwNywxMTUsMjE4LDAsMCwwLDBdfQ=="
+const confirmedTxProof3 = "eyJNZXJrbGVQcm9vZnMiOlt7IlByb29mSGFzaCI6WzE0MywyMTEsMjI2LDExNiwyNTMsNjksMjQ2LDIyNCwxMTAsMTg0LDMwLDE1Nyw4NCwyMDcsMTQyLDI1MywxMjIsNTAsMTk0LDgsMjAzLDExOSw3NSwxODMsMjUsNjUsMTU1LDIxMywxODYsMTg0LDEyNSwxMF0sIklzTGVmdCI6dHJ1ZX0seyJQcm9vZkhhc2giOls0OCwxODIsMTE2LDI1MCwzOSwxMDgsMTk1LDE0NCwyMSw3OSwyMjIsNzQsMTk3LDE2MSwxMDcsMTYwLDIxLDMwLDIwNiwyNDksMTc5LDExMSwyMjMsMzIsNDcsMTM5LDE1MywyOCwxOTIsMjIwLDE0NiwyNV0sIklzTGVmdCI6dHJ1ZX0seyJQcm9vZkhhc2giOlsxMzgsNSwzOSw3NCwyNCw3NSw4MSw2MCwxNjcsNDYsMTg2LDEwNiwxNTAsNDQsMjAwLDIxLDIzOCw0MSwyMzQsMzksMjI1LDkyLDExLDIzNCwxNDAsMTA3LDI0OCwyNDQsMTQ0LDExNiwyMTksMTM2XSwiSXNMZWZ0Ijp0cnVlfSx7IlByb29mSGFzaCI6WzE4MiwxMDYsOTEsMTYxLDE0NSwxMzMsMjQ2LDc1LDIwOSw3NCwxODEsMTgyLDkyLDI1NCw0OSwxOTMsNTEsMjMzLDE1NywxODUsNTQsNzMsNTAsMjQ0LDEwNywzMiwzMSwxODksNDMsNCwxMTIsMTI4XSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOlsxMiwzNSwxODIsMTk3LDE5NiwxODYsMTQzLDE1MSw0MywxMDMsMjU1LDE2LDE2MSwyNDAsMTM5LDE2OCwxNzEsOTgsODYsMTA3LDk3LDIxMiw5MCwxNjUsMTQ5LDYyLDMwLDY1LDc1LDIyOCw2NywxODFdLCJJc0xlZnQiOnRydWV9LHsiUHJvb2ZIYXNoIjpbNDcsMTY0LDYwLDcsODAsMTQsNzQsMTY1LDE5NSwxODYsMTE2LDY0LDExOCwxMDIsMTk1LDEsMTMxLDQ0LDU5LDE3MSwyMDEsMTU3LDc2LDUzLDgyLDksMTM4LDE3OSw5MSw2LDQsNDRdLCJJc0xlZnQiOmZhbHNlfSx7IlByb29mSGFzaCI6WzIzNSwyNDEsMTY4LDM0LDE4MywxNzgsNDEsMjUzLDEwMiwxMzYsMTg2LDg3LDE4OCwyMzQsMzgsMTU4LDExMSwyMjUsMTIyLDIzMCwyMjksNDgsMTgyLDEwNiwyNyw2NSwyMTQsNDIsMTUzLDQyLDMwLDkwXSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOls2LDE4NCwyOCwyNDgsMTcyLDM0LDE0MywyNTEsMTcwLDEzLDIxNyw3OSwyMjcsMTA2LDIxMiw1NSw5MSwyMDMsMTAzLDkwLDkwLDIyLDI0Niw2NSw0OCwyMTMsMjU1LDE5OSwzOCwxMTMsMTkxLDIxXSwiSXNMZWZ0IjpmYWxzZX0seyJQcm9vZkhhc2giOlsyOCwxOTQsMTQyLDMzLDQzLDg3LDIxLDIzNCwxOSwxOTEsMTYzLDIxMiwyMTcsMjUsNDksMTk5LDIwMywxNzIsMjUsNywxNjEsMTM2LDE2MywzMyw3OSwxODcsNDQsNzEsMTAxLDI5LDE4NSwyNTNdLCJJc0xlZnQiOmZhbHNlfV0sIkJUQ1R4Ijp7IlZlcnNpb24iOjEsIlR4SW4iOlt7IlByZXZpb3VzT3V0UG9pbnQiOnsiSGFzaCI6WzE0MywyMTEsMjI2LDExNiwyNTMsNjksMjQ2LDIyNCwxMTAsMTg0LDMwLDE1Nyw4NCwyMDcsMTQyLDI1MywxMjIsNTAsMTk0LDgsMjAzLDExOSw3NSwxODMsMjUsNjUsMTU1LDIxMywxODYsMTg0LDEyNSwxMF0sIkluZGV4IjoyfSwiU2lnbmF0dXJlU2NyaXB0IjoiU0RCRkFpRUE5WS9XeDZvMDh4QjAzZkdya3EyVGQ5NXV5akxiK0ZTRk13cHpWcHdkZTFNQ0lGcWJzdWlWeis5Wnhka05YWmZXQ1p5WHZMdUJrK3Y1KzZzYk1kbGUwSVkvQVNFRHp5QVRUMVpJNHZieGQ2WlZLeVc2bCtSYkZJVk9UeE1xU3ZEK2Zhay94UHc9IiwiV2l0bmVzcyI6bnVsbCwiU2VxdWVuY2UiOjQyOTQ5NjcyOTV9XSwiVHhPdXQiOlt7IlZhbHVlIjowLCJQa1NjcmlwdCI6ImFpeFNUVXBQYkN0b00wNUZibEkwTm5SaE5GSkVkQ3QwVEhObVdIRktiamswYUVaSWVDOWtUbloyU1ZCUlBRPT0ifSx7IlZhbHVlIjo2MDAsIlBrU2NyaXB0IjoicVJRbko2ZHY4dm81WGNVbFpLanJLcXVNL2xISWRvYz0ifSx7IlZhbHVlIjoyMjQzNzIsIlBrU2NyaXB0IjoiZHFrVWd2eTZsUWkrRWlReTk3dVEybDkwQVVDbVc0aUlyQT09In1dLCJMb2NrVGltZSI6MH0sIkJsb2NrSGFzaCI6WzE3MiwyMzYsMTY4LDEwNSwxMzQsMzMsMTM1LDEzMiwxMiwyMjUsMTIzLDIxMiwzOSwyNDUsMTUsMTkzLDE0NiwxMjMsMTA1LDExMiwzNiwxODAsMTgyLDEwNSw0MiwyMDcsMTE1LDIxOCwwLDAsMCwwXX0="
+
+type TestCaseSubmitConfirmedTx struct {
+	confirmedTxProof string
+	batchID          string
+	tokenID          string
+	outputs          []OutPut
+}
+
+type ExpectedResultSubmitConfirmedTx struct {
+	utxos                     map[string]map[string]*statedb.UTXO
+	processedUnshieldRequests map[string]map[string]*statedb.ProcessedUnshieldRequestBatch
+	numBeaconInsts            uint
+	statusInsts               []string
+}
+
+func (s *PortalTestSuiteV4) SetupTestSubmitConfirmedTx() {
+
+	btcMultiSigAddress := s.portalParams.MultiSigAddresses[pv4Common.PortalBTCIDStr]
+	utxos := map[string]map[string]*statedb.UTXO{
+		pv4Common.PortalBTCIDStr: {
+			statedb.GenerateUTXOObjectKey(pv4Common.PortalBTCIDStr, btcMultiSigAddress, "7a4734c33040cc93794722b29c75020a9a8364cb294a525704f33712acbb41aa", 0).String(): statedb.NewUTXOWithValue(btcMultiSigAddress, "7a4734c33040cc93794722b29c75020a9a8364cb294a525704f33712acbb41aa", 1, 100000),
+		},
+	}
+
+	processUnshield1 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID1,
+		[]string{"txid1", "txid2", "txid3"},
+		map[string][]*statedb.UTXO{
+			btcMultiSigAddress: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "6a3b123367bdcd6aaf61f391d4158cdaa6f34ee6c4d52d3a9d57920e683c396c", 2, 224372),
+			},
+		},
+		map[uint64]uint{
+			900: 900,
+		},
+	)
+
+	processUnshield2 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID2,
+		[]string{"txid4", "txid5"},
+		map[string][]*statedb.UTXO{
+			btcMultiSigAddress: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "163a6cc24df4efbd5c997aa623d4e319f1b7671be83a86bb0fa27bc701ae4a76", 1, 1000000),
+			},
+		},
+		map[uint64]uint{
+			1000: 1000,
+		},
+	)
+
+	processedUnshieldRequests := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{
+		pv4Common.PortalBTCIDStr: {
+			keyBatchShield1: processUnshield1,
+			keyBatchShield2: processUnshield2,
+		},
+	}
+
+	s.currentPortalStateForProducer.ProcessedUnshieldRequests = processedUnshieldRequests
+	s.currentPortalStateForProducer.UTXOs = utxos
+	s.currentPortalStateForProcess.ProcessedUnshieldRequests = CloneUnshieldBatchRequests(processedUnshieldRequests)
+	s.currentPortalStateForProcess.UTXOs = CloneUTXOs(utxos)
+}
+
+func buildSubmitConfirmedTxActionsFromTcs(tcs []TestCaseSubmitConfirmedTx, shardID byte) []portalV4InstForProducer {
+	insts := []portalV4InstForProducer{}
+
+	for _, tc := range tcs {
+		inst := buildPortalSubmitConfirmedTxAction(
+			tc.confirmedTxProof,
+			tc.tokenID,
+			tc.batchID,
+			shardID,
+		)
+		optionalData := make(map[string]interface{})
+		outputs := make(map[string]uint64, 0)
+		for _, v := range tc.outputs {
+			outputs[v.externalAddress] = v.amount
+		}
+		insts = append(insts, portalV4InstForProducer{
+			inst:         inst,
+			optionalData: optionalData,
+		})
+	}
+
+	return insts
+}
+
+func buildPortalSubmitConfirmedTxAction(
+	unshieldProof string,
+	tokenID string,
+	batchID string,
+	shardID byte,
+) []string {
+	data := pv4Meta.PortalSubmitConfirmedTxRequest{
+		MetadataBase: basemeta.MetadataBase{
+			Type: basemeta.PortalSubmitConfirmedTxMeta,
+		},
+		UnshieldProof: unshieldProof,
+		TokenID:       tokenID,
+		BatchID:       batchID,
+	}
+
+	actionContent := pv4Meta.PortalSubmitConfirmedTxAction{
+		Meta:    data,
+		TxReqID: common.Hash{},
+		ShardID: shardID,
+	}
+	actionContentBytes, _ := json.Marshal(actionContent)
+	actionContentBase64Str := base64.StdEncoding.EncodeToString(actionContentBytes)
+	return []string{strconv.Itoa(basemeta.PortalSubmitConfirmedTxMeta), actionContentBase64Str}
+}
+
+func buildExpectedResultSubmitConfirmedTx(s *PortalTestSuiteV4) ([]TestCaseSubmitConfirmedTx, *ExpectedResultSubmitConfirmedTx) {
+
+	testcases := []TestCaseSubmitConfirmedTx{
+		// request submit external confirmed tx
+		{
+			batchID:          BatchID1,
+			confirmedTxProof: confirmedTxProof1,
+			tokenID:          pv4Common.PortalBTCIDStr,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// submit existed proof
+		{
+			batchID:          BatchID1,
+			confirmedTxProof: confirmedTxProof1,
+			tokenID:          pv4Common.PortalBTCIDStr,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request submit proof with non-exist batchID
+		{
+			batchID:          BatchID3,
+			confirmedTxProof: confirmedTxProof2,
+			tokenID:          pv4Common.PortalBTCIDStr,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+		// request submit wrong proof
+		{
+			batchID:          BatchID2,
+			confirmedTxProof: confirmedTxProof3,
+			tokenID:          pv4Common.PortalBTCIDStr,
+			outputs: []OutPut{
+				{
+					externalAddress: "bc1qqyxfxeh6k5kt29e30pzhxs7kd59fvr76u95qat",
+					amount:          100,
+				},
+				{
+					externalAddress: "bc1qj9dgez2sstg8d06ehjgw6wf4hsjxr3aake0dzs",
+					amount:          100,
+				},
+			},
+		},
+	}
+
+	btcMultiSigAddress := s.portalParams.MultiSigAddresses[pv4Common.PortalBTCIDStr]
+	processUnshield2 := statedb.NewProcessedUnshieldRequestBatchWithValue(
+		BatchID2,
+		[]string{"txid4", "txid5"},
+		map[string][]*statedb.UTXO{
+			btcMultiSigAddress: {
+				statedb.NewUTXOWithValue(btcMultiSigAddress, "163a6cc24df4efbd5c997aa623d4e319f1b7671be83a86bb0fa27bc701ae4a76", 1, 1000000),
+			},
+		},
+		map[uint64]uint{
+			1000: 1000,
+			1500: 1500,
+		},
+	)
+
+	processedUnshieldRequests := map[string]map[string]*statedb.ProcessedUnshieldRequestBatch{
+		pv4Common.PortalBTCIDStr: {
+			keyBatchShield2: processUnshield2,
+		},
+	}
+
+	// build expected results
+	expectedRes := &ExpectedResultSubmitConfirmedTx{
+		processedUnshieldRequests: processedUnshieldRequests,
+		numBeaconInsts:            4,
+		statusInsts: []string{
+			pCommon.PortalRequestRejectedChainStatus,
+			pCommon.PortalRequestRejectedChainStatus,
+			pCommon.PortalRequestAcceptedChainStatus,
+			pCommon.PortalRequestRejectedChainStatus,
+		},
+	}
+
+	return testcases, expectedRes
+}
+
+func (s *PortalTestSuiteV4) TestSubmitConfirmedTx() {
+	fmt.Println("Running TestUnlockOverRateCollaterals - beacon height 1501 ...")
+	bc := s.blockChain
+	beaconHeight := uint64(1501)
+	shardHeights := map[byte]uint64{
+		0: uint64(1501),
+	}
+	shardID := byte(0)
+	pm := portalprocessv4.NewPortalV4Manager()
+
+	s.SetupTestSubmitConfirmedTx()
+
+	unshieldBatchPool := s.currentPortalStateForProducer.ProcessedUnshieldRequests
+	for key, unshieldBatch := range unshieldBatchPool {
+		fmt.Printf("cusKey %v - custodian address: %v\n", key, unshieldBatch)
+	}
+
+	testcases, expectedResult := buildExpectedResultSubmitConfirmedTx(s)
+
+	// build actions from testcases
+	instsForProducer := buildSubmitConfirmedTxActionsFromTcs(testcases, shardID)
+
+	newInsts, err := producerPortalInstructionsV4(
+		bc, beaconHeight-1, shardHeights, instsForProducer, &s.currentPortalStateForProducer, s.portalParams, shardID, pm)
+	s.Equal(nil, err)
+
+	// process new instructions
+	err = processPortalInstructionsV4(
+		bc, beaconHeight-1, newInsts, s.sdb, &s.currentPortalStateForProcess, s.portalParams, pm)
+
+	// check results
+	s.Equal(expectedResult.numBeaconInsts, uint(len(newInsts)))
+	s.Equal(nil, err)
+
+	for i, inst := range newInsts {
+		s.Equal(expectedResult.statusInsts[i], inst[2], "Instruction index %v", i)
+	}
+
+	s.Equal(expectedResult.processedUnshieldRequests, s.currentPortalStateForProducer.ProcessedUnshieldRequests)
+
+	s.Equal(s.currentPortalStateForProcess, s.currentPortalStateForProducer)
+}
+
 func TestPortalSuiteV4(t *testing.T) {
 	suite.Run(t, new(PortalTestSuiteV4))
 }
@@ -920,6 +1187,23 @@ func CloneUnshieldBatchRequests(processedUnshieldRequestBatch map[string]map[str
 				batch2.GetUnshieldRequests(),
 				batch2.GetUTXOs(),
 				batch2.GetExternalFees(),
+			)
+		}
+		newReqs[key] = newBatch
+	}
+	return newReqs
+}
+
+func CloneUTXOs(utxos map[string]map[string]*statedb.UTXO) map[string]map[string]*statedb.UTXO {
+	newReqs := make(map[string]map[string]*statedb.UTXO, len(utxos))
+	for key, batch := range utxos {
+		newBatch := make(map[string]*statedb.UTXO, len(batch))
+		for key2, batch2 := range batch {
+			newBatch[key2] = statedb.NewUTXOWithValue(
+				batch2.GetWalletAddress(),
+				batch2.GetTxHash(),
+				batch2.GetOutputIndex(),
+				batch2.GetOutputAmount(),
 			)
 		}
 		newReqs[key] = newBatch
