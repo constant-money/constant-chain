@@ -412,6 +412,10 @@ func (p *portalReplacementFeeRequestProcessor) BuildNewInsts(
 
 	portalTokenProcessor := portalParams.PortalTokens[tokenIDStr]
 	multisigAddress := portalParams.MultiSigAddresses[tokenIDStr]
+	if unshieldBatch.GetUTXOs() == nil || unshieldBatch.GetUTXOs()[multisigAddress] == nil {
+		Logger.log.Errorf("Error: Can not get utxos from unshield batch with multisig address: %v", multisigAddress)
+		return [][]string{rejectInst}, nil
+	}
 	hexRawExtTxStr, _, err := portalTokenProcessor.CreateRawExternalTx(unshieldBatch.GetUTXOs()[multisigAddress], optionalData["outputs"].([]*portaltokens.OutputTx), uint64(meta.Fee), meta.BatchID, bc)
 
 	// build accept instruction
