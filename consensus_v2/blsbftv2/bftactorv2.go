@@ -411,12 +411,22 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 	if validVote > 2*len(view.GetCommittee())/3 {
 		e.Logger.Infof("%v Commit block %v , height: %v", e.ChainKey, blockHash, v.block.GetHeight())
 		committeeBLSString, err := incognitokey.ExtractPublickeysFromCommitteeKeyList(view.GetCommittee(), common.BlsConsensus)
-		//fmt.Println(committeeBLSString)
+		// fmt.Println(committeeBLSString)
 		if err != nil {
 			e.Logger.Error(err)
 			return
 		}
 		aggSig, brigSigs, validatorIdx, err := CombineVotes(v.votes, committeeBLSString)
+		committeeBLSKeys := []blsmultisig.PublicKey{}
+		for _, member := range view.GetCommittee() {
+			committeeBLSKeys = append(committeeBLSKeys, member.MiningPubKey[common.BlsConsensus])
+		}
+		err2 := validateBLSSig(v.block.Hash(), aggSig, validatorIdx, committeeBLSKeys)
+		e.Logger.Infof("[debugsig] Committee list %v, validatorIdx %v", committeeBLSString, validatorIdx)
+		if err2 != nil {
+			panic(err2)
+		}
+
 		if err != nil {
 			e.Logger.Error(err)
 			return
@@ -434,12 +444,6 @@ func (e *BLSBFT_V2) processIfBlockGetEnoughVote(blockHash string, v *ProposeBloc
 		validationDataString, _ := EncodeValidationData(*valData)
 		e.Logger.Infof("%v Validation Data %v %v %v %v", e.ChainKey, aggSig, brigSigs, validatorIdx, validationDataString)
 		if err := v.block.(blockValidation).AddValidationField(validationDataString); err != nil {
-			e.Logger.Error(err)
-			return
-		}
-
-		//pre validate block agg sig => agg flow can be wrong and we dont want to insert to db
-		if err := ValidateCommitteeSig(v.block, view.GetCommittee()); err != nil {
 			e.Logger.Error(err)
 			return
 		}
@@ -484,6 +488,9 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 			}
 
 			v.isValid = true
+			blkHeight := v.block.GetHeight()
+			blkHash := v.block.Hash()
+			// preHash := v.block.GetPrevHash()blkHash := v.block.Hash()
 			e.voteHistory[v.block.GetHeight()] = v.block
 			x := msg.(*wire.MessageBFT)
 			var xVote BFTVote
@@ -491,7 +498,8 @@ func (e *BLSBFT_V2) validateAndVote(v *ProposeBlockInfo) error {
 			if err != nil {
 				e.Logger.Error(err)
 			}
-			e.Logger.Infof("sending vote for block %v %v...", Vote.BlockHash, xVote.BlockHash)
+			idx := common.IndexOfStr(xVote.Validator, committeeBLSString)
+			e.Logger.Infof("%v sending vote for block %v %v TS %v signature %v %v %v...", blkHeight, blkHash, xVote.TimeSlot, xVote.BLS, xVote.BRI, xVote.Validator, idx)
 			v.sendVote = true
 			go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 			go e.Node.PushMessageToChain(msg, e.Chain)
@@ -578,7 +586,7 @@ func (e *BLSBFT_V2) proposeBlock(userMiningKey signatureschemes2.MiningKey, prop
 	proposeCtn.PeerID = pKey.GetMiningKeyBase58("bls")
 	msg, _ := MakeBFTProposeMsg(proposeCtn, e.ChainKey, e.currentTimeSlot, block.GetHeight())
 	e.Logger.Infof("[debugbft] BFT msg pubkey %v", msg.(*wire.MessageBFT).PeerID)
-	go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
+	// go e.ProcessBFTMsg(msg.(*wire.MessageBFT))
 	go e.Node.PushMessageToChain(msg, e.Chain)
 
 	return block, nil
