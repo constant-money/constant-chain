@@ -667,10 +667,13 @@ func (p *portalSubmitConfirmedTxProcessor) BuildNewInsts(
 		return [][]string{rejectInst}, nil
 	}
 
-	expectedMemo := meta.BatchID
 	expectedMultisigAddress := portalParams.MultiSigAddresses[tokenIDStr]
 	outputs := optionalData["outputs"].(map[string]uint64)
-	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyUnshieldProof(meta.UnshieldProof, bc, expectedMemo, expectedMultisigAddress, outputs, unshieldBatch.GetUTXOs()[tokenIDStr])
+	if unshieldBatch.GetUTXOs() == nil || unshieldBatch.GetUTXOs()[expectedMultisigAddress] == nil {
+		Logger.log.Errorf("Error submit external confirmed tx: can not get utxos of wallet address: %v", expectedMultisigAddress)
+		return [][]string{rejectInst}, nil
+	}
+	isValid, listUTXO, err := portalTokenProcessor.ParseAndVerifyUnshieldProof(meta.UnshieldProof, bc, batchIDStr, expectedMultisigAddress, outputs, unshieldBatch.GetUTXOs()[expectedMultisigAddress])
 	if !isValid || err != nil {
 		Logger.log.Errorf("Unshield Proof is invalid")
 		return [][]string{rejectInst}, nil
