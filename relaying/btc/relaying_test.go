@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/btcsuite/btcutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -268,9 +269,9 @@ func TestCreateAndSendBTCTxToCypher(t *testing.T) {
 	// bc := gobcy.API{"029727206f7e4c8fb19301e4629c5793", "bcy", "test"}
 	bc := getBlockCypherAPI("test3")
 
-	inAddr := "n4UtqQiW3qYjtiEUMscwPoBtUuYAK1AqKJ"
-	outAddr := "mgLFmRTFRakf5zs23YHB4Pcd8JF7TWCy6E"
-	amount := int(100)
+	inAddr := "msTYtu7nsMiwFUtNgCSQBk26JeBf9q3GTM"
+	outAddr := "2MvpFqydTR43TT4emMD84Mzhgd8F6dCow1X"
+	amount := int(400)
 	trans := gobcy.TX{}
 	trans.Fees = int(5000)
 	trans.Inputs = make([]gobcy.TXInput, 1)
@@ -279,15 +280,15 @@ func TestCreateAndSendBTCTxToCypher(t *testing.T) {
 
 	trans.Outputs = make([]gobcy.TXOutput, 2)
 	trans.Outputs[0].ScriptType = "null-data"
+	uniquePortingID := "batch2"
 	script := []byte{
 		txscript.OP_RETURN,
-		0x10,
+		byte(len(uniquePortingID)),
 	}
 
-	uniquePortingID := "btcporting2"
-	msg := HashAndEncodeBase58(uniquePortingID)
-	fmt.Println("hashed msg: ", msg)
-	script = append(script, []byte(msg)...)
+	//msg := HashAndEncodeBase58(uniquePortingID)
+	fmt.Println("memo: ", uniquePortingID)
+	script = append(script, []byte(uniquePortingID)...)
 	trans.Outputs[0].Script = hex.EncodeToString(script)
 
 	trans.Outputs[1].Addresses = make([]string, 1)
@@ -300,8 +301,12 @@ func TestCreateAndSendBTCTxToCypher(t *testing.T) {
 		t.Errorf("Could not init btc tx by using cypher api - with err: %v", err)
 		return
 	}
-
-	privateKeys := []string{"abc440d4db1e72008343231abcfde64f3e5c09df3927e52317435981bab90bfa"}
+	wifDecoded, err := btcutil.DecodeWIF("cSoBn9ayvDT1WsxmArCxq2Deot5sYswSqtxu4UTuAbSTHBsDdTCm")
+	if err != nil {
+		t.Errorf("Could not decode wif - with err: %v", err)
+		return
+	}
+	privateKeys := []string{wifDecoded.PrivKey.D.Text(16)}
 	err = skelTx.Sign(privateKeys)
 	if err != nil {
 		t.Errorf("Could not sign btc tx by using cypher api - with err: %v", err)
