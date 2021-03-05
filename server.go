@@ -325,12 +325,12 @@ func (serverObj *Server) NewServer(
 		Syncker:     serverObj.syncker,
 		// UserKeySet:        serverObj.userKeySet,
 		// NodeMode:        cfg.NodeMode,
-		FeeEstimator:    make(map[byte]blockchain.FeeEstimator),
-		PubSubManager:   pubsubManager,
-		RandomClient:    randomClient,
-		ConsensusEngine: serverObj.consensusEngine,
-		Highway:         serverObj.highway,
-		GenesisParams:   blockchain.GenesisParam,
+		FeeEstimator:      make(map[byte]blockchain.FeeEstimator),
+		PubSubManager:     pubsubManager,
+		RandomClient:      randomClient,
+		ConsensusEngine:   serverObj.consensusEngine,
+		Highway:           serverObj.highway,
+		GenesisParams:     blockchain.GenesisParam,
 		OutcoinByOTAKeyDb: dboc,
 	})
 	if err != nil {
@@ -537,10 +537,10 @@ func (serverObj *Server) NewServer(
 			ConsensusEngine: serverObj.consensusEngine,
 			MemCache:        serverObj.memCache,
 			Syncker:         serverObj.syncker,
+			Highway:         serverObj.highway,
 		}
 		serverObj.rpcServer = &rpcserver.RpcServer{}
 		serverObj.rpcServer.Init(&rpcConfig)
-
 		// init rpc client instance and stick to Blockchain object
 		// in order to communicate to external services (ex. eth light node)
 		//serverObj.blockChain.SetRPCClientChain(rpccaller.NewRPCClient())
@@ -764,44 +764,44 @@ func (serverObj *Server) GetActiveShardNumber() int {
 // }
 
 func (serverObj *Server) TransactionPoolBroadcastLoop() {
-	ticker := time.NewTicker(serverObj.memPool.ScanTime)
-	defer ticker.Stop()
-	for _ = range ticker.C {
-		txDescs := serverObj.memPool.GetPool()
+	// ticker := time.NewTicker(serverObj.memPool.ScanTime)
+	// defer ticker.Stop()
+	// for _ = range ticker.C {
+	// 	txDescs := serverObj.memPool.GetPool()
 
-		for _, txDesc := range txDescs {
-			time.Sleep(50 * time.Millisecond)
-			if !txDesc.IsFowardMessage {
-				tx := txDesc.Desc.Tx
-				switch tx.GetType() {
-				case common.TxNormalType, common.TxConversionType:
-					{
-						txMsg, err := wire.MakeEmptyMessage(wire.CmdTx)
-						if err != nil {
-							continue
-						}
-						txMsg.(*wire.MessageTx).Transaction = tx
-						err = serverObj.PushMessageToAll(txMsg)
-						if err == nil {
-							serverObj.memPool.MarkForwardedTransaction(*tx.Hash())
-						}
-					}
-				case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
-					{
-						txMsg, err := wire.MakeEmptyMessage(wire.CmdPrivacyCustomToken)
-						if err != nil {
-							continue
-						}
-						txMsg.(*wire.MessageTxPrivacyToken).Transaction = tx
-						err = serverObj.PushMessageToAll(txMsg)
-						if err == nil {
-							serverObj.memPool.MarkForwardedTransaction(*tx.Hash())
-						}
-					}
-				}
-			}
-		}
-	}
+	// 	for _, txDesc := range txDescs {
+	// 		time.Sleep(50 * time.Millisecond)
+	// 		if !txDesc.IsFowardMessage {
+	// 			tx := txDesc.Desc.Tx
+	// 			switch tx.GetType() {
+	// 			case common.TxNormalType, common.TxConversionType:
+	// 				{
+	// 					txMsg, err := wire.MakeEmptyMessage(wire.CmdTx)
+	// 					if err != nil {
+	// 						continue
+	// 					}
+	// 					txMsg.(*wire.MessageTx).Transaction = tx
+	// 					err = serverObj.PushMessageToAll(txMsg)
+	// 					if err == nil {
+	// 						serverObj.memPool.MarkForwardedTransaction(*tx.Hash())
+	// 					}
+	// 				}
+	// 			case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
+	// 				{
+	// 					txMsg, err := wire.MakeEmptyMessage(wire.CmdPrivacyCustomToken)
+	// 					if err != nil {
+	// 						continue
+	// 					}
+	// 					txMsg.(*wire.MessageTxPrivacyToken).Transaction = tx
+	// 					err = serverObj.PushMessageToAll(txMsg)
+	// 					if err == nil {
+	// 						serverObj.memPool.MarkForwardedTransaction(*tx.Hash())
+	// 					}
+	// 				}
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 // CheckForceUpdateSourceCode - loop to check current version with update version is equal

@@ -87,7 +87,7 @@ func (txService TxService) ListCommitmentIndices(tokenID common.Hash, shardID by
 
 func (txService TxService) HasSerialNumbers(shardID byte, serialNumbersStr []interface{}, tokenID common.Hash) ([]bool, error) {
 	if int(shardID) >= common.MaxShardNumber {
-		return nil, fmt.Errorf("shardID %v is out of range [0 - %v]", shardID, common.MaxShardNumber - 1)
+		return nil, fmt.Errorf("shardID %v is out of range [0 - %v]", shardID, common.MaxShardNumber-1)
 	}
 	result := make([]bool, 0)
 	for _, item := range serialNumbersStr {
@@ -658,61 +658,61 @@ func (txService TxService) SendRawTransaction(txB58Check string) (wire.Message, 
 		return nil, nil, byte(0), NewRPCError(JsonDataOfTxInvalid, err)
 	}
 
-	beaconHeigh := int64(-1)
-	beaconBestState, err := txService.BlockChain.GetClonedBeaconBestState()
-	if err == nil {
-		beaconHeigh = int64(beaconBestState.BeaconHeight)
-	} else {
-		Logger.log.Errorf("Send Raw Transaction can not get beacon best state with error %+v", err)
-	}
-	// Try add tx in to mempool of node
-	hash, _, err := txService.TxMemPool.MaybeAcceptTransaction(tx, beaconHeigh)
-	if err != nil {
-		Logger.log.Errorf("Send Raw Transaction Error, try add tx into mempool of node: %+v", err)
-		mempoolErr, ok := err.(*mempool.MempoolTxError)
-		if ok {
-			switch mempoolErr.Code {
-			case mempool.ErrCodeMessage[mempool.RejectInvalidFee].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectInvalidTxFeeError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectInvalidSize].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectInvalidTxSizeError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectInvalidTxType].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectInvalidTxTypeError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectInvalidTx].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectInvalidTxError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectReplacementTxError].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectReplacementTx, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectDoubleSpendWithBlockchainTx].Code, mempool.ErrCodeMessage[mempool.RejectDoubleSpendWithMempoolTx].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectDoubleSpendTxError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectDuplicateTx].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectDuplicateTxInPoolError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectVersion].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectDuplicateTxInPoolError, mempoolErr)
-				}
-			case mempool.ErrCodeMessage[mempool.RejectSanityTxLocktime].Code:
-				{
-					return nil, nil, byte(0), NewRPCError(RejectSanityTxLocktime, mempoolErr)
-				}
-			}
-		}
-		return nil, nil, byte(0), NewRPCError(TxPoolRejectTxError, err)
-	}
-	Logger.log.Debugf("New transaction hash: %+v \n", *hash)
+	// beaconHeigh := int64(-1)
+	// beaconBestState, err := txService.BlockChain.GetClonedBeaconBestState()
+	// if err == nil {
+	// 	beaconHeigh = int64(beaconBestState.BeaconHeight)
+	// } else {
+	// 	Logger.log.Errorf("Send Raw Transaction can not get beacon best state with error %+v", err)
+	// }
+	// // Try add tx in to mempool of node
+	// hash, _, err := txService.TxMemPool.MaybeAcceptTransaction(tx, beaconHeigh)
+	// if err != nil {
+	// 	Logger.log.Errorf("Send Raw Transaction Error, try add tx into mempool of node: %+v", err)
+	// 	mempoolErr, ok := err.(*mempool.MempoolTxError)
+	// 	if ok {
+	// 		switch mempoolErr.Code {
+	// 		case mempool.ErrCodeMessage[mempool.RejectInvalidFee].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectInvalidTxFeeError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectInvalidSize].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectInvalidTxSizeError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectInvalidTxType].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectInvalidTxTypeError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectInvalidTx].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectInvalidTxError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectReplacementTxError].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectReplacementTx, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectDoubleSpendWithBlockchainTx].Code, mempool.ErrCodeMessage[mempool.RejectDoubleSpendWithMempoolTx].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectDoubleSpendTxError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectDuplicateTx].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectDuplicateTxInPoolError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectVersion].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectDuplicateTxInPoolError, mempoolErr)
+	// 			}
+	// 		case mempool.ErrCodeMessage[mempool.RejectSanityTxLocktime].Code:
+	// 			{
+	// 				return nil, nil, byte(0), NewRPCError(RejectSanityTxLocktime, mempoolErr)
+	// 			}
+	// 		}
+	// 	}
+	// 	return nil, nil, byte(0), NewRPCError(TxPoolRejectTxError, err)
+	// }
+	// Logger.log.Debugf("New transaction hash: %+v \n", *hash)
 	// Create tx message for broadcasting
 	txMsg, err := wire.MakeEmptyMessage(wire.CmdTx)
 	if err != nil {
@@ -720,7 +720,7 @@ func (txService TxService) SendRawTransaction(txB58Check string) (wire.Message, 
 		return nil, nil, byte(0), NewRPCError(SendTxDataError, err)
 	}
 	txMsg.(*wire.MessageTx).Transaction = tx
-	return txMsg, hash, tx.GetSenderAddrLastByte(), nil
+	return txMsg, tx.Hash(), tx.GetSenderAddrLastByte(), nil
 }
 
 func (txService TxService) BuildTokenParam(tokenParamsRaw map[string]interface{}, senderKeySet *incognitokey.KeySet, shardIDSender byte) (*transaction.TokenParam, *RPCError) {
@@ -817,11 +817,11 @@ func (txService TxService) BuildPrivacyCustomTokenParam(tokenParamsRaw map[strin
 				if !isBridgeToken {
 					// totally invalid token
 					Logger.log.Errorf("BUGLOG invalid TokenID: %v\n", tokenID.String())
-					if len(bridgeTokenIDs) != len(allBridgeTokens){
+					if len(bridgeTokenIDs) != len(allBridgeTokens) {
 						Logger.log.Errorf("BUGLOG something must be wrong here\n")
 					}
 
-					for i:=0;i<len(bridgeTokenIDs);i++{
+					for i := 0; i < len(bridgeTokenIDs); i++ {
 						Logger.log.Infof("BUGLOG tokenID: %v, %v\n", bridgeTokenIDs[i].String(), allBridgeTokens[i].TokenID.String())
 					}
 
@@ -1094,7 +1094,7 @@ func (txService TxService) getTxsByHashs(txHashs []common.Hash, ch chan []TxInfo
 		txInfo := TxInfo{
 			BlockHash: blockHash,
 			Tx:        txDetail,
-			TxHash: txHash.String(),
+			TxHash:    txHash.String(),
 		}
 		txInfos = append(txInfos, txInfo)
 	}
@@ -1162,7 +1162,7 @@ func (txService TxService) GetTransactionByReceiverV2(
 		limit = txNum
 	}
 	pagingTxInfos := txInfos[skip:limit]
-	for _, info := range pagingTxInfos{
+	for _, info := range pagingTxInfos {
 		txDetail, err := txService.GetTransactionByHash(info.TxHash)
 		if err != nil {
 			Logger.log.Error("cannot get tx detail from hash %v. Error %v", info.TxHash, err)
@@ -1182,9 +1182,9 @@ func (txService TxService) GetTransactionByReceiverV2(
 		}
 
 		item := jsonresult.ReceivedTransactionV2{
-			TxDetail:        txDetail,
-			FromShardID:     txDetail.ShardID,
-			ReceivedAmounts: receivedAmounts,
+			TxDetail:           txDetail,
+			FromShardID:        txDetail.ShardID,
+			ReceivedAmounts:    receivedAmounts,
 			InputSerialNumbers: inputSerialNumbers,
 		}
 
@@ -1231,7 +1231,7 @@ func (txService TxService) GetTransactionByHash(txHashStr string) (*jsonresult.T
 
 func (txService TxService) GetTransactionBySerialNumber(snList []string, shardID byte, tokenID common.Hash) ([]string, *RPCError) {
 	txList := make([]string, 0)
-	if int(shardID) >= common.MaxShardNumber {//If the shardID is not provided, just retrieve with all shards
+	if int(shardID) >= common.MaxShardNumber { //If the shardID is not provided, just retrieve with all shards
 		for _, snStr := range snList {
 			snBytes, _, err := base58.Base58Check{}.Decode(snStr)
 			if err != nil {
@@ -1261,7 +1261,7 @@ func (txService TxService) GetTransactionBySerialNumber(snList []string, shardID
 		}
 		return txList, nil
 
-	} else {//If the shardID is provided, just retrieve within the shard
+	} else { //If the shardID is provided, just retrieve within the shard
 		shardDB := txService.BlockChain.GetShardChainDatabase(shardID)
 
 		for _, snStr := range snList {
@@ -1944,7 +1944,7 @@ func (txService TxService) GetInputSerialNumberByTransaction(txHashStr string) (
 	case common.TxCustomTokenPrivacyType, common.TxTokenConversionType:
 		{
 			txToken, ok := tx.(transaction.TransactionToken)
-			if !ok{
+			if !ok {
 				return nil, NewRPCError(UnexpectedError, errors.New("tx type is invalid - cast failed"))
 			}
 			inputSerialNumbers, err := GetInputSerialnumber(txToken.GetTxBase().GetProof().GetInputCoins())

@@ -15,6 +15,7 @@ import (
 	"github.com/incognitochain/incognito-chain/memcache"
 	"github.com/incognitochain/incognito-chain/mempool"
 	"github.com/incognitochain/incognito-chain/netsync"
+	"github.com/incognitochain/incognito-chain/peerv2"
 	"github.com/incognitochain/incognito-chain/pubsub"
 	"github.com/incognitochain/incognito-chain/rpcserver/rpcservice"
 	"github.com/incognitochain/incognito-chain/syncker"
@@ -74,6 +75,7 @@ type RpcServerConfig struct {
 	// NodeMode        string
 	NetSync *netsync.NetSync
 	Syncker *syncker.SynckerManager
+	Highway *peerv2.ConnManager
 	Server  interface {
 		// Push TxNormal Message
 		PushMessageToAll(message wire.Message) error
