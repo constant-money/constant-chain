@@ -87,7 +87,8 @@ func getBurnProofByHeightV2(
 	txID *common.Hash,
 ) (interface{}, *rpcservice.RPCError) {
 	// Get beacon block
-	beaconBlock, err := getSingleBeaconBlockByHeight(httpServer.GetBlockchain(), height)
+	beaconBlock, err := httpServer.GetBlockchain().GetBeaconBlockByHeightV1(height)
+	//beaconBlock, err := getSingleBeaconBlockByHeight(httpServer.GetBlockchain(), height)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
 	}
