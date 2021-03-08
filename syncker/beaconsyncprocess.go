@@ -57,7 +57,7 @@ func NewBeaconSyncProcess(network Network, bc *blockchain.BlockChain, chain Beac
 		lastCrossShardState: make(map[byte]map[byte]uint64),
 	}
 	go s.syncBeacon()
-	go s.insertBeaconBlockFromPool()
+	//go s.insertBeaconBlockFromPool()
 	go s.updateConfirmCrossShard()
 
 	go func() {
@@ -312,7 +312,7 @@ func (s *BeaconSyncProcess) streamFromPeer(peerID string, pState BeaconPeerState
 		requestCnt++
 		peerID = ""
 	}
-	
+
 	//stream
 	ch, err := s.network.RequestBeaconBlocksViaStream(ctx, peerID, s.chain.GetFinalViewHeight()+1, toHeight)
 	if err != nil {
