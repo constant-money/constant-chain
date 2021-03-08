@@ -57,7 +57,7 @@ func NewBeaconSyncProcess(network Network, bc *blockchain.BlockChain, chain Beac
 		lastCrossShardState: make(map[byte]map[byte]uint64),
 	}
 	go s.syncBeacon()
-	//go s.insertBeaconBlockFromPool()
+	go s.insertBeaconBlockFromPool()
 	go s.updateConfirmCrossShard()
 
 	go func() {
@@ -215,6 +215,11 @@ func (s *BeaconSyncProcess) insertBeaconBlockFromPool() {
 			time.AfterFunc(time.Second*2, s.insertBeaconBlockFromPool)
 		}
 	}()
+
+	if s.isCommittee {
+		return
+	}
+
 	//Logger.Debugf("insertBeaconBlockFromPool Start")
 	//loop all current views, if there is any block connect to the view
 	for _, viewHash := range s.chain.GetAllViewHash() {
