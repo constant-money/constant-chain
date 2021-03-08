@@ -64,7 +64,36 @@ func (blockchain *BlockChain) GetBeaconBlockHashByView(view multiview.View, heig
 	return rawdbv2.GetFinalizedBeaconBlockHashByIndex(blockchain.GetBeaconChainDatabase(), height)
 }
 
+func (blockchain *BlockChain) GetBeaconBlockFork(height uint64) (*BeaconBlock, error) {
+	//get from  branch 2 (largest timeslot)
+	allView := blockchain.BeaconChain.multiView.GetAllViewsWithBFS()
+	var validBlk *BeaconBlock
+	for _, v := range allView {
+		if height == v.GetHeight() {
+			if validBlk == nil {
+				validBlk = v.GetBlock().(*BeaconBlock)
+			}
+			if v.GetBlock().GetProduceTime() > validBlk.GetProduceTime() {
+				validBlk = v.GetBlock().(*BeaconBlock)
+			}
+		}
+	}
+	if validBlk != nil {
+		return validBlk, nil
+	}
+
+	beaconBlocks, err := blockchain.GetBeaconBlockByHeight(height)
+	if err != nil {
+		return nil, err
+	}
+	if len(beaconBlocks) == 0 {
+		return nil, fmt.Errorf("Beacon Block Height %+v NOT FOUND", height)
+	}
+	return beaconBlocks[0], nil
+}
+
 func (blockchain *BlockChain) GetBeaconBlockByHeightV1(height uint64) (*BeaconBlock, error) {
+
 	beaconBlocks, err := blockchain.GetBeaconBlockByHeight(height)
 	if err != nil {
 		return nil, err

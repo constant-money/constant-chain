@@ -87,7 +87,7 @@ func getBurnProofByHeightV2(
 	txID *common.Hash,
 ) (interface{}, *rpcservice.RPCError) {
 	// Get beacon block
-	beaconBlock, err := httpServer.GetBlockchain().GetBeaconBlockByHeightV1(height)
+	beaconBlock, err := httpServer.GetBlockchain().GetBeaconBlockFork(height)
 	//beaconBlock, err := getSingleBeaconBlockByHeight(httpServer.GetBlockchain(), height)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
@@ -98,7 +98,6 @@ func getBurnProofByHeightV2(
 	if instID == -1 {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, fmt.Errorf("cannot find inst %s in beacon block %d", txID.String(), height))
 	}
-
 	beaconInstProof, err := getBurnProofOnBeacon(inst, []*blockchain.BeaconBlock{beaconBlock}, httpServer.config.ConsensusEngine)
 	if err != nil {
 		return nil, rpcservice.NewRPCError(rpcservice.UnexpectedError, err)
