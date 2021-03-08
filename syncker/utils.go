@@ -27,6 +27,7 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 
 	//loop through block, to get same committee
 	for i, v := range blocks {
+		shouldBreak := false
 		switch v.(type) {
 		case *blockchain.BeaconBlock:
 			// do nothing, beacon committee assume not change
@@ -38,8 +39,11 @@ func InsertBatchBlock(chain Chain, blocks []common.BlockInterface) (int, error) 
 			//if block contain swap inst,
 			if containSwap(v.(*blockchain.ShardBlock).Body.Instructions) {
 				sameCommitteeBlock = blocks[:i+1]
-				break
+				shouldBreak = true
 			}
+		}
+		if shouldBreak {
+			break
 		}
 	}
 

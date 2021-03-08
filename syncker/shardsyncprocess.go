@@ -231,14 +231,19 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		return
 	}
 
-	//if pState.BestViewHeight == s.Chain.GetBestViewHeight() {
-	//	fmt.Println("debug ", pState.BestViewHeight, s.Chain.GetBestViewHash(), s.Chain.GetBestViewHash(), pState.BestViewHash)
-	//	panic(1)
-	//}
-	if !((pState.BestViewHeight == s.Chain.GetBestViewHeight()) && (s.Chain.GetBestViewHash() != pState.BestViewHash)) {
-		peerID = ""
+	if pState.BestViewHeight == s.Chain.GetBestViewHeight() && s.Chain.GetBestViewHash() != pState.BestViewHash {
+		for _, h := range s.Chain.GetAllViewHash() { //check if block exist in multiview, then return
+			if h.String() == pState.BestViewHash {
+				return
+			}
+		}
+	}
+
+	if pState.BestViewHeight > s.Chain.GetBestViewHeight() {
 		requestCnt++
-	} 
+		peerID = ""
+	}
+
 	//fmt.Println("SYNCKER Request Shard Block", peerID, s.ShardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
 	ch, err := s.Network.RequestShardBlocksViaStream(ctx, peerID, s.shardID, s.Chain.GetFinalViewHeight()+1, toHeight)
 	// ch, err := s.Server.RequestShardBlocksViaStream(ctx, "", s.shardID, s.Chain.GetBestViewHeight()+1, pState.BestViewHeight)
@@ -248,7 +253,6 @@ func (s *ShardSyncProcess) streamFromPeer(peerID string, pState ShardPeerState) 
 		return
 	}
 
-	
 	insertTime := time.Now()
 	for {
 		select {
