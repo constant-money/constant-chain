@@ -277,7 +277,7 @@ func (s *BeaconSyncProcess) syncBeacon() {
 			if len(s.beaconPeerStates) > 0 {
 				s.isCatchUp = true
 			}
-			time.Sleep(time.Second * 5)
+			time.Sleep(time.Second * 60)
 		}
 	}
 }
