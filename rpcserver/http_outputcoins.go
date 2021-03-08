@@ -189,4 +189,80 @@ func (httpServer *HttpServer) handleListOutputCoinsFromCache(params interface{},
 	return result, nil
 }
 
+func (httpServer *HttpServer) handleListOutputCoinV2Idxs(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
 
+	// get component
+	paramsArray := common.InterfaceSlice(params)
+	if paramsArray == nil || len(paramsArray) < 1 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 2 elements"))
+	}
+	listKeyParams := common.InterfaceSlice(paramsArray[0])
+	if listKeyParams == nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("list key is invalid"))
+	}
+
+	tokenID := &common.Hash{}
+	err := tokenID.SetBytes(common.PRVCoinID[:])
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.TokenIsInvalidError, err)
+	}
+	if len(paramsArray) > 1 {
+		var err1 error
+		tokenIdParam, ok := paramsArray[1].(string)
+		if !ok {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("token id param is invalid"))
+		}
+		tokenID, err1 = common.Hash{}.NewHashFromStr(tokenIdParam)
+		if err1 != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.ListTokenNotFoundError, err1)
+		}
+	}
+	result, err1 := httpServer.outputCoinService.ListOutputCoinV2Idxs(listKeyParams[0], *tokenID)
+	if err1 != nil {
+		return nil, err1
+	}
+	return result, nil
+}
+
+func (httpServer *HttpServer) handleListOutputCoinV2ByIdxs(params interface{}, closeChan <-chan struct{}) (interface{}, *rpcservice.RPCError) {
+
+	// get component
+	paramsArray := common.InterfaceSlice(params)
+	if paramsArray == nil || len(paramsArray) < 2 {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("param must be an array at least 3 elements"))
+	}
+
+	listIndexParams := common.InterfaceSlice(paramsArray[0])
+	if listIndexParams == nil {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("list key is invalid"))
+	}
+
+	shardIDParam, ok := paramsArray[1].(float64)
+	if !ok {
+		return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("Shard ID component invalid"))
+	}
+	shardID := byte(shardIDParam)
+
+	tokenID := &common.Hash{}
+	err := tokenID.SetBytes(common.PRVCoinID[:])
+	if err != nil {
+		return nil, rpcservice.NewRPCError(rpcservice.TokenIsInvalidError, err)
+	}
+	if len(paramsArray) > 2 {
+		var err1 error
+		tokenIdParam, ok := paramsArray[2].(string)
+		if !ok {
+			return nil, rpcservice.NewRPCError(rpcservice.RPCInvalidParamsError, errors.New("token id param is invalid"))
+		}
+
+		tokenID, err1 = common.Hash{}.NewHashFromStr(tokenIdParam)
+		if err1 != nil {
+			return nil, rpcservice.NewRPCError(rpcservice.ListTokenNotFoundError, err1)
+		}
+	}
+	result, err1 := httpServer.outputCoinService.ListOutputCoinV2ByIdxs(listIndexParams, shardID, *tokenID)
+	if err1 != nil {
+		return nil, err1
+	}
+	return result, nil
+}

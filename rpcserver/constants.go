@@ -54,7 +54,7 @@ const (
 
 	listOutputCoins                            = "listoutputcoins"
 	listOutputCoinsFromCache                   = "listoutputcoinsfromcache"
-	listOutputTokens                            = "listoutputtokens"
+	listOutputTokens                           = "listoutputtokens"
 	createRawTransaction                       = "createtransaction"
 	sendRawTransaction                         = "sendtransaction"
 	createAndSendTransaction                   = "createandsendtransaction"
@@ -86,7 +86,7 @@ const (
 	getPrivacyCustomToken                      = "getprivacycustomtoken"
 	listPrivacyCustomTokenByShard              = "listprivacycustomtokenbyshard"
 	getBalancePrivacyCustomToken               = "getbalanceprivacycustomtoken"
-	listUnspentOutputTokens					   = "listunspentoutputtokens"
+	listUnspentOutputTokens                    = "listunspentoutputtokens"
 	customTokenTxs                             = "customtoken"
 	listCustomTokenHolders                     = "customtokenholder"
 	privacyCustomTokenTxs                      = "privacycustomtoken"
@@ -105,7 +105,7 @@ const (
 	createAndSendStakingTransaction            = "createandsendstakingtransaction"
 	createAndSendStopAutoStakingTransaction    = "createandsendstopautostakingtransaction"
 	decryptoutputcoinbykeyoftransaction        = "decryptoutputcoinbykeyoftransaction"
-	randomCommitmentsAndPublicKeys			   = "randomcommitmentsandpublickeys"
+	randomCommitmentsAndPublicKeys             = "randomcommitmentsandpublickeys"
 
 	//===========For Testing and Benchmark==============
 	getAndSendTxsFromFile   = "getandsendtxsfromfile"
@@ -114,7 +114,7 @@ const (
 	getAutoStakingByHeight  = "getautostakingbyheight"
 	getCommitteeState       = "getcommitteestate"
 	getRewardAmountByEpoch  = "getrewardamountbyepoch"
-	convertPaymentAddress  = "convertpaymentaddress"
+	convertPaymentAddress   = "convertpaymentaddress"
 	//==================================================
 
 	getShardBestState        = "getshardbeststate"
@@ -136,7 +136,7 @@ const (
 	getBalanceByPaymentAddress = "getbalancebypaymentaddress"
 	getReceivedByAccount       = "getreceivedbyaccount"
 	setTxFee                   = "settxfee"
-	submitKey 				   = "submitkey"
+	submitKey                  = "submitkey"
 
 	// walletsta
 	getPublicKeyFromPaymentAddress = "getpublickeyfrompaymentaddress"
@@ -296,6 +296,10 @@ const (
 
 	//validator state
 	getValKeyState = "getvalkeystate"
+
+	//new listoutputcoin rpcs
+	listOutputCoinV2Idxs   = "listoutputcoinv2idxs"
+	listOutputCoinV2ByIdxs = "listoutputcoinv2byidxs"
 )
 
 const (

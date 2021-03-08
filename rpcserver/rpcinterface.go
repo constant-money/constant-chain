@@ -65,7 +65,7 @@ var HttpHandler = map[string]httpHandler{
 	// transaction
 	listOutputCoins:                         (*HttpServer).handleListOutputCoins,
 	listOutputCoinsFromCache:                (*HttpServer).handleListOutputCoinsFromCache,
-	listOutputTokens:                         (*HttpServer).handleListOutputCoins,
+	listOutputTokens:                        (*HttpServer).handleListOutputCoins,
 	createRawTransaction:                    (*HttpServer).handleCreateRawTransaction,
 	sendRawTransaction:                      (*HttpServer).handleSendRawTransaction,
 	createConvertCoinVer1ToVer2Transaction:  (*HttpServer).handleCreateConvertCoinVer1ToVer2Transaction,
@@ -75,8 +75,8 @@ var HttpHandler = map[string]httpHandler{
 	gettransactionhashbyreceiverv2:          (*HttpServer).handleGetTransactionHashByReceiverV2,
 	gettransactionbyreceiver:                (*HttpServer).handleGetTransactionByReceiver,
 	gettransactionbyreceiverv2:              (*HttpServer).handleGetTransactionByReceiverV2,
-	gettransactionbyserialnumber: 			 (*HttpServer).handleGetTransactionBySerialNumber,
-	gettransactionbypublickey: 			     (*HttpServer).handleGetTransactionHashPublicKey,
+	gettransactionbyserialnumber:            (*HttpServer).handleGetTransactionBySerialNumber,
+	gettransactionbypublickey:               (*HttpServer).handleGetTransactionHashPublicKey,
 	createAndSendStakingTransaction:         (*HttpServer).handleCreateAndSendStakingTx,
 	createAndSendStopAutoStakingTransaction: (*HttpServer).handleCreateAndSendStopAutoStakingTransaction,
 	randomCommitments:                       (*HttpServer).handleRandomCommitments,
@@ -86,7 +86,7 @@ var HttpHandler = map[string]httpHandler{
 	listCommitments:                         (*HttpServer).handleListCommitments,
 	listCommitmentIndices:                   (*HttpServer).handleListCommitmentIndices,
 	decryptoutputcoinbykeyoftransaction:     (*HttpServer).handleDecryptOutputCoinByKeyOfTransaction,
-	randomCommitmentsAndPublicKeys:			 (*HttpServer).handleRandomCommitmentsAndPublicKeys,
+	randomCommitmentsAndPublicKeys:          (*HttpServer).handleRandomCommitmentsAndPublicKeys,
 
 	//======Testing and Benchmark======
 	getAndSendTxsFromFile:   (*HttpServer).handleGetAndSendTxsFromFile,
@@ -95,7 +95,7 @@ var HttpHandler = map[string]httpHandler{
 	getAutoStakingByHeight:  (*HttpServer).handleGetAutoStakingByHeight,
 	getCommitteeState:       (*HttpServer).handleGetCommitteeState,
 	getRewardAmountByEpoch:  (*HttpServer).handleGetRewardAmountByEpoch,
-	convertPaymentAddress:	 (*HttpServer).handleConvertPaymentAddress,
+	convertPaymentAddress:   (*HttpServer).handleConvertPaymentAddress,
 
 	//=================================
 
@@ -278,6 +278,10 @@ var HttpHandler = map[string]httpHandler{
 
 	//validators state
 	getValKeyState: (*HttpServer).handleGetValKeyState,
+
+	// new listoutpucoin rpcs
+	listOutputCoinV2Idxs:   (*HttpServer).handleListOutputCoinV2Idxs,
+	listOutputCoinV2ByIdxs: (*HttpServer).handleListOutputCoinV2ByIdxs,
 }
 
 // Commands that are available to a limited user
@@ -298,7 +302,7 @@ var LimitedHttpHandler = map[string]httpHandler{
 	setTxFee:                         (*HttpServer).handleSetTxFee,
 	convertNativeTokenToPrivacyToken: (*HttpServer).handleConvertNativeTokenToPrivacyToken,
 	convertPrivacyTokenToNativeToken: (*HttpServer).handleConvertPrivacyTokenToNativeToken,
-	submitKey:                     	  (*HttpServer).handleSubmitKey,
+	submitKey:                        (*HttpServer).handleSubmitKey,
 }
 
 var WsHandler = map[string]wsHandler{
