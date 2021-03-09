@@ -3,6 +3,7 @@ package rpcservice
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/rand"
 
 	"github.com/incognitochain/incognito-chain/blockchain"
@@ -51,10 +52,10 @@ func (walletService WalletService) SubmitKey(keyStr string) (struct{}, *RPCError
 	// this function accepts a private key or a hex-encoded OTA key
 	var otaKey privacy.OTAKey
 	keySet, shardIDSender, err := GetKeySetFromPrivateKeyParams(keyStr)
-	if err==nil || keySet.OTAKey.GetOTASecretKey()==nil{
-		otaKey = keySet.OTAKey
+	if err != nil || keySet.OTAKey.GetOTASecretKey() == nil{
+		return struct{}{}, NewRPCError(InvalidSenderViewingKeyError, fmt.Errorf("OTA key not found, error: %v", err))
 	}else{
-		return struct{}{}, NewRPCError(InvalidSenderViewingKeyError, errors.New("OTA key not found"))
+		otaKey = keySet.OTAKey
 	}
 	result := struct{}{}
 
