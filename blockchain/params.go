@@ -264,8 +264,8 @@ func SetupParam() {
 		ETHRemoveBridgeSigEpoch:     21920,
 
 		PortalETHContractAddressStr: "0x6D53de7aFa363F779B5e125876319695dC97171E", // todo: update sc address
-		BCHeightBreakPointPortalV3:  30158,
-		BCHeightBreakPointPrivacyV2:  30, //TODO: change this value when deployed testnet
+		BCHeightBreakPointPortalV3:  321550,
+		BCHeightBreakPointPrivacyV2:  621564, //TODO: change this value when deployed testnet
 	}
 	// END TESTNET
 
@@ -356,7 +356,7 @@ func SetupParam() {
 		ETHRemoveBridgeSigEpoch:     2085,
 		PortalETHContractAddressStr: "0xF7befD2806afD96D3aF76471cbCa1cD874AA1F46",   // todo: update sc address
 		BCHeightBreakPointPortalV3:  8974, // todo: should update before deploying
-		BCHeightBreakPointPrivacyV2:  30, //TODO: change this value when deployed testnet2
+		BCHeightBreakPointPrivacyV2:  621564, //TODO: change this value when deployed testnet2
 	}
 	// END TESTNET-2
 
