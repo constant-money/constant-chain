@@ -321,7 +321,11 @@ func verifyRing(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, er
 		if err != nil {
 			return false, err
 		}
-		utils.Logger.Log.Infof("BUGLOG3 c[%] = %v\n", i + 1, nextC.String())
+		fmt.Printf("BUGLOG3 r[%v] = %v\n", i, PrintScalar(sig.r[i]))
+		fmt.Printf("BUGLOG3 key[%v] = %v\n", i, PrintPoint(R.keys[i]))
+		fmt.Printf("BUGLOG3 keyImages = %v\n", PrintPoint(sig.keyImages))
+		fmt.Printf("BUGLOG3 c[%v] = %v\n", i, nextC.String())
+		fmt.Println("BUGLOG3 ===============")
 		c = *nextC
 	}
 	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
@@ -360,4 +364,27 @@ func (mlsag *Mlsag) Sign(message []byte) (*MlsagSig, error) {
 	return &MlsagSig{
 		c[0], mlsag.keyImages, r,
 	}, nil
+}
+
+func PrintScalar(sList []*operation.Scalar) string {
+	toBePrinted := ""
+	for i, element := range sList {
+		toBePrinted += element.String()
+		if i != len(sList) - 1 {
+			toBePrinted += "--"
+		}
+	}
+
+	return toBePrinted
+}
+
+func PrintPoint(sList []*operation.Point) string {
+	toBePrinted := ""
+	for i, element := range sList {
+		toBePrinted += element.String()
+		if i != len(sList) - 1 {
+			toBePrinted += "--"
+		}
+	}
+	return toBePrinted
 }

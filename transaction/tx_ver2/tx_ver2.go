@@ -358,6 +358,7 @@ func getRingFromSigPubKeyAndLastColumnCommitment(sigPubKey []byte, sumOutputsWit
 			}
 			row[j] = randomCoin.GetPublicKey()
 			sumCommitment.Add(sumCommitment, randomCoin.GetCommitment())
+			fmt.Printf("BUGLOG3 idx: %v, pk: %v, cm: %v\n", index.Uint64(), randomCoin.GetPublicKey().String(), randomCoin.GetCommitment().String())
 		}
 		row[m] = new(privacy.Point).Set(sumCommitment)
 		ring[i] = row
@@ -443,6 +444,7 @@ func (tx *Tx) verifySig(transactionStateDB *statedb.StateDB, shardID byte, token
 
 	// Reform Ring
 	sumOutputsWithFee := tx_generic.CalculateSumOutputsWithFee(tx.Proof.GetOutputCoins(), tx.Fee)
+	fmt.Printf("BUGLOG3 sumOutputWithFee: %v\n", sumOutputsWithFee.String())
 	ring, err := getRingFromSigPubKeyAndLastColumnCommitment(tx.SigPubKey, sumOutputsWithFee, transactionStateDB, shardID, tokenID)
 	if err != nil {
 		utils.Logger.Log.Errorf("Error when querying database to construct mlsag ring: %v ", err)
