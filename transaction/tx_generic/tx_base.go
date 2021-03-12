@@ -121,6 +121,10 @@ func updateParamsWhenOverBalance(params *TxPrivacyInitParams, senderPaymentAddre
 	return nil
 }
 
+func AddChangeOutput(params *TxPrivacyInitParams, senderPaymentAddress privacy.PaymentAddress) error {
+	return updateParamsWhenOverBalance(params, senderPaymentAddress)
+}
+
 func GetTxVersionFromCoins(inputCoins []privacy.PlainCoin) (int8, error) {
 	// If this is nonPrivacyNonInputCoins (maybe)
 	if len(inputCoins) == 0 {

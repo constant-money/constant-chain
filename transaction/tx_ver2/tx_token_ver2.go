@@ -12,6 +12,7 @@ import (
 	"github.com/incognitochain/incognito-chain/dataaccessobject/statedb"
 	"github.com/incognitochain/incognito-chain/metadata"
 	"github.com/incognitochain/incognito-chain/privacy"
+	"github.com/incognitochain/incognito-chain/privacy/key"
 	"github.com/incognitochain/incognito-chain/privacy/privacy_v2/mlsag"
 	"github.com/incognitochain/incognito-chain/transaction/tx_generic"
 	"github.com/incognitochain/incognito-chain/transaction/utils"
@@ -213,6 +214,19 @@ func checkIsBridgeTokenID(bridgeStateDB *statedb.StateDB, tokenID *common.Hash) 
 	return nil
 }
 
+func fillTxWithParams(tx *Tx, params *tx_generic.TxPrivacyInitParams) error {
+	var err error
+	// Get Keyset from param
+	paymentAddr := key.GeneratePaymentAddress(*params.SenderSK)
+	tx.SetPrivateKey(*params.SenderSK)
+
+	// Params: update balance if overbalance
+	if err = tx_generic.AddChangeOutput(params, paymentAddr); err != nil {
+		return err
+	}
+	return nil
+}
+
 // this signs only on the hash of the data in it
 func (tx *Tx) proveToken(params *tx_generic.TxPrivacyInitParams) (bool, error) {
 	utils.Logger.Log.Debugf("CREATING sub-TX (token)")
@@ -222,7 +236,7 @@ func (tx *Tx) proveToken(params *tx_generic.TxPrivacyInitParams) (bool, error) {
 
 	// Init tx and params (tx and params will be changed)
 	utils.Logger.Log.Warnf("init token with receivers : %v", params.PaymentInfo)
-	if err := tx.InitializeTxAndParams(params); err != nil {
+	if err := fillTxWithParams(tx, params); err != nil {
 		return false, err
 	}
 	tx.SetType(common.TxCustomTokenPrivacyType)
