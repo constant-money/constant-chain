@@ -639,7 +639,7 @@ func TestInitializeTxTokenConversion(t *testing.T) {
 	tokenIDs := make([]*common.Hash, numTokens)
 	for i := 0; i < numTokens; i++ {
 		// tokenID := &common.Hash{common.RandBytes(1)[0]}
-		tokenName := "Token" + string(i)
+		tokenName := "Token" + fmt.Sprintf("%d", i)
 		theInputCoin, ok := coins[i].(coin.Coin)
 		assert.Equal(t, true, ok, "Cannot parse coin")
 		paramToCreateTx, tokenParam, err := createInitTokenParams(theInputCoin, testDB, "", tokenName, keySets[0])

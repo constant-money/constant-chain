@@ -157,6 +157,12 @@ func TestPrivacyV2TxToken(t *testing.T) {
 		if err != nil {
 			panic(err)
 		}
+		jsb, err = json.Marshal(tx2)
+		assert.Equal(t, nil, err)
+		if err != nil {
+			panic(err)
+		}
+		json.Unmarshal(jsb, tx2)
 
 		msgCipherText = []byte("doing a transfer")
 		assert.Equal(t, true, bytes.Equal(msgCipherText, tx2.GetTxNormal().GetProof().GetOutputCoins()[0].GetInfo()))
@@ -484,7 +490,7 @@ func getParamForTxTokenTransfer(txTokenInit *TxToken, db *statedb.StateDB, speci
 
 	paramToCreateTx2 := tx_generic.NewTxTokenParams(&keySets[0].PrivateKey,
 		[]*key.PaymentInfo{}, prvCoinsToPayTransfer, 15, tokenParam2, db, nil,
-		hasPrivacyForPRV, hasPrivacyForToken, shardID, []byte{}, db)
+		hasPrivacyForPRV, hasPrivacyForToken, shardID, []byte("TRANSFER"), db)
 	return paramToCreateTx2, tokenParam2
 }
 
@@ -512,7 +518,7 @@ func getParamsForTxTokenInit(theInputCoin coin.Coin, db *statedb.StateDB) (*tx_g
 
 	paramToCreateTx := tx_generic.NewTxTokenParams(&keySets[0].PrivateKey,
 		paymentInfoPRV, inputCoinsPRV, 1000, tokenParam, db, nil,
-		hasPrivacyForPRV, hasPrivacyForToken, shardID, []byte{}, db)
+		hasPrivacyForPRV, hasPrivacyForToken, shardID, []byte("INIT TOKEN"), db)
 	return paramToCreateTx, tokenParam
 }
 
