@@ -361,6 +361,11 @@ func reconstructRingCA(sigPubKey []byte, sumOutputsWithFee , sumOutputAssetTags 
 			sumCommitment.Add(sumCommitment, randomCoin.GetCommitment())
 			temp := new(privacy.Point).ScalarMult(randomCoin.GetAssetTag(), numOfOutputs)
 			sumAssetTags.Add(sumAssetTags, temp)
+			if randomCoin.GetAssetTag() != nil {
+				fmt.Printf("BUGLOG3 idx: %v, pk: %v, cm: %v, tag: %v\n", index.Uint64(), randomCoin.GetPublicKey().String(), randomCoin.GetCommitment().String(), randomCoin.GetAssetTag().String())
+			} else {
+				fmt.Printf("BUGLOG3 idx: %v, pk: %v, cm: %v\n", index.Uint64(), randomCoin.GetPublicKey().String(), randomCoin.GetCommitment().String())
+			}
 		}
 
 		row[m] 	 = new(privacy.Point).Set(sumAssetTags)

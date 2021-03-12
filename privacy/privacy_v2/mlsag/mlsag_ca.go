@@ -3,6 +3,8 @@ package mlsag
 import (
 	"errors"
 	"bytes"
+	"fmt"
+	utils "github.com/incognitochain/incognito-chain/privacy/privacy_util"
 
 	"github.com/incognitochain/incognito-chain/common"
 	"github.com/incognitochain/incognito-chain/privacy/operation"
@@ -196,6 +198,7 @@ func verifyRingCA(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, 
 	if len(R.keys) != len(sig.r){
 		return false, errors.New("MLSAG Error : Malformed Ring")
 	}
+	utils.Logger.Log.Infof("BUGLOG3 cBefore = %v\n", c.String(), cBefore.String())
 	for i := 0; i < len(sig.r); i += 1 {
 		nextC, err := calculateNextCCA(
 			message,
@@ -206,6 +209,11 @@ func verifyRingCA(sig *MlsagSig, R *Ring, message [common.HashSize]byte) (bool, 
 		if err != nil {
 			return false, err
 		}
+		fmt.Printf("BUGLOG3 r[%v] = %v\n", i, PrintScalar(sig.r[i]))
+		fmt.Printf("BUGLOG3 key[%v] = %v\n", i, PrintPoint(R.keys[i]))
+		fmt.Printf("BUGLOG3 keyImages = %v\n", PrintPoint(sig.keyImages))
+		fmt.Printf("BUGLOG3 c[%v] = %v\n", i, nextC.String())
+		fmt.Println("BUGLOG3 ===============")
 		c = *nextC
 	}
 	return bytes.Equal(c.ToBytesS(), cBefore.ToBytesS()), nil
